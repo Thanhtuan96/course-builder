@@ -1,0 +1,11 @@
+# Internal planning documents
+reports/
+RAILROAD_ARCHITECTURE.md
+.planning/
+analysis/
+
+# Agent files
+.claude/**
+.cursor/**
+.gemini/**
+.agents/**
