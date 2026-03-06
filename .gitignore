@@ -10,3 +10,6 @@ analysis/
 .gemini/**
 .agents/**
 .opencode/**
+
+# Export configuration (user-specific vault path)
+.export-config.json

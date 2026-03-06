@@ -402,8 +402,136 @@ Export course content to Notion or Obsidian via MCP.
       - If any MCP call fails → show error and offer retry
       - Wrap in try/catch with clear error messages
 
-6. **If Obsidian selected**: Proceed to Obsidian export (Plan 05-03 handles implementation)
-   - Show: "Exporting to Obsidian..." then guide through the process
+6. **If Obsidian selected**: Proceed to Obsidian export implementation below
+
+   **Obsidian Export Implementation:**
+
+   a) **Vault path management**:
+      - Check for existing vault path in `.export-config.json` (create if doesn't exist)
+      - If not set → Use AskUserQuestion:
+        > "What's the path to your Obsidian vault?"
+        > Provide absolute path (e.g., /Users/name/Documents/Obsidian/MyVault)
+      - Save to `.export-config.json` for future exports
+      - Validate path exists before proceeding
+
+   b) **Create folder structure**:
+      - Path: `/{vault}/{course-slug}/`
+      - Use obsidian MCP tool to create folder if available, otherwise use Bash mkdir
+
+   c) **Create Markdown files** with YAML frontmatter:
+
+      - **course.md** (course overview):
+        ```markdown
+        ---
+        title: "Course: {Topic Name}"
+        date: {export-date}
+        tags: [course, {topic-slug}, learning]
+        course-slug: {topic-slug}
+        status: {in-progress|completed}
+        level: {level}
+        progress: "{X/Y sections complete}"
+        ---
+        
+        # Course: {Topic Name}
+        
+        ## Learning Objectives
+        ...
+        
+        ## Syllabus & Progress
+        | # | Section | Status |
+        |---|---------|--------|
+        ...
+        ```
+
+      - **lecture-1.md, lecture-2.md, ...** (one per section):
+        ```markdown
+        ---
+        title: "Section N: {Section Title}"
+        date: {date}
+        tags: [lecture, {topic-slug}]
+        course-slug: {topic-slug}
+        ---
+        
+        # Section N: {Section Title}
+        
+        ## Concept
+        ...
+        
+        ## Exercise
+        ...
+        ```
+
+      - **notes.md**:
+        ```markdown
+        ---
+        title: "Notes: {Topic Name}"
+        date: {export-date}
+        tags: [notes, {topic-slug}]
+        course-slug: {topic-slug}
+        ---
+        
+        # Notes: {Topic Name}
+        
+        {All content from NOTES.md}
+        ```
+
+      - **capstone.md**:
+        ```markdown
+        ---
+        title: "Capstone: {Project Name}"
+        date: {export-date}
+        tags: [capstone, {topic-slug}]
+        course-slug: {topic-slug}
+        ---
+        
+        # Capstone Project: {Project Name}
+        
+        {Full CAPSTONE.md content}
+        ```
+
+      - **summary.md**:
+        ```markdown
+        ---
+        title: "Learning Summary: {Topic Name}"
+        date: {export-date}
+        tags: [summary, {topic-slug}]
+        course-slug: {topic-slug}
+        ---
+        
+        # Learning Summary: {Topic Name}
+        
+        ## Completed Sections
+        - Section 1: {Title} ({date})
+        ...
+        
+        ## Key Concepts Learned
+        - {concept 1}
+        - {concept 2}
+        
+        ## Capstone Project
+        {capstone description}
+        
+        ## Recommendations
+        - {recommendation 1}
+        ```
+
+   d) **MCP tool calls**:
+      - Use obsidian MCP tools if available (obsidian_create_folder, obsidian_create_note)
+      - If MCP unavailable, use Write tool to create files directly in vault path
+      - Validate vault path exists before file creation
+
+   e) **Success message**:
+      > "Export complete! Your course is now in Obsidian at:
+      > - {vault}/{course-slug}/course.md
+      > - {lecture files}
+      > - notes.md, capstone.md, summary.md
+      > 
+      > Run professor:export again anytime to re-export."
+
+   f) **Error handling**:
+      - If vault path invalid → prompt for correct path
+      - If file creation fails → show error and offer retry
+      - Wrap in try/catch
 
 7. **If Cancel selected**:
    > "Export cancelled. Your course remains here. Run professor:export again anytime."
