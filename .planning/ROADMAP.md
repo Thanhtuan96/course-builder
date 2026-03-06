@@ -104,7 +104,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Implement professor:export command with destination selector (Notion/Obsidian)
+- [x] 05-01-PLAN.md — Implement professor:export command with destination selector (Notion/Obsidian)
 - [ ] 05-02-PLAN.md — Implement Notion export path (MCP tool calls, content assembly, child pages for lectures/notes)
 - [ ] 05-03-PLAN.md — Implement Obsidian export path (MCP tool calls, user vault path, folder/file structure)
 
@@ -120,7 +120,7 @@ Phases execute in numeric order: 1 → 1b → 2 → 3 → 4 → 5 → 6
 | 2. Professor Agent and Core Commands | 4/4 | Complete   | 2026-03-06 |
 | 3. Notes Feature | 1/1 | Complete    | 2026-03-06 |
 | 4. PreCompact Hook | 1/1 | Complete    | 2026-03-06 |
-| 5. Export Feature | 0/3 | Not started | - |
+| 5. Export Feature | 1/3 | In Progress | 2026-03-07 |
 | 6. Course Archive and Context | 0/1 | Not started | - |
 
 ### Phase 6: Course Archive and Context Management

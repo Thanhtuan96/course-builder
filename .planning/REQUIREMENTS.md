@@ -32,7 +32,7 @@ Requirements for milestone v1.0. Each maps to roadmap phases.
 - [x] **CMD-11**: User can run `professor:capstone` to start the capstone project
 - [x] **CMD-12**: User can run `professor:capstone-review` to review capstone progress
 - [ ] **CMD-13**: User can run `professor:note` to append a note to the current course's NOTES.md
-- [ ] **CMD-14**: User can run `professor:export` to choose exporting the course to Notion or Obsidian
+- [x] **CMD-14**: User can run `professor:export` to choose exporting the course to Notion or Obsidian
 
 ### Hooks
 
@@ -47,7 +47,7 @@ Requirements for milestone v1.0. Each maps to roadmap phases.
 
 - [ ] **EXP-01**: `professor:export` sends lecture notes + user answers + NOTES.md to Notion via MCP
 - [ ] **EXP-02**: `professor:export` sends course content to Obsidian via Obsidian MCP server
-- [ ] **EXP-03**: User can choose export destination (Notion or Obsidian) when running `professor:export`
+- [x] **EXP-03**: User can choose export destination (Notion or Obsidian) when running `professor:export`
 
 ## Future Requirements
 
@@ -95,10 +95,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NOT-01 | Phase 3 | Pending |
 | HOK-01 | Phase 4 | Complete |
 | HOK-02 | Phase 4 | Complete |
-| CMD-14 | Phase 5 | Pending |
+| CMD-14 | Phase 5 | Complete |
 | EXP-01 | Phase 5 | Pending |
 | EXP-02 | Phase 5 | Pending |
-| EXP-03 | Phase 5 | Pending |
+| EXP-03 | Phase 5 | Complete |
 
 **Coverage:**
 - v1.0 requirements: 24 total
