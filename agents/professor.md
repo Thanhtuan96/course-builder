@@ -348,7 +348,59 @@ Export course content to Notion or Obsidian via MCP.
    - IF unavailable → show destination-specific setup instructions with link to README
 
 5. **If Notion selected**: Proceed to Notion export (Plan 05-02 handles implementation)
-   - Show: "Exporting to Notion..." then guide through the process
+
+   **Notion Export Implementation:**
+
+   a) **Create parent page** with course properties:
+      - Title: "Course: {Topic Name}"
+      - Properties:
+        - Level (select): user's level from COURSE.md
+        - Progress (select): "X/Y sections complete" based on progress
+        - Started (date): course start date from COURSE.md
+        - Capstone link (url): link to capstone child page (created in step c)
+
+   b) **Transform and create child pages**:
+   
+      - **Lecture pages** (one per completed/in-progress section):
+        - Title: "Section N: {Section Title}"
+        - Content: Concept explanation, exercise, resources
+        - Code handling: If code blocks exist, add link reference instead: "Code for this section available at: /exercises/{section-file}.{ext}"
+        - Use notion_create_page for each lecture with parent_id set to parent page ID
+      
+      - **Notes page**:
+        - Title: "Notes"
+        - Content: All content from NOTES.md (if exists)
+        - Use notion_create_page with parent_id
+      
+      - **Capstone page**:
+        - Title: "Capstone Project"
+        - Content: Full CAPSTONE.md content
+        - Use notion_create_page with parent_id
+      
+      - **Summary page**:
+        - Title: "Learning Summary"
+        - Content: Generate retrospective from COURSE.md progress log:
+          - List completed sections with dates
+          - Key concepts learned
+          - Capstone project description
+          - Recommendations for next steps
+        - Use notion_create_page with parent_id
+
+   c) **MCP tool calls**:
+      - First: notion_create_page for parent page
+      - Then: notion_create_page for each child page (with parent_id set to parent page's id from response)
+
+   d) **Success message**:
+      > "Export complete! Your course is now in Notion:
+      > - Parent page: {link}
+      > - {N} lecture pages
+      > - Notes, Capstone, and Summary pages
+      > 
+      > Run professor:export again anytime to re-export."
+
+   e) **Error handling**:
+      - If any MCP call fails → show error and offer retry
+      - Wrap in try/catch with clear error messages
 
 6. **If Obsidian selected**: Proceed to Obsidian export (Plan 05-03 handles implementation)
    - Show: "Exporting to Obsidian..." then guide through the process
