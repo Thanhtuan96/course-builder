@@ -29,7 +29,7 @@ See: .planning/PROJECT.md
 ## Accumulated Context
 
 ### Roadmap Evolution
-- Phase 6 added: agent able to get and manage context through all course
+- Phase 6 added: Course Archive and Context Management
 
 ## Session Log
 
