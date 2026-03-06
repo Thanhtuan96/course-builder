@@ -78,7 +78,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 03-01-PLAN.md — Implement NOTES.md auto-creation on new-topic and professor:note command
+- [x] 03-01-PLAN.md — Implement NOTES.md auto-creation on new-topic and professor:note command
 
 ### Phase 4: PreCompact Hook
 **Goal**: Users never lose session progress silently when Claude's context is about to be compressed
@@ -117,6 +117,6 @@ Phases execute in numeric order: 1 → 1b → 2 → 3 → 4 → 5
 | 1. Plugin Scaffold | 2/2 | Complete   | 2026-03-05 |
 | 1b. CLI Auto-Setup | 1/1 | Complete   | 2026-03-06 |
 | 2. Professor Agent and Core Commands | 4/4 | Complete   | 2026-03-06 |
-| 3. Notes Feature | 0/1 | Planned    | - |
+| 3. Notes Feature | 1/1 | Planned    | - |
 | 4. PreCompact Hook | 0/1 | Not started | - |
 | 5. Export Feature | 0/3 | Not started | - |
