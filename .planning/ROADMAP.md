@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1b: CLI Auto-Setup** - Add npx-based auto-setup for any AI agent (completed 2026-03-06)
 - [x] **Phase 2: Professor Agent and Core Commands** - Package professor-skill-v3 as a Claude Code agent and wire all 12 course commands (completed 2026-03-06)
 - [x] **Phase 3: Notes Feature** - Add NOTES.md per-course file and the professor:note command (completed 2026-03-06)
-- [ ] **Phase 4: PreCompact Hook** - Token warning and auto-save session state before context compression
+- [x] **Phase 4: PreCompact Hook** - Token warning and auto-save session state before context compression (completed 2026-03-06)
 - [ ] **Phase 5: Export Feature** - Notion and Obsidian export via MCP with user destination choice
 
 ## Phase Details
@@ -97,15 +97,16 @@ Plans:
 **Depends on**: Phase 3
 **Requirements**: CMD-14, EXP-01, EXP-02, EXP-03
 **Success Criteria** (what must be TRUE):
-  1. User can run `professor:export` and is prompted to choose between Notion and Obsidian as the export destination
-  2. Choosing Notion sends lecture notes, user review answers, concept summaries, COURSE.md, and NOTES.md to a Notion page via MCP
-  3. Choosing Obsidian sends the same course content to the Obsidian vault via Obsidian MCP server
-**Plans**: TBD
+  1. User runs `professor:export` and is prompted to choose Notion or Obsidian
+  2. **Notion export**: Creates parent page with course properties, child pages for each lecture, separate "Notes" child page, code referenced (not embedded), capstone + summary as child pages
+  3. **Obsidian export**: Creates folder per course with .md files, user provides/configures vault path
+  4. If MCP not available, show helpful setup instructions (link to README)
+**Plans**: 3 plans
 
 Plans:
-- [ ] 05-01: Implement professor:export command with destination selector
-- [ ] 05-02: Implement Notion export path (MCP tool calls, content assembly)
-- [ ] 05-03: Implement Obsidian export path (MCP tool calls, content assembly)
+- [ ] 05-01: Implement professor:export command with destination selector (Notion/Obsidian)
+- [ ] 05-02: Implement Notion export path (MCP tool calls, content assembly, child pages for lectures/notes)
+- [ ] 05-03: Implement Obsidian export path (MCP tool calls, user vault path, folder/file structure)
 
 ## Progress
 
@@ -118,16 +119,22 @@ Phases execute in numeric order: 1 → 1b → 2 → 3 → 4 → 5 → 6
 | 1b. CLI Auto-Setup | 1/1 | Complete   | 2026-03-06 |
 | 2. Professor Agent and Core Commands | 4/4 | Complete   | 2026-03-06 |
 | 3. Notes Feature | 1/1 | Complete    | 2026-03-06 |
-| 4. PreCompact Hook | 1/1 | Complete   | 2026-03-06 |
+| 4. PreCompact Hook | 1/1 | Complete    | 2026-03-06 |
 | 5. Export Feature | 0/3 | Not started | - |
-| 6. agent able to get and manage context through all course | 0/0 | Not started | - |
+| 6. Course Archive and Context | 0/1 | Not started | - |
 
-### Phase 6: agent able to get and manage context through all course
+### Phase 6: Course Archive and Context Management
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** Allow technical learners to archive completed courses with full context (notes, summary, syllabus) while leaving code exercises behind, plus improve context management for technical courses
 **Depends on:** Phase 5
-**Plans:** 1/1 plans complete
+**Requirements**: ARCH-01, ARCH-02, ARCH-03
+**Success Criteria** (what must be TRUE):
+  1. Course folder can include `exercises/` subfolder for code artifacts
+  2. User can run `professor:archive` after course completion to archive learning context
+  3. Archive creates `.course_archive/{slug}/` with COURSE.md, NOTES.md, CAPSTONE.md, and SUMMARY.md (comprehensive retrospective)
+  4. Original course folder is deleted after successful archive
+  5. Exercises folder is left behind (user has code locally)
+**Plans**: 1 plan
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 6 to break down)
+- [ ] 06-01: Implement professor:archive command with course archive and exercises handling
