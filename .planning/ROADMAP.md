@@ -104,9 +104,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 05-01: Implement professor:export command with destination selector (Notion/Obsidian)
-- [ ] 05-02: Implement Notion export path (MCP tool calls, content assembly, child pages for lectures/notes)
-- [ ] 05-03: Implement Obsidian export path (MCP tool calls, user vault path, folder/file structure)
+- [ ] 05-01-PLAN.md — Implement professor:export command with destination selector (Notion/Obsidian)
+- [ ] 05-02-PLAN.md — Implement Notion export path (MCP tool calls, content assembly, child pages for lectures/notes)
+- [ ] 05-03-PLAN.md — Implement Obsidian export path (MCP tool calls, user vault path, folder/file structure)
 
 ## Progress
 
