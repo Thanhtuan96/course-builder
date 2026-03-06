@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Plugin Scaffold** - Establish plugin.json, directory layout, and README with setup instructions (completed 2026-03-05)
 - [x] **Phase 1b: CLI Auto-Setup** - Add npx-based auto-setup for any AI agent (completed 2026-03-06)
 - [x] **Phase 2: Professor Agent and Core Commands** - Package professor-skill-v3 as a Claude Code agent and wire all 12 course commands (completed 2026-03-06)
-- [ ] **Phase 3: Notes Feature** - Add NOTES.md per-course file and the professor:note command
+- [x] **Phase 3: Notes Feature** - Add NOTES.md per-course file and the professor:note command (completed 2026-03-06)
 - [ ] **Phase 4: PreCompact Hook** - Token warning and auto-save session state before context compression
 - [ ] **Phase 5: Export Feature** - Notion and Obsidian export via MCP with user destination choice
 
@@ -110,13 +110,24 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 1b → 2 → 3 → 4 → 5
+Phases execute in numeric order: 1 → 1b → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Plugin Scaffold | 2/2 | Complete   | 2026-03-05 |
 | 1b. CLI Auto-Setup | 1/1 | Complete   | 2026-03-06 |
 | 2. Professor Agent and Core Commands | 4/4 | Complete   | 2026-03-06 |
-| 3. Notes Feature | 1/1 | Planned    | - |
+| 3. Notes Feature | 1/1 | Complete    | 2026-03-06 |
 | 4. PreCompact Hook | 0/1 | Not started | - |
 | 5. Export Feature | 0/3 | Not started | - |
+| 6. agent able to get and manage context through all course | 0/0 | Not started | - |
+
+### Phase 6: agent able to get and manage context through all course
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 5
+**Plans:** 1/1 plans complete
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 6 to break down)
