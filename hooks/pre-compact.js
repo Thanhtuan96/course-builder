@@ -88,7 +88,7 @@ function findMostRecentCourse() {
 /**
  * Extract session state from COURSE.md
  */
-function extractSessionState(courseContent) {
+function extractSessionState(coursePath, courseContent) {
   const state = {
     lastActiveSection: null,
     lectureSummary: null
@@ -102,7 +102,7 @@ function extractSessionState(courseContent) {
   
   // Look for last active lecture content in LECTURE.md
   // This would be done by reading LECTURE.md if it exists
-  const coursesDir = path.dirname(courseContent);
+  const coursesDir = path.dirname(coursePath);
   const lecturePath = path.join(coursesDir, 'LECTURE.md');
   
   if (fs.existsSync(lecturePath)) {
@@ -186,7 +186,7 @@ function autoSaveSession() {
     }
     
     const courseContent = fs.readFileSync(coursePath, 'utf-8');
-    const sessionState = extractSessionState(courseContent);
+    const sessionState = extractSessionState(coursePath, courseContent);
     
     updateCourseWithSession(coursePath, sessionState);
   } catch (error) {
