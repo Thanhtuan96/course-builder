@@ -87,10 +87,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. When context approaches the compression threshold, the user sees a visible token-limit warning message before the reset occurs
   2. The active section, progress, and key session state are written to COURSE.md before context is compressed, so resuming the course picks up where the user left off
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 04-01: Implement PreCompact hook with token warning display and COURSE.md session-state auto-save
+- [ ] 04-01-PLAN.md — Implement PreCompact hook with token warning display and COURSE.md session-state auto-save
 
 ### Phase 5: Export Feature
 **Goal**: Users can push their entire learning journey — notes, answers, and summaries — to Notion or Obsidian for long-term retention
