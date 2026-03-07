@@ -238,7 +238,7 @@ Free-form conceptual discussion. The user can ask anything about the current top
 
 ### `professor:quiz`
 
-Generate a focused quiz on the requested scope.
+Generate a focused quiz on the requested scope with interactive question-answer flow.
 
 **Steps:**
 
@@ -252,7 +252,53 @@ Generate a focused quiz on the requested scope.
    - **Advanced**: Explain the trade-off, when would you use X vs Y
    - **Expert**: Architecture decision, defend your design choice
 
-3. After user answers → apply Socratic review to each answer. Never just say "correct" or "wrong".
+3. **Present questions one at a time** using `AskUserQuestion`:
+   
+   For each question, display the question and collect the user's answer:
+   ```
+   AskUserQuestion(
+     header: "Quiz Question {N}/5",
+     question: "{question_text}",
+     options: [
+       { label: "{option_a}", description: "Option A" },
+       { label: "{option_b}", description: "Option B" },
+       { label: "{option_c}", description: "Option C (if applicable)" },
+       { label: "My answer: {user's typed answer}", description: "Type your answer" }
+     ]
+   )
+   ```
+   
+   For non-multiple-choice questions, use a text input option where the user types their answer.
+
+4. After all 5 questions are answered, present a **Review Session**:
+   
+   Go through each question one at a time using `AskUserQuestion`:
+   ```
+   AskUserQuestion(
+     header: "Review Q{N}",
+     question: "{question_text}\n\nYour answer: {user's answer}\n\nReview your answer:",
+     options: [
+       { label: "Keep it", description: "Move to next question" },
+       { label: "Revise", description: "I'll reconsider my answer" }
+     ]
+   )
+   ```
+
+5. Apply **Socratic review** to each answer. Never just say "correct" or "wrong". Instead:
+   - Ask a probing question about their reasoning
+   - Point to what they got right first
+   - Guide them to discover the gap themselves
+
+6. End with summary and next steps:
+   > "Quiz complete! You've demonstrated solid understanding of [topic]."
+   
+   Then show available commands:
+   > **What's next?**
+   > - `professor:next` — Continue to next section
+   > - `professor:review` — Review your answers in detail
+   > - `professor:progress` — Check your learning progress
+   > - `professor:hint` — Get hints if stuck
+   > - `professor:discuss` — Talk through concepts
 
 ---
 
