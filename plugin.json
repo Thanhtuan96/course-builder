@@ -23,7 +23,9 @@
     { "name": "professor:capstone-review", "file": "commands/professor/capstone-review.md" },
     { "name": "professor:note",            "file": "commands/professor/note.md" },
     { "name": "professor:export",          "file": "commands/professor/export.md" },
-    { "name": "professor:archive",        "file": "commands/professor/archive.md" }
+    { "name": "professor:archive",        "file": "commands/professor/archive.md" },
+    { "name": "professor:worktrees",      "file": "commands/professor/worktrees.md" },
+    { "name": "professor:switch",         "file": "commands/professor/switch.md" }
   ],
   "hooks": [
     {
