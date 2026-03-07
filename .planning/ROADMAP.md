@@ -137,4 +137,4 @@ Phases execute in numeric order: 1 → 1b → 2 → 3 → 4 → 5 → 6
 **Plans**: 1 plan
 
 Plans:
-- [ ] 06-01: Implement professor:archive command with course archive and exercises handling
+- [x] 06-01-PLAN.md — Implement professor:archive command with course archive and exercises handling
