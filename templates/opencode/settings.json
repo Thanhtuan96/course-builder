@@ -1,0 +1,6 @@
+{
+  "skills": ["professor"],
+  "permissions": {
+    "allow": ["Bash", "Read", "Write", "Glob", "Grep", "WebFetch"]
+  }
+}

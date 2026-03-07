@@ -1,0 +1,35 @@
+{
+  "name": "course-professor",
+  "version": "1.0.0",
+  "description": "A Socratic learning assistant - teaches by asking questions instead of giving answers. Works with Claude Code, OpenCode, Gemini CLI, and other AI agents.",
+  "type": "module",
+  "bin": {
+    "course-professor": "./bin/cli.js",
+    "professor": "./bin/cli.js"
+  },
+  "files": [
+    "bin/",
+    "templates/",
+    "shared/",
+    "plugin.json"
+  ],
+  "keywords": [
+    "learning",
+    "socratic",
+    "education",
+    "ai",
+    "claude",
+    "opencode",
+    "teacher",
+    "course"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/course-learning-plugin"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "",
+  "license": "MIT"
+}

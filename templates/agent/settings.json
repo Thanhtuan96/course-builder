@@ -1,0 +1,6 @@
+{
+  "professor": {
+    "enabled": true,
+    "mode": "socratic"
+  }
+}

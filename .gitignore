@@ -1,7 +1,7 @@
 # Internal planning documents
 reports/
 RAILROAD_ARCHITECTURE.md
-.planning/
+.planning/**
 analysis/
 
 # Agent files
@@ -9,3 +9,7 @@ analysis/
 .cursor/**
 .gemini/**
 .agents/**
+.opencode/**
+
+# Export configuration (user-specific vault path)
+.export-config.json

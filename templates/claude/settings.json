@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls)",
+      "Bash(mkdir)",
+      "Bash(cd)",
+      "Bash(pwd)",
+      "Read",
+      "Write",
+      "Glob",
+      "Grep",
+      "WebFetch"
+    ],
+    "deny": [
+      "Bash(rm -rf *)"
+    ]
+  }
+}

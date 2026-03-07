@@ -22,7 +22,8 @@
     { "name": "professor:capstone",        "file": "commands/professor/capstone.md" },
     { "name": "professor:capstone-review", "file": "commands/professor/capstone-review.md" },
     { "name": "professor:note",            "file": "commands/professor/note.md" },
-    { "name": "professor:export",          "file": "commands/professor/export.md" }
+    { "name": "professor:export",          "file": "commands/professor/export.md" },
+    { "name": "professor:archive",        "file": "commands/professor/archive.md" }
   ],
   "hooks": [
     {
