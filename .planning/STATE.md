@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
 milestone: v2.0
-milestone_name: milestone
-current_phase: Phase 9 - Backend Foundation
+milestone_name: Coverage
+current_phase: Not started (defining requirements)
 current_plan: —
 status: planning
-last_updated: "2026-03-08T00:00:00.000Z"
+last_updated: "2026-03-07T18:53:55.878Z"
 progress:
-  total_phases: 11
-  completed_phases: 8
-  total_plans: 3
-  completed_plans: 0
+  total_phases: 13
+  completed_phases: 9
+  total_plans: 12
+  completed_plans: 16
 ---
 
 # Session State
@@ -32,6 +32,7 @@ See: .planning/PROJECT.md
 - v1.0 completed: Plugin scaffold, all 14 commands, notes, export, archive, CLI
 - v1.1 completed: Git worktree courses, auto-create exercise files
 - v2.0 starting: Local Web UI with split-pane layout
+- Phase 12 added: mcp.json for tool that needed in this source (notion, obsidian, ....) document it
 
 ### v2.0 Goals
 - Express + React + Vite web application

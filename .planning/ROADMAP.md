@@ -23,7 +23,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 6: Course Archive and Context Management** - Archive completed courses preserving learning context (completed 2026-03-07)
 - [x] **Phase 7: Git Worktree Courses** - Each technology learned = separate git worktree (completed 2026-03-07)
 - [x] **Phase 8: Auto-create Exercise Files** - Automatically create exercise files when professor:next is called (completed 2026-03-08)
-- [ ] **Phase 9: Backend Foundation** - Express server with course API, chat API (SSE), WebSocket server
+- [x] **Phase 9: Backend Foundation** - Express server with course API, chat API (SSE), WebSocket server (completed 2026-03-07)
 - [ ] **Phase 10: Client Components** - React split-pane UI with LecturePanel, ChatPanel, command pills
 - [ ] **Phase 11: Integration** - CLI web command, production build, static file serving
 
@@ -132,7 +132,7 @@ Phases execute in numeric order: 1 → 1b → 2 → 3 → 4 → 5 → 6 → 7 �
 | 6. Course Archive and Context | 1/1 | Complete    | 2026-03-07 |
 | 7. Git Worktree Courses | 1/1 | Complete    | 2026-03-07 |
 | 8. Auto-create Exercise Files | 1/1 | Complete    | 2026-03-08 |
-| 9. Backend Foundation | 0/1 | Not started | - |
+| 9. Backend Foundation | 0/1 | Complete    | 2026-03-07 |
 | 10. Client Components | 0/1 | Not started | - |
 | 11. Integration | 0/1 | Not started | - |
 
@@ -198,7 +198,7 @@ Plans:
 7. WebSocket server runs alongside HTTP server and accepts client connections
 8. POST `/api/notify` broadcasts "lecture-updated" event to all connected WebSocket clients
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 09-01-PLAN.md — Implement Express backend with course API, chat API (SSE), and WebSocket server

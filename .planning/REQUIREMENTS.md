@@ -95,14 +95,14 @@ Requirements for milestone v2.0 - Local Web UI.
 
 ### Web Backend
 
-- [ ] **WEB-01**: Express server runs on configurable port (default 3000)
-- [ ] **WEB-02**: `/api/courses` returns list of all courses with slug, name, lastActive
-- [ ] **WEB-03**: `/api/courses/:slug/:file` returns COURSE.md, LECTURE.md, NOTES.md, CAPSTONE.md content
-- [ ] **WEB-04**: `/api/chat` accepts messages and streams Claude responses via Server-Sent Events (SSE)
-- [ ] **WEB-05**: Chat API loads system prompt from `agents/professor.md` for behavioral consistency
-- [ ] **WEB-06**: Chat API builds course context from COURSE.md and LECTURE.md
-- [ ] **WEB-07**: WebSocket server broadcasts lecture updates when professor:next runs
-- [ ] **WEB-08**: `/api/notify` endpoint triggers WebSocket broadcast to all connected clients
+- [x] **WEB-01**: Express server runs on configurable port (default 3000)
+- [x] **WEB-02**: `/api/courses` returns list of all courses with slug, name, lastActive
+- [x] **WEB-03**: `/api/courses/:slug/:file` returns COURSE.md, LECTURE.md, NOTES.md, CAPSTONE.md content
+- [x] **WEB-04**: `/api/chat` accepts messages and streams Claude responses via Server-Sent Events (SSE)
+- [x] **WEB-05**: Chat API loads system prompt from `agents/professor.md` for behavioral consistency
+- [x] **WEB-06**: Chat API builds course context from COURSE.md and LECTURE.md
+- [x] **WEB-07**: WebSocket server broadcasts lecture updates when professor:next runs
+- [x] **WEB-08**: `/api/notify` endpoint triggers WebSocket broadcast to all connected clients
 
 ### Web Frontend
 
@@ -199,14 +199,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CMD-15 | Phase 7 | Pending |
 | CMD-16 | Phase 7 | Pending |
 | CMD-17 | Phase 7 | Pending |
-| WEB-01 | Phase 9 | Pending |
-| WEB-02 | Phase 9 | Pending |
-| WEB-03 | Phase 9 | Pending |
-| WEB-04 | Phase 9 | Pending |
-| WEB-05 | Phase 9 | Pending |
-| WEB-06 | Phase 9 | Pending |
-| WEB-07 | Phase 9 | Pending |
-| WEB-08 | Phase 9 | Pending |
+| WEB-01 | Phase 9 | Complete |
+| WEB-02 | Phase 9 | Complete |
+| WEB-03 | Phase 9 | Complete |
+| WEB-04 | Phase 9 | Complete |
+| WEB-05 | Phase 9 | Complete |
+| WEB-06 | Phase 9 | Complete |
+| WEB-07 | Phase 9 | Complete |
+| WEB-08 | Phase 9 | Complete |
 | WEB-09 | Phase 10 | Pending |
 | WEB-10 | Phase 10 | Pending |
 | WEB-11 | Phase 10 | Pending |
