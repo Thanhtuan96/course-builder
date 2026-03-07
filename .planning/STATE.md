@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
-current_phase: 07-git-worktree-courses (executing)
-current_plan: 07-01 (completed)
-status: planning
+current_phase: 08-auto-create-exercise-files
+current_plan: 08-01 (planned)
+status: ready to execute
 last_updated: "2026-03-07T17:04:46.848Z"
 progress:
   total_phases: 12
@@ -45,3 +45,4 @@ See: .planning/PROJECT.md
 - 2026-03-07: v1.0 milestone complete - all features shipped
 - 2026-03-07: Started v1.1 - Git Worktree Courses
 - 2026-03-07: Completed plan 07-01 - Git Worktree Courses implementation
+- 2026-03-08: Planned Phase 08 - Auto-create exercise files

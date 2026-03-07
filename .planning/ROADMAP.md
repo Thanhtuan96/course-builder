@@ -127,6 +127,7 @@ Phases execute in numeric order: 1 → 1b → 2 → 3 → 4 → 5 → 6 → 7
 | 5. Export Feature | 3/3 | Complete    | 2026-03-06 |
 | 6. Course Archive and Context | 1/1 | Complete    | 2026-03-07 |
 | 7. Git Worktree Courses | 1/1 | Complete    | 2026-03-07 |
+| 8. Auto-create Exercise Files | 1/1 | Planned    | — |
 
 ### Phase 6: Course Archive and Context Management
 
@@ -161,15 +162,15 @@ Plans:
 Plans:
 - [x] 07-01-PLAN.md — Implement git worktree-based course structure and worktree management
 
-### Phase 8: when initial user start lecture so create files include excercise instead of make user create new one (exclude coding)
+### Phase 8: Auto-create Exercise Files
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** Automatically create exercise files when professor:next is called, instead of making users create files manually. Exercise files are templates with comments, not working code.
+**Requirements**: EXER-01, EXER-02, EXER-03, EXER-04
 **Depends on:** Phase 7
-**Plans:** 0 plans
+**Plans:** 1 plan
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 8 to break down)
+- [x] 08-01-PLAN.md — Auto-create exercise files on professor:next
 
 ### Phase 9: support for another ai agent (cursor, google antigravity, etc)
 
