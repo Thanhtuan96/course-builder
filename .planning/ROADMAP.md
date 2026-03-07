@@ -4,7 +4,7 @@
 
 Five phases transform the existing professor-skill-v3 into a full Claude Code plugin. The scaffold comes first to establish the target structure, then the professor agent is packaged with all its course commands, then personal notes and the PreCompact session-save hook are layered on, and finally the Notion/Obsidian export pipeline completes the knowledge-retention story.
 
-v1.1 adds Git Worktree-based courses - each technology learned gets its own git worktree, with learning files alongside the user's project code.
+v1.1 adds agent support (Cursor), agent specialization, research-enhanced hints, and MCP documentation.
 
 v2.0 adds Client Components (React UI) and Integration (CLI web command).
 
@@ -25,11 +25,14 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 6: Course Archive and Context Management** - Archive completed courses preserving learning context (completed 2026-03-07)
 - [x] **Phase 7: Git Worktree Courses** - Each technology learned = separate git worktree (completed 2026-03-07)
 - [x] **Phase 8: Auto-create Exercise Files** - Automatically create exercise files when professor:next is called (completed 2026-03-08)
-- [x] **Phase 9: Backend Foundation** - Express server with course API, chat API (SSE), WebSocket server (completed 2026-03-07)
+- [x] **Phase 9: Agent Support** - Add Cursor agent support (completed 2026-03-08)
+- [ ] **Phase 10: Agent Specialization** - Improve and separate agents into specific fields (math, marketing, sales, coaching, bookkeeper, researcher)
+- [ ] **Phase 11: Research-Enhanced Hints** - Give hints with keyword to googling or research + useful conferences
+- [ ] **Phase 12: MCP Documentation** - Document mcp.json for tools needed (notion, obsidian)
 
 ## Milestones
 
-**v1.1 (Current):** Phase 1-9 (complete)
+**v1.1 (Current):** Phases 9-12 (in progress)
 **v2.0 (Pending):** Phase 13-14
 
 ## Phase Details
@@ -127,8 +130,8 @@ Plans:
 **v2.0:** Pending
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 1b → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 (v1.1 complete)
-v2.0 phases: 13 → 14
+v1.1: 9 → 10 → 11 → 12
+v2.0: 13 → 14
 
 ### v1.1 Phases
 
@@ -143,7 +146,10 @@ v2.0 phases: 13 → 14
 | 6. Course Archive and Context | 1/1 | Complete    | 2026-03-07 |
 | 7. Git Worktree Courses | 1/1 | Complete    | 2026-03-07 |
 | 8. Auto-create Exercise Files | 1/1 | Complete    | 2026-03-08 |
-| 9. Backend Foundation | 1/1 | Complete    | 2026-03-07 |
+| 9. Agent Support (Cursor) | 1/1 | Complete    | 2026-03-08 |
+| 10. Agent Specialization | 0/1 | Not started | - |
+| 11. Research-Enhanced Hints | 0/1 | Not started | - |
+| 12. MCP Documentation | 0/1 | Not started | - |
 
 ### v2.0 Phases (Pending)
 
@@ -196,28 +202,74 @@ Plans:
 Plans:
 - [x] 08-01-PLAN.md — Auto-create exercise files on professor:next
 
-### Phase 9: Backend Foundation
+### Phase 9: Agent Support
 
-**Goal:** Express server running with working course API, chat API (SSE), and WebSocket server for real-time lecture updates.
+**Goal:** Add Cursor agent support to CLI and templates.
 
 **Depends on:** Phase 8
 
-**Requirements:** WEB-01, WEB-02, WEB-03, WEB-04, WEB-05, WEB-06, WEB-07, WEB-08
+**Requirements:** AGENT-01
 
 **Success Criteria** (what must be TRUE):
-1. Express server starts on configurable port (default 3000) when `npm run web` is executed
-2. GET `/api/courses` returns JSON array of courses with slug, name, and lastActive fields
-3. GET `/api/courses/:slug/:file` returns raw content of COURSE.md, LECTURE.md, NOTES.md, or CAPSTONE.md
-4. POST `/api/chat` with message accepts request and initiates SSE stream to client
-5. Chat API loads behavioral rules from `agents/professor.md` for Socratic consistency
-6. Chat API includes relevant course context (current lecture, progress) in Claude requests
-7. WebSocket server runs alongside HTTP server and accepts client connections
-8. POST `/api/notify` broadcasts "lecture-updated" event to all connected WebSocket clients
+1. templates/cursor/settings.json exists following templates/claude/ pattern
+2. CLI supports 'cursor' in SUPPORTED_AGENTS
+3. README documents Cursor setup
 
 **Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 09-01-PLAN.md — Implement Express backend with course API, chat API (SSE), and WebSocket server
+- [x] 09-01-PLAN.md — Add Cursor agent support
+
+---
+
+### Phase 10: Agent Specialization
+
+**Goal:** Improve and separate agents into specific agent fields (math, marketing, sales, coaching, bookkeeper, researcher, etc.). Let each agent focus on one job and do it well. Agents can use tools or call other agents.
+
+**Depends on:** Phase 9
+
+**Requirements:** TBD
+
+**Success Criteria** (what must be TRUE):
+1. Each specialized agent has a clear focus area (e.g., math-agent, marketing-agent, researcher-agent)
+2. Agents can delegate to other agents when needed
+3. Agents have appropriate tools for their domain
+
+**Plans:** To be planned
+
+---
+
+### Phase 11: Research-Enhanced Hints
+
+**Goal:** Enhance professor:hint and professor:stuck commands to provide keywords for googling or research, plus useful conferences/resources to help users figure out solutions themselves.
+
+**Depends on:** Phase 10
+
+**Requirements:** TBD
+
+**Success Criteria** (what must be TRUE):
+1. Hints include relevant search keywords
+2. Hints suggest useful conferences, tutorials, or documentation
+3. Research suggestions are contextual to the current learning topic
+
+**Plans:** To be planned
+
+---
+
+### Phase 12: MCP Documentation
+
+**Goal:** Document mcp.json configuration for tools needed in this project (notion, obsidian, etc.)
+
+**Depends on:** Phase 11
+
+**Requirements:** TBD
+
+**Success Criteria** (what must be TRUE):
+1. mcp.json is documented with all required tools
+2. Notion MCP configuration is documented
+3. Obsidian MCP configuration is documented
+
+**Plans:** To be planned
 
 ---
 
@@ -225,7 +277,7 @@ Plans:
 
 **Goal:** React client with split-pane layout, lecture panel with markdown rendering, chat panel with streaming and context-aware command pills.
 
-**Depends on:** Phase 9
+**Depends on:** Phase 12
 
 **Requirements:** WEB-09, WEB-10, WEB-11, WEB-12, WEB-13, WEB-14, WEB-15, WEB-16, WEB-22
 
