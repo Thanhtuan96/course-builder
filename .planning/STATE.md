@@ -7,7 +7,7 @@ current_plan: 07-01 (completed)
 status: planning
 last_updated: "2026-03-07T17:04:46.848Z"
 progress:
-  total_phases: 9
+  total_phases: 10
   completed_phases: 7
   total_plans: 10
   completed_plans: 14
@@ -31,6 +31,7 @@ See: .planning/PROJECT.md
 ### Roadmap Evolution
 - v1.0 completed: Plugin scaffold, all 14 commands, notes, export, archive, CLI
 - Phase 8 added: when initial user start lecture so create files include excercise instead of make user create new one (exclude coding)
+- Phase 9 added: support for another ai agent (cursor, google antigravity, etc)
 
 ### v1.1 Goals
 - Git worktree-based courses (each tech = separate worktree)
