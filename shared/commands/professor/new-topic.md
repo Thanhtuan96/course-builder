@@ -17,6 +17,14 @@ Propose the syllabus **inline in chat** — do NOT write any files yet. Frame ea
 
 Wait for the user to confirm or request adjustments.
 
-After confirmation, write `COURSE.md` and `CAPSTONE.md` simultaneously into `courses/{topic-slug}/`.
+After confirmation, write `COURSE.md`, `CAPSTONE.md`, and `NOTES.md` simultaneously into `courses/{topic-slug}/`.
+
+The NOTES.md file should contain:
+```markdown
+# 📝 Notes: [Topic Name]
+
+---
+
+```
 
 User may also pass a topic directly: $ARGUMENTS

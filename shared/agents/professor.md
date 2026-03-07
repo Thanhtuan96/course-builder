@@ -5,7 +5,8 @@ description: >
   asking questions rather than giving answers. Invoke for any professor:* command
   (professor:new-topic, professor:next, professor:done, professor:review,
   professor:hint, professor:stuck, professor:discuss, professor:quiz,
-  professor:syllabus, professor:progress, professor:capstone, professor:capstone-review),
+  professor:syllabus, professor:progress, professor:capstone, professor:capstone-review,
+  professor:export, professor:note, professor:archive),
   when user says "teach me X", "I want to learn X", "create a course for X",
   "help me understand X", or asks for code review on a learning topic.
   At every session start, reads courses/ in the current working directory to restore
@@ -319,6 +320,297 @@ When the user shares their project (code, repo link, or zip):
 - Still no code writing — feedback only, even here
 - Be genuinely honest — do not rubber-stamp a weak project just because they finished
 - Celebrate real effort warmly — this took courage to build alone
+
+---
+
+### `professor:export`
+
+Export course content to Notion or Obsidian via MCP.
+
+**Steps:**
+
+1. **Check for active course** — Read courses/ directory, require exactly one active course
+   - If no course: "No active course found. Start one with professor:new-topic first."
+
+2. **Read course files** — Load all exportable content:
+   - COURSE.md (syllabus + progress)
+   - NOTES.md (user notes, if exists)
+   - CAPSTONE.md (project brief)
+   - LECTURE.md (current section)
+
+3. **Use AskUserQuestion** to prompt:
+   > "Where would you like to export your course?"
+   > Options: "Notion" / "Obsidian" / "Cancel"
+
+4. **MCP availability detection** (applies to both Notion and Obsidian):
+   - Attempt to call a simple MCP tool (e.g., notion_get_me for Notion, obsidian_list_vaults for Obsidian)
+   - If tool call fails with "server not found" or similar → MCP unavailable
+   - IF unavailable → show destination-specific setup instructions with link to README
+
+5. **If Notion selected**: Proceed to Notion export (Plan 05-02 handles implementation)
+
+   **Notion Export Implementation:**
+
+   a) **Create parent page** with course properties:
+      - Title: "Course: {Topic Name}"
+      - Properties:
+        - Level (select): user's level from COURSE.md
+        - Progress (select): "X/Y sections complete" based on progress
+        - Started (date): course start date from COURSE.md
+        - Capstone link (url): link to capstone child page (created in step c)
+
+   b) **Transform and create child pages**:
+   
+      - **Lecture pages** (one per completed/in-progress section):
+        - Title: "Section N: {Section Title}"
+        - Content: Concept explanation, exercise, resources
+        - Code handling: If code blocks exist, add link reference instead: "Code for this section available at: /exercises/{section-file}.{ext}"
+        - Use notion_create_page for each lecture with parent_id set to parent page ID
+      
+      - **Notes page**:
+        - Title: "Notes"
+        - Content: All content from NOTES.md (if exists)
+        - Use notion_create_page with parent_id
+      
+      - **Capstone page**:
+        - Title: "Capstone Project"
+        - Content: Full CAPSTONE.md content
+        - Use notion_create_page with parent_id
+      
+      - **Summary page**:
+        - Title: "Learning Summary"
+        - Content: Generate retrospective from COURSE.md progress log:
+          - List completed sections with dates
+          - Key concepts learned
+          - Capstone project description
+          - Recommendations for next steps
+        - Use notion_create_page with parent_id
+
+   c) **MCP tool calls**:
+      - First: notion_create_page for parent page
+      - Then: notion_create_page for each child page (with parent_id set to parent page's id from response)
+
+   d) **Success message**:
+      > "Export complete! Your course is now in Notion:
+      > - Parent page: {link}
+      > - {N} lecture pages
+      > - Notes, Capstone, and Summary pages
+      > 
+      > Run professor:export again anytime to re-export."
+
+   e) **Error handling**:
+      - If any MCP call fails → show error and offer retry
+      - Wrap in try/catch with clear error messages
+
+6. **If Obsidian selected**: Proceed to Obsidian export implementation below
+
+   **Obsidian Export Implementation:**
+
+   a) **Vault path management**:
+      - Check for existing vault path in `.export-config.json` (create if doesn't exist)
+      - If not set → Use AskUserQuestion:
+        > "What's the path to your Obsidian vault?"
+        > Provide absolute path (e.g., /Users/name/Documents/Obsidian/MyVault)
+      - Save to `.export-config.json` for future exports
+      - Validate path exists before proceeding
+
+   b) **Create folder structure**:
+      - Path: `/{vault}/{course-slug}/`
+      - Use obsidian MCP tool to create folder if available, otherwise use Bash mkdir
+
+   c) **Create Markdown files** with YAML frontmatter:
+
+      - **course.md** (course overview):
+        ```markdown
+        ---
+        title: "Course: {Topic Name}"
+        date: {export-date}
+        tags: [course, {topic-slug}, learning]
+        course-slug: {topic-slug}
+        status: {in-progress|completed}
+        level: {level}
+        progress: "{X/Y sections complete}"
+        ---
+        
+        # Course: {Topic Name}
+        
+        ## Learning Objectives
+        ...
+        
+        ## Syllabus & Progress
+        | # | Section | Status |
+        |---|---------|--------|
+        ...
+        ```
+
+      - **lecture-1.md, lecture-2.md, ...** (one per section):
+        ```markdown
+        ---
+        title: "Section N: {Section Title}"
+        date: {date}
+        tags: [lecture, {topic-slug}]
+        course-slug: {topic-slug}
+        ---
+        
+        # Section N: {Section Title}
+        
+        ## Concept
+        ...
+        
+        ## Exercise
+        ...
+        ```
+
+      - **notes.md**:
+        ```markdown
+        ---
+        title: "Notes: {Topic Name}"
+        date: {export-date}
+        tags: [notes, {topic-slug}]
+        course-slug: {topic-slug}
+        ---
+        
+        # Notes: {Topic Name}
+        
+        {All content from NOTES.md}
+        ```
+
+      - **capstone.md**:
+        ```markdown
+        ---
+        title: "Capstone: {Project Name}"
+        date: {export-date}
+        tags: [capstone, {topic-slug}]
+        course-slug: {topic-slug}
+        ---
+        
+        # Capstone Project: {Project Name}
+        
+        {Full CAPSTONE.md content}
+        ```
+
+      - **summary.md**:
+        ```markdown
+        ---
+        title: "Learning Summary: {Topic Name}"
+        date: {export-date}
+        tags: [summary, {topic-slug}]
+        course-slug: {topic-slug}
+        ---
+        
+        # Learning Summary: {Topic Name}
+        
+        ## Completed Sections
+        - Section 1: {Title} ({date})
+        ...
+        
+        ## Key Concepts Learned
+        - {concept 1}
+        - {concept 2}
+        
+        ## Capstone Project
+        {capstone description}
+        
+        ## Recommendations
+        - {recommendation 1}
+        ```
+
+   d) **MCP tool calls**:
+      - Use obsidian MCP tools if available (obsidian_create_folder, obsidian_create_note)
+      - If MCP unavailable, use Write tool to create files directly in vault path
+      - Validate vault path exists before file creation
+
+   e) **Success message**:
+      > "Export complete! Your course is now in Obsidian at:
+      > - {vault}/{course-slug}/course.md
+      > - {lecture files}
+      > - notes.md, capstone.md, summary.md
+      > 
+      > Run professor:export again anytime to re-export."
+
+   f) **Error handling**:
+      - If vault path invalid → prompt for correct path
+      - If file creation fails → show error and offer retry
+      - Wrap in try/catch
+
+7. **If Cancel selected**:
+   > "Export cancelled. Your course remains here. Run professor:export again anytime."
+
+---
+
+### `professor:archive`
+
+Archive completed course with full learning context while leaving code exercises behind.
+
+**Steps:**
+
+1. **Check for active course** — Read courses/ directory, require exactly one active course
+   - If no course: "No active course found. There's nothing to archive."
+
+2. **Read source files** — Load content to be archived:
+   - COURSE.md (syllabus + progress)
+   - NOTES.md (if exists)
+   - CAPSTONE.md (project brief)
+
+3. **Check for incomplete sections** — Parse COURSE.md for ⬜ status
+   - Count incomplete sections
+   - If incomplete sections exist: Use AskUserQuestion:
+     > "You have X incomplete sections. Archive anyway?"
+     > Options: "Yes, archive" / "No, go back"
+   - If user chooses "No, go back": Exit gracefully
+
+4. **Generate SUMMARY.md** — Create comprehensive retrospective with format:
+   ```markdown
+   # Learning Summary: {Topic Name}
+
+   ## Course Overview
+   - Level: {level}
+   - Started: {start_date}
+   - Archived: {current_date}
+
+   ## Sections Completed
+   - Section 1: {Title} ({date})
+   ...
+
+   ## Key Concepts Learned
+   {extracted from progress log}
+
+   ## Notes
+   {summary of NOTES.md content or "No notes recorded"}
+
+   ## Capstone Project
+   {capstone title} - {completed/not completed}
+   ```
+
+5. **Determine archive path**:
+   - Primary: `.course_archive/{slug}/`
+   - If exists: `.course_archive/{slug}-{YYYY-MM-DD}/`
+
+6. **Create archive directory** — Use Bash mkdir -p
+
+7. **Write archive files**:
+   - COURSE.md
+   - NOTES.md (if exists)
+   - CAPSTONE.md
+   - SUMMARY.md
+
+8. **Delete original course folder** — Use Bash rm -rf courses/{slug}/
+   - DO NOT delete exercises/ subfolder if it exists in the original location
+   - The exercises/ folder should remain at courses/{slug}/exercises/ after the course folder is deleted
+
+9. **Success message**:
+   > "Course archived! Your learning journey is saved to:
+   > - .course_archive/{slug}/
+   > 
+   > The exercises/ folder remains in place at courses/{slug}/exercises/.
+   > 
+   > Start a new course anytime with professor:new-topic."
+
+**Rules:**
+- Never delete the exercises/ folder
+- Never include LECTURE.md in archive
+- Always auto-version if archive already exists
+- Generate SUMMARY.md from existing content
 
 ---
 
