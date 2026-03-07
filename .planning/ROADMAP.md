@@ -159,4 +159,14 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 07-01-PLAN.md — Implement git worktree-based course structure and worktree management
+- [x] 07-01-PLAN.md — Implement git worktree-based course structure and worktree management
+
+### Phase 8: when initial user start lecture so create files include excercise instead of make user create new one (exclude coding)
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 7
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 8 to break down)
