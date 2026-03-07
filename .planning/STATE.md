@@ -30,6 +30,7 @@ See: .planning/PROJECT.md
 
 ### Roadmap Evolution
 - v1.0 completed: Plugin scaffold, all 14 commands, notes, export, archive, CLI
+- Phase 8 added: when initial user start lecture so create files include excercise instead of make user create new one (exclude coding)
 
 ### v1.1 Goals
 - Git worktree-based courses (each tech = separate worktree)
