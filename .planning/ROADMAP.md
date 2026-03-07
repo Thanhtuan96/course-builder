@@ -21,6 +21,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: PreCompact Hook** - Token warning and auto-save session state before context compression (completed 2026-03-06)
 - [x] **Phase 5: Export Feature** - Notion and Obsidian export via MCP with user destination choice (completed 2026-03-06)
 - [x] **Phase 6: Course Archive and Context Management** - Archive completed courses preserving learning context (completed 2026-03-07)
+- [x] **Phase 7: Git Worktree Courses** - Each technology learned = separate git worktree (completed 2026-03-07)
 - [x] **Phase 8: Auto-create Exercise Files** - Automatically create exercise files when professor:next is called (completed 2026-03-08)
 - [ ] **Phase 9: Backend Foundation** - Express server with course API, chat API (SSE), WebSocket server
 - [ ] **Phase 10: Client Components** - React split-pane UI with LecturePanel, ChatPanel, command pills
@@ -118,7 +119,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 1b → 2 → 3 → 4 → 5 → 6 → 7
+Phases execute in numeric order: 1 → 1b → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -130,7 +131,10 @@ Phases execute in numeric order: 1 → 1b → 2 → 3 → 4 → 5 → 6 → 7
 | 5. Export Feature | 3/3 | Complete    | 2026-03-06 |
 | 6. Course Archive and Context | 1/1 | Complete    | 2026-03-07 |
 | 7. Git Worktree Courses | 1/1 | Complete    | 2026-03-07 |
-| 8. Auto-create Exercise Files | 1/1 | Complete    | 2026-03-07 |
+| 8. Auto-create Exercise Files | 1/1 | Complete    | 2026-03-08 |
+| 9. Backend Foundation | 0/1 | Not started | - |
+| 10. Client Components | 0/1 | Not started | - |
+| 11. Integration | 0/1 | Not started | - |
 
 ### Phase 6: Course Archive and Context Management
 
@@ -246,3 +250,36 @@ Plans:
 
 Plans:
 - [ ] 11-01-PLAN.md — Implement CLI web command, production build, and static file serving
+
+---
+
+## v2.0 Coverage
+
+All 22 v2.0 requirements mapped to phases:
+
+| Requirement | Phase |
+|-------------|-------|
+| WEB-01 | Phase 9 |
+| WEB-02 | Phase 9 |
+| WEB-03 | Phase 9 |
+| WEB-04 | Phase 9 |
+| WEB-05 | Phase 9 |
+| WEB-06 | Phase 9 |
+| WEB-07 | Phase 9 |
+| WEB-08 | Phase 9 |
+| WEB-09 | Phase 10 |
+| WEB-10 | Phase 10 |
+| WEB-11 | Phase 10 |
+| WEB-12 | Phase 10 |
+| WEB-13 | Phase 10 |
+| WEB-14 | Phase 10 |
+| WEB-15 | Phase 10 |
+| WEB-16 | Phase 10 |
+| WEB-22 | Phase 10 |
+| WEB-17 | Phase 11 |
+| WEB-18 | Phase 11 |
+| WEB-19 | Phase 11 |
+| WEB-20 | Phase 11 |
+| WEB-21 | Phase 11 |
+
+**Coverage:** 22/22 requirements mapped ✓
