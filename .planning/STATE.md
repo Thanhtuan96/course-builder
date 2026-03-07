@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-current_phase: 05-export-feature (Phase 5)
-current_plan: 05-03
-status: completed
-last_updated: "2026-03-07T03:44:46.527Z"
+milestone: v1.1
+milestone_name: Git Worktree Courses
+current_phase: Not started
+current_plan: —
+status: defining_requirements
+last_updated: "2026-03-07T12:00:00.000Z"
 progress:
-  total_phases: 7
-  completed_phases: 6
-  total_plans: 9
-  completed_plans: 13
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Session State
@@ -21,18 +21,22 @@ See: .planning/PROJECT.md
 
 ## Position
 
-**Milestone:** v1.0 milestone
-**Current phase:** 05-export-feature (Phase 5)
-**Current plan:** 05-03
-**Status:** Milestone complete
+**Milestone:** v1.1 Git Worktree Courses
+**Current phase:** Not started (defining requirements)
+**Current plan:** —
+**Status:** Defining requirements
 
 ## Accumulated Context
 
 ### Roadmap Evolution
-- Phase 6 added: Course Archive and Context Management
+- v1.0 completed: Plugin scaffold, all 14 commands, notes, export, archive, CLI
+
+### v1.1 Goals
+- Git worktree-based courses (each tech = separate worktree)
+- Learning files alongside user's project code
+- Archive preserves learning context to .course_archive/
 
 ## Session Log
 
-- 2026-03-07: Executed 05-01 - Export feature foundation (professor:export command)
-- 2026-03-07: Executed 05-02 - Notion export implementation (parent/child page hierarchy)
-- 2026-03-07: Executed 05-03 - Obsidian export implementation (vault path, Markdown files)
+- 2026-03-07: v1.0 milestone complete - all features shipped
+- 2026-03-07: Started v1.1 - Git Worktree Courses

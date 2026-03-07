@@ -4,6 +4,8 @@
 
 Five phases transform the existing professor-skill-v3 into a full Claude Code plugin. The scaffold comes first to establish the target structure, then the professor agent is packaged with all its course commands, then personal notes and the PreCompact session-save hook are layered on, and finally the Notion/Obsidian export pipeline completes the knowledge-retention story.
 
+v1.1 adds Git Worktree-based courses - each technology learned gets its own git worktree, with learning files alongside the user's project code.
+
 ## Phases
 
 **Phase Numbering:**
@@ -18,6 +20,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Notes Feature** - Add NOTES.md per-course file and the professor:note command (completed 2026-03-06)
 - [x] **Phase 4: PreCompact Hook** - Token warning and auto-save session state before context compression (completed 2026-03-06)
 - [x] **Phase 5: Export Feature** - Notion and Obsidian export via MCP with user destination choice (completed 2026-03-06)
+- [x] **Phase 6: Course Archive and Context Management** - Archive completed courses preserving learning context (completed 2026-03-07)
+- [ ] **Phase 7: Git Worktree Courses** - Each technology learned = separate git worktree
 
 ## Phase Details
 
@@ -111,7 +115,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 1b → 2 → 3 → 4 → 5 → 6
+Phases execute in numeric order: 1 → 1b → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -122,6 +126,7 @@ Phases execute in numeric order: 1 → 1b → 2 → 3 → 4 → 5 → 6
 | 4. PreCompact Hook | 1/1 | Complete    | 2026-03-06 |
 | 5. Export Feature | 3/3 | Complete    | 2026-03-06 |
 | 6. Course Archive and Context | 1/1 | Complete    | 2026-03-07 |
+| 7. Git Worktree Courses | 0/1 | Pending     | — |
 
 ### Phase 6: Course Archive and Context Management
 
@@ -138,3 +143,20 @@ Phases execute in numeric order: 1 → 1b → 2 → 3 → 4 → 5 → 6
 
 Plans:
 - [x] 06-01-PLAN.md — Implement professor:archive command with course archive and exercises handling
+
+### Phase 7: Git Worktree Courses
+
+**Goal:** Each technology learned = one git worktree. User's code lives in the worktree alongside learning files. When archived, learning context is preserved to `.course_archive/` before worktree is cleaned up.
+**Depends on:** Phase 6
+**Requirements**: WORK-01, WORK-02, WORK-03, WORK-04, ARCH-01, ARCH-02, ARCH-03, ARCH-04, ARCH-05, FILE-01, FILE-02, FILE-03, FILE-04, CMD-15, CMD-16, CMD-17
+**Success Criteria** (what must be TRUE):
+  1. User can create a new course as a git worktree at `learning/{tech-slug}/`
+  2. Learning files (COURSE.md, NOTES.md, CAPSTONE.md) live in worktree root alongside project code
+  3. User can list all existing learning worktrees
+  4. User can switch between learning worktrees
+  5. Archiving copies learning files to `.course_archive/{slug}/` before removing worktree
+  6. User's code remains in worktree (not deleted with the worktree)
+**Plans**: 1 plan
+
+Plans:
+- [ ] 07-01-PLAN.md — Implement git worktree-based course structure and worktree management
