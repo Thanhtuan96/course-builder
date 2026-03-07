@@ -32,6 +32,7 @@ This will auto and set up the plugin-detect your agent. Or specify manually:
 
 ```bash
 npx course-professor setup claude   # Claude Code
+npx course-professor setup cursor   # Cursor
 npx course-professor setup opencode # OpenCode
 npx course-professor setup gemini   # Gemini CLI
 ```
