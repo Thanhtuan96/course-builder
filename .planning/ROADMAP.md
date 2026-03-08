@@ -6,7 +6,7 @@ Five phases transform the existing professor-skill-v3 into a full Claude Code pl
 
 v1.1 adds agent support (Cursor), agent specialization, research-enhanced hints, and MCP documentation.
 
-v2.0 adds Client Components (React UI) and Integration (CLI web command).
+v2.0 adds Local Web UI (React + Express), Retention Layer (spaced repetition, flashcards, streaks), and Sharing & Templates (course template export/import).
 
 ## Phases
 
@@ -29,11 +29,15 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 10: Agent Specialization** - Improve and separate agents into specific fields (math, marketing, sales, coaching, bookkeeper, researcher)
 - [ ] **Phase 11: Research-Enhanced Hints** - Give hints with keyword to googling or research + useful conferences
 - [ ] **Phase 12: MCP Documentation** - Document mcp.json for tools needed (notion, obsidian)
+- [ ] **Phase 13: Client Components** - React split-pane UI with LecturePanel, ChatPanel, command pills (v2.0)
+- [ ] **Phase 14: Integration** - CLI web command, production build, static file serving (v2.0)
+- [ ] **Phase 15: Retention Layer** - SCHEDULE.md, professor:recall, professor:schedule, streak tracking, time tracking (v2.0)
+- [ ] **Phase 16: Sharing and Templates** - professor:template-export, professor:template-import, course sharing workflow (v2.0)
 
 ## Milestones
 
 **v1.1 (Current):** Phases 9-12 (in progress)
-**v2.0 (Pending):** Phase 13-14
+**v2.0 (Pending):** Phases 13-16 — Local Web UI, Retention Layer, Sharing & Templates
 
 ## Phase Details
 
@@ -131,7 +135,7 @@ Plans:
 
 **Execution Order:**
 v1.1: 9 → 10 → 11 → 12
-v2.0: 13 → 14
+v2.0: 13 → 14 → 15 → 16
 
 ### v1.1 Phases
 
@@ -157,6 +161,8 @@ v2.0: 13 → 14
 |-------|----------------|--------|
 | 13. Client Components | 0/1 | Not started |
 | 14. Integration | 0/1 | Not started |
+| 15. Retention Layer | 0/1 | Not started |
+| 16. Sharing and Templates | 0/1 | Not started |
 
 ### Phase 6: Course Archive and Context Management
 
@@ -228,14 +234,19 @@ Plans:
 
 **Depends on:** Phase 9
 
-**Requirements:** TBD
+**Requirements:** AGT-01
 
 **Success Criteria** (what must be TRUE):
 1. Each specialized agent has a clear focus area (e.g., math-agent, marketing-agent, researcher-agent)
 2. Agents can delegate to other agents when needed
 3. Agents have appropriate tools for their domain
 
-**Plans:** To be planned
+**Plans:** 3/3 plans
+
+Plans:
+- [ ] 10-01-PLAN.md — Create researcher agent and register in plugin.json
+- [ ] 10-02-PLAN.md — Add delegation from professor to researcher agent + CLI support
+- [ ] 10-03-PLAN.md — Create researcher agent templates
 
 ---
 
@@ -319,12 +330,55 @@ Plans:
 Plans:
 - [ ] 14-01-PLAN.md — Implement CLI web command, production build, and static file serving
 
+### Phase 15: Retention Layer
+
+**Goal:** Prevent learners from forgetting completed content through spaced repetition scheduling, interactive recall sessions, streak tracking, and time-per-section logging — all stored in plain Markdown with no external plugin dependencies.
+
+**Depends on:** Phase 14
+
+**Requirements:** RET-01, RET-02, RET-03, RET-04, RET-05
+
+**Success Criteria** (what must be TRUE):
+1. `courses/{slug}/SCHEDULE.md` is auto-created when `professor:done` completes a section, containing a spaced repetition queue and flashcard set for that section
+2. `professor:recall` runs an interactive recall session: shows due sections, asks 3 Socratic questions per section, user self-rates (clear/fuzzy/forgot), updates SCHEDULE.md with next scheduled date
+3. `professor:schedule` displays a read-only dashboard of overdue, due-today, and upcoming reviews
+4. Session start auto-checks SCHEDULE.md and displays recall count + streak if items are due
+5. Streak (days active) and time-per-section are tracked in COURSE.md and visible in `professor:progress`
+6. `professor:export` includes SCHEDULE.md data — flashcards exported as plain Q/A table to Notion; Markdown as-is to Obsidian
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 15 to break down)
+
+---
+
+### Phase 16: Sharing and Templates
+
+**Goal:** Enable course syllabus sharing via exportable template files and one-command template import, so instructors and community members can share learning paths without sharing personal progress or notes.
+
+**Depends on:** Phase 15
+
+**Requirements:** SHR-01, SHR-02, SHR-03
+
+**Success Criteria** (what must be TRUE):
+1. `professor:template-export` creates `courses/{slug}/TEMPLATE.md` containing only course structure (sections, objectives, capstone brief) — no personal data (notes, progress, answers, dates)
+2. `professor:template-import <path>` reads a TEMPLATE.md file and creates a new course with pre-built syllabus; user still runs `professor:next` to generate lectures
+3. Exported template is valid Markdown readable without any tool and importable by any Professor installation
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 16 to break down)
+
 ---
 
 ## v2.0 Coverage
 
 v2.0 phases:
-- Phase 13: Client Components
-- Phase 14: Integration
+- Phase 13: Client Components — React split-pane UI, markdown rendering, command pills
+- Phase 14: Integration — CLI web command, production build, static file serving
+- Phase 15: Retention Layer — SCHEDULE.md, professor:recall, streak, time tracking
+- Phase 16: Sharing and Templates — professor:template-export, professor:template-import
 
-**Coverage:** v2.0 includes Client Components (Phase 13) and Integration (Phase 14)
+**Coverage:** 4 phases delivering Local Web UI + Retention + Sharing
