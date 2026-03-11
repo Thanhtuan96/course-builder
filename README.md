@@ -166,9 +166,10 @@ Replace `your-obsidian-rest-api-key-here` with the API key from Step 1. Update `
 Run a local web interface for a richer learning experience:
 
 ```bash
-export ANTHROPIC_API_KEY=your-key
 npx course-professor web
 ```
+
+The CLI will auto-detect your agent and use its API key. If no key is found, it will prompt you to set one.
 
 Opens at `http://localhost:3000` with:
 - **Lecture panel** — current section rendered with syntax highlighting
