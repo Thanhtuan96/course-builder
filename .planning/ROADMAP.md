@@ -28,16 +28,17 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 9: Agent Support** - Add Cursor agent support (completed 2026-03-08)
 - [x] **Phase 10: Agent Specialization** - Improve and separate agents into specific fields (math, marketing, sales, coaching, bookkeeper, researcher) (completed 2026-03-11)
 - [x] **Phase 11: Research-Enhanced Hints** - Give hints with keyword to googling or research + useful conferences (completed 2026-03-11)
-- [ ] **Phase 12: MCP Documentation** - Document mcp.json for tools needed (notion, obsidian)
+- [x] **Phase 12: MCP Documentation** - Document mcp.json for tools needed (notion, obsidian) (verified in README.md)
 - [ ] **Phase 13: Client Components** - React split-pane UI with LecturePanel, ChatPanel, command pills (v2.0)
 - [ ] **Phase 14: Integration** - CLI web command, production build, static file serving (v2.0)
 - [ ] **Phase 15: Retention Layer** - SCHEDULE.md, professor:recall, professor:schedule, streak tracking, time tracking (v2.0)
 - [ ] **Phase 16: Sharing and Templates** - professor:template-export, professor:template-import, course sharing workflow (v2.0)
+- [ ] **Phase 17: Auto-generate Exercise Files** - Generate exercise files user can work on directly (exclude learning framework - only need instructions)
 
 ## Milestones
 
-**v1.1 (Current):** Phases 9-12 (in progress)
-**v2.0 (Pending):** Phases 13-16 — Local Web UI, Retention Layer, Sharing & Templates
+**v1.1 (Complete):** Phases 1-12 ✓
+**v2.0 (Next):** Phases 13-17 — Local Web UI, Retention Layer, Sharing & Templates, Auto-generate Exercise Files
 
 ## Phase Details
 
@@ -374,6 +375,16 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 16 to break down)
+
+### Phase 17: auto generate excercise files that user can work on directly (exclude learning framework- only need instructions)
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 16
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 17 to break down)
 
 ---
 
