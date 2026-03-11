@@ -26,7 +26,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 7: Git Worktree Courses** - Each technology learned = separate git worktree (completed 2026-03-07)
 - [x] **Phase 8: Auto-create Exercise Files** - Automatically create exercise files when professor:next is called (completed 2026-03-08)
 - [x] **Phase 9: Agent Support** - Add Cursor agent support (completed 2026-03-08)
-- [ ] **Phase 10: Agent Specialization** - Improve and separate agents into specific fields (math, marketing, sales, coaching, bookkeeper, researcher)
+- [x] **Phase 10: Agent Specialization** - Improve and separate agents into specific fields (math, marketing, sales, coaching, bookkeeper, researcher) (completed 2026-03-11)
 - [ ] **Phase 11: Research-Enhanced Hints** - Give hints with keyword to googling or research + useful conferences
 - [ ] **Phase 12: MCP Documentation** - Document mcp.json for tools needed (notion, obsidian)
 - [ ] **Phase 13: Client Components** - React split-pane UI with LecturePanel, ChatPanel, command pills (v2.0)
@@ -151,7 +151,7 @@ v2.0: 13 → 14 → 15 → 16
 | 7. Git Worktree Courses | 1/1 | Complete    | 2026-03-07 |
 | 8. Auto-create Exercise Files | 1/1 | Complete    | 2026-03-08 |
 | 9. Agent Support (Cursor) | 1/1 | Complete    | 2026-03-08 |
-| 10. Agent Specialization | 2/3 | In Progress | 2026-03-11 |
+| 10. Agent Specialization | 2/3 | Complete    | 2026-03-11 |
 | 11. Research-Enhanced Hints | 0/1 | Not started | - |
 | 12. MCP Documentation | 0/1 | Not started | - |
 
@@ -241,7 +241,7 @@ Plans:
 2. Agents can delegate to other agents when needed
 3. Agents have appropriate tools for their domain
 
-**Plans:** 2/3 plans executed
+**Plans:** 2/3 plans complete
 
 Plans:
 - [x] 10-01-PLAN.md — Create researcher agent and register in plugin.json
