@@ -27,7 +27,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 8: Auto-create Exercise Files** - Automatically create exercise files when professor:next is called (completed 2026-03-08)
 - [x] **Phase 9: Agent Support** - Add Cursor agent support (completed 2026-03-08)
 - [x] **Phase 10: Agent Specialization** - Improve and separate agents into specific fields (math, marketing, sales, coaching, bookkeeper, researcher) (completed 2026-03-11)
-- [ ] **Phase 11: Research-Enhanced Hints** - Give hints with keyword to googling or research + useful conferences
+- [x] **Phase 11: Research-Enhanced Hints** - Give hints with keyword to googling or research + useful conferences (completed 2026-03-11)
 - [ ] **Phase 12: MCP Documentation** - Document mcp.json for tools needed (notion, obsidian)
 - [ ] **Phase 13: Client Components** - React split-pane UI with LecturePanel, ChatPanel, command pills (v2.0)
 - [ ] **Phase 14: Integration** - CLI web command, production build, static file serving (v2.0)
@@ -151,8 +151,8 @@ v2.0: 13 → 14 → 15 → 16
 | 7. Git Worktree Courses | 1/1 | Complete    | 2026-03-07 |
 | 8. Auto-create Exercise Files | 1/1 | Complete    | 2026-03-08 |
 | 9. Agent Support (Cursor) | 1/1 | Complete    | 2026-03-08 |
-| 10. Agent Specialization | 2/3 | Complete    | 2026-03-11 |
-| 11. Research-Enhanced Hints | 0/1 | Not started | - |
+| 10. Agent Specialization | 3/3 | Complete    | 2026-03-11 |
+| 11. Research-Enhanced Hints | 1/1 | Complete    | 2026-03-11 |
 | 12. MCP Documentation | 0/1 | Not started | - |
 
 ### v2.0 Phases (Pending)
@@ -241,12 +241,12 @@ Plans:
 2. Agents can delegate to other agents when needed
 3. Agents have appropriate tools for their domain
 
-**Plans:** 2/3 plans complete
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 10-01-PLAN.md — Create researcher agent and register in plugin.json
 - [x] 10-02-PLAN.md — Add delegation from professor to researcher agent + CLI support
-- [ ] 10-03-PLAN.md — Create researcher agent templates
+- [x] 10-03-PLAN.md — Create researcher agent templates
 
 ---
 
@@ -262,8 +262,12 @@ Plans:
 1. Hints include relevant search keywords
 2. Hints suggest useful conferences, tutorials, or documentation
 3. Research suggestions are contextual to the current learning topic
+4. Static fallback available when live research unavailable
 
-**Plans:** To be planned
+**Plans:** 1/1 plans complete
+
+Plans:
+- [x] 11-01-PLAN.md — Enhance hint and stuck commands with research keywords
 
 ---
 
