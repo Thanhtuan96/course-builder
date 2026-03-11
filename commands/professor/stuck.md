@@ -1,6 +1,6 @@
 ---
 name: professor:stuck
-description: "Get structured guidance when genuinely blocked"
+description: "Get structured guidance when genuinely stuck"
 ---
 
 **Before helping, check for Active exercise:**
@@ -24,5 +24,48 @@ Based on their response:
 - Guide them to the next smallest step they can take independently
 
 Do NOT write the solution.
+
+---
+
+### Optional Research Enhancement
+
+After providing the structured breakdown, you may include optional research suggestions **if** the user would benefit from exploring additional resources:
+
+1. **Assess if research would help:**
+   - Concept gap → research might help (user needs to understand underlying principle)
+   - Syntax issue → research probably not needed (breakdown should suffice)
+   - Logic error → depends on complexity
+
+2. **If research would help, offer it:**
+   
+   Try live research first: Delegate to the researcher agent for topic-specific keywords and resources.
+   
+   Or use static fallback: Present relevant categories from `resources/static-research.md` as starting points.
+
+3. **Research format (optional):**
+
+```
+---
+
+## 🔍 Dig Deeper (Optional)
+
+If you'd like to understand [concept] better:
+
+*Search keywords:*
+- "[concept] explained"
+- "[concept] tutorial"
+
+*Helpful resources:*
+- [Docs link] — official reference
+- [Tutorial link] — for hands-on learning
+
+*This is optional — the breakdown above should give you enough to try the next step!*
+```
+
+4. **Keep it optional:** The user may just need the breakdown, not a research path. Present research as "if you'd like to dig deeper" not "you must research this."
+
+5. **Socratic tone:** Frame research as "here are some directions to explore" not "go figure it out yourself."
+
+---
 
 $ARGUMENTS
