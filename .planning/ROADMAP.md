@@ -38,7 +38,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Milestones
 
 **v1.1 (Complete):** Phases 1-12 ✓
-**v2.0 (Next):** Phases 13-17 — Local Web UI, Retention Layer, Sharing & Templates, Auto-generate Exercise Files
+**v2.0 (In Progress):** Phases 13-17 — Local Web UI, Retention Layer, Sharing & Templates, Auto-generate Exercise Files
 
 ## Phase Details
 
@@ -131,8 +131,8 @@ Plans:
 
 ## Progress
 
-**Current Milestone:** v1.1 (in progress)
-**v2.0:** Pending
+**Current Milestone:** v2.0 (in progress)
+**v2.0:** 1 of 17 plans complete
 
 **Execution Order:**
 v1.1: 9 → 10 → 11 → 12
@@ -156,14 +156,14 @@ v2.0: 13 → 14 → 15 → 16
 | 11. Research-Enhanced Hints | 1/1 | Complete    | 2026-03-11 |
 | 12. MCP Documentation | 0/1 | Not started | - |
 
-### v2.0 Phases (Pending)
+### v2.0 Phases
 
-| Phase | Plans Complete | Status |
-|-------|----------------|--------|
-| 13. Client Components | 0/2 | Not started |
-| 14. Integration | 0/1 | Not started |
-| 15. Retention Layer | 0/1 | Not started |
-| 16. Sharing and Templates | 0/1 | Not started |
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 13. Client Components | 1/2 | In Progress | 2026-03-11 |
+| 14. Integration | 0/1 | Not started | - |
+| 15. Retention Layer | 0/1 | Not started | - |
+| 16. Sharing and Templates | 0/1 | Not started | - |
 
 ### Phase 6: Course Archive and Context Management
 

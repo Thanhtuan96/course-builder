@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
+milestone: v2.0
 milestone_name: Phases
-current_phase: 11-research-enhanced-hints
-current_plan: 01 (Research-Enhanced Hints)
-status: planning
-last_updated: "2026-03-11T14:28:00.160Z"
+current_phase: 13-client-components
+current_plan: 01 (Client Infrastructure)
+status: executing
+last_updated: "2026-03-11T15:43:21.000Z"
 progress:
   total_phases: 17
   completed_phases: 7
-  total_plans: 15
-  completed_plans: 17
+  total_plans: 18
+  completed_plans: 1
 ---
 
 # Session State
@@ -21,24 +21,25 @@ See: .planning/PROJECT.md
 
 ## Position
 
-**Milestone:** v1.1 Agent Specialization
-**Current phase:** 11-research-enhanced-hints
-**Current plan:** 01 (Research-Enhanced Hints)
-**Status:** Ready to plan
+**Milestone:** v2.0 Web UI
+**Current phase:** 13-client-components
+**Current plan:** 01 (Client Infrastructure)
+**Status:** Executing
 
 ## Accumulated Context
 
 ### Roadmap Evolution
 - v1.0 completed: Plugin scaffold, all 14 commands, notes, export, archive, CLI
-- v1.1 completed: Git worktree courses, auto-create exercise files
-- Phase 10: Agent specialization - professor delegates to researcher
-- Phase 11: Research-enhanced hints - keywords for googling/research
-- Phase 17: Auto generate exercise files that user can work on directly
+- v1.1 completed: Git worktree courses, auto-create exercise files, agent specialization
+- Phase 12: Agent templates and CLI setup for multiple agents
+- Phase 13: React client components with Vite
+- Phase 17: Auto generate exercise files
 
-### v1.1 Goals
-- Separate agents for specific tasks (researcher)
-- Professor can delegate research to researcher agent
-- CLI supports multiple agent setups
+### v2.0 Goals
+- Local Web UI with React frontend
+- Split-pane layout (lecture left, chat right)
+- Streaming chat responses via SSE
+- Markdown rendering with syntax highlighting
 
 ### Pending Todos
 - 4 todos (see .planning/todos/pending/)
@@ -55,3 +56,5 @@ See: .planning/PROJECT.md
 - 2026-03-11: Completed plan 10-03 - Researcher agent template
 - 2026-03-11: Completed plan 11-01 - Research-enhanced hints with keywords
 - 2026-03-11: Added Phase 17 - Auto generate exercise files
+- 2026-03-11: Started v2.0 - Local Web UI (Phase 13)
+- 2026-03-11: Completed plan 13-01 - Client components infrastructure
