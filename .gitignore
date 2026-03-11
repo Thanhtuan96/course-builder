@@ -13,3 +13,5 @@ analysis/
 
 # Export configuration (user-specific vault path)
 .export-config.json
+
+/docs/plans
