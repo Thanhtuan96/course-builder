@@ -4,11 +4,11 @@ milestone: v2.1
 milestone_name: Public Launch
 current_phase: not-started
 current_plan: —
-status: defining-requirements
-last_updated: "2026-03-13T00:00:00.000Z"
+status: roadmap-ready
+last_updated: "2026-03-14T00:00:00.000Z"
 progress:
-  total_phases: 3
-  completed_phases: 0
+  total_phases: 20
+  completed_phases: 14
   total_plans: 0
   completed_plans: 0
 ---
@@ -24,9 +24,9 @@ See: .planning/PROJECT.md
 ## Position
 
 **Milestone:** v2.1 Public Launch
-**Current phase:** Not started (defining requirements)
+**Current phase:** Not started (roadmap defined, ready for planning)
 **Current plan:** —
-**Status:** Defining requirements
+**Status:** Roadmap ready — run `/gsd:plan-phase 18` to begin
 
 ## Accumulated Context
 
@@ -34,12 +34,17 @@ See: .planning/PROJECT.md
 - v1.0 completed: Plugin scaffold, all 14 commands, notes, export, archive, CLI
 - v1.1 completed: Git worktree courses, auto-create exercise files, agent specialization
 - v2.0 in progress: Phase 13 (React client) and Phase 14 (Integration) done; phases 15-17 still pending
-- v2.1 started: Public Launch — cloud deploy, auth, OSS SKILL registry (phases 18-20)
+- v2.1 roadmap defined: Phases 18-20 — cloud deploy, auth, OSS SKILL registry
+
+### v2.1 Phase Summary
+- **Phase 18: Cloud Deployment** — Vercel deploy, custom domain, env var management (DEPL-01, DEPL-02, DEPL-03)
+- **Phase 19: Authentication** — Email/password signup, GitHub OAuth, persistent sessions (AUTH-01, AUTH-02, AUTH-03)
+- **Phase 20: OSS SKILL Registry** — GitHub-backed registry, webhook sync, CLI install command (REG-01, REG-02, REG-03)
 
 ### v2.1 Goals
-- Cloud deployment (Vercel/Railway) with public URL and custom domain
-- Email + GitHub OAuth user authentication
-- `professor-skills/` GitHub org as OSS SKILL registry
+- Cloud deployment (Vercel) with public URL and custom domain
+- Email + GitHub OAuth user authentication via lightweight auth library (e.g. better-auth, Lucia, or Clerk)
+- `professor-skills/` GitHub org as OSS SKILL registry with webhook sync
 - `npx course-professor install <skill-name>` CLI command
 
 ### Platform Roadmap Context
@@ -69,3 +74,4 @@ See: .planning/PROJECT.md
 - 2026-03-13: Completed plan 14-01 - Integration (Express server, build, production mode)
 - 2026-03-13: Started v2.1 - Public Launch milestone
 - 2026-03-13: Defined v2.1 requirements (DEPL-01-03, AUTH-01-03, REG-01-03)
+- 2026-03-14: Created v2.1 roadmap — phases 18, 19, 20 added to ROADMAP.md

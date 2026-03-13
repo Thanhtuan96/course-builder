@@ -1,7 +1,7 @@
 # Requirements: Course Learning Plugin
 
 **Defined:** 2026-03-05
-**Updated:** 2026-03-08
+**Updated:** 2026-03-14
 **Core Value:** The learner builds real understanding by doing — not by reading Claude's code.
 
 ## v1.0 Requirements
@@ -246,7 +246,6 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WEB-20 | Phase 11 | Pending |
 | WEB-21 | Phase 11 | Pending |
 | WEB-22 | Phase 10 | Complete |
-
 | DEPL-01 | Phase 18 | Pending |
 | DEPL-02 | Phase 18 | Pending |
 | DEPL-03 | Phase 18 | Pending |
@@ -267,4 +266,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-05*
-*Last updated: 2026-03-13 after v2.1 milestone started*
+*Last updated: 2026-03-14 after v2.1 roadmap phases 18-20 created*

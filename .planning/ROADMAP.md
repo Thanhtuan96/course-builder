@@ -8,6 +8,8 @@ v1.1 adds agent support (Cursor), agent specialization, research-enhanced hints,
 
 v2.0 adds Local Web UI (React + Express), Retention Layer (spaced repetition, flashcards, streaks), and Sharing & Templates (course template export/import).
 
+v2.1 adds cloud deployment (Vercel), email + GitHub OAuth authentication, and an open SKILL registry backed by the `professor-skills/` GitHub org.
+
 ## Phases
 
 **Phase Numbering:**
@@ -34,11 +36,15 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 15: Retention Layer** - SCHEDULE.md, professor:recall, professor:schedule, streak tracking, time tracking (v2.0)
 - [ ] **Phase 16: Sharing and Templates** - professor:template-export, professor:template-import, course sharing workflow (v2.0)
 - [ ] **Phase 17: Auto-generate Exercise Files** - Generate exercise files user can work on directly (exclude learning framework - only need instructions)
+- [ ] **Phase 18: Cloud Deployment** - Deploy to Vercel with public URL, custom domain, and production env var management (v2.1)
+- [ ] **Phase 19: Authentication** - Email + password signup, GitHub OAuth login, persistent sessions (v2.1)
+- [ ] **Phase 20: OSS SKILL Registry** - GitHub-backed community registry, webhook sync, CLI install command (v2.1)
 
 ## Milestones
 
 **v1.1 (Complete):** Phases 1-12 ✓
 **v2.0 (In Progress):** Phases 13-17 — Local Web UI, Retention Layer, Sharing & Templates, Auto-generate Exercise Files
+**v2.1 (Planned):** Phases 18-20 — Cloud Deployment, Authentication, OSS SKILL Registry
 
 ## Phase Details
 
@@ -137,6 +143,7 @@ Plans:
 **Execution Order:**
 v1.1: 9 → 10 → 11 → 12
 v2.0: 13 → 14 → 15 → 16
+v2.1: 18 → 19 → 20
 
 ### v1.1 Phases
 
@@ -164,6 +171,14 @@ v2.0: 13 → 14 → 15 → 16
 | 14. Integration | 1/1 | Complete    | 2026-03-13 |
 | 15. Retention Layer | 0/1 | Not started | - |
 | 16. Sharing and Templates | 0/1 | Not started | - |
+
+### v2.1 Phases
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 18. Cloud Deployment | 0/TBD | Not started | - |
+| 19. Authentication | 0/TBD | Not started | - |
+| 20. OSS SKILL Registry | 0/TBD | Not started | - |
 
 ### Phase 6: Course Archive and Context Management
 
@@ -389,6 +404,66 @@ Plans:
 
 ---
 
+### Phase 18: Cloud Deployment
+
+**Goal:** The platform runs at a stable public URL with production-safe configuration — no local machine required to access the app.
+
+**Depends on:** Phase 14 (production build must exist before deploying)
+**Requirements:** DEPL-01, DEPL-02, DEPL-03
+
+**Success Criteria** (what must be TRUE):
+1. Visiting the public Vercel URL loads the web UI without error from any network
+2. A custom domain (e.g. `professor.yourdomain.com`) resolves to the deployed platform
+3. Rotating or adding an environment variable (API key, secret) in the Vercel dashboard takes effect on the next request without any code change or redeployment
+4. A new deployment triggered by a `git push` to main completes successfully and serves the updated app
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 18 to break down)
+
+---
+
+### Phase 19: Authentication
+
+**Goal:** Users can create accounts and stay signed in — via email/password or GitHub — with sessions that survive browser restarts.
+
+**Depends on:** Phase 18 (OAuth callbacks require a public URL; session cookies require a stable domain)
+**Requirements:** AUTH-01, AUTH-02, AUTH-03
+
+**Success Criteria** (what must be TRUE):
+1. A new visitor can sign up with email and password and land on the app as an authenticated user
+2. An existing user can click "Continue with GitHub" and complete OAuth login without entering a password
+3. A logged-in user who closes the browser tab and returns later is still authenticated without being asked to log in again
+4. An unauthenticated user who navigates to a protected route is redirected to the login page, then returned to their original destination after login
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 19 to break down)
+
+---
+
+### Phase 20: OSS SKILL Registry
+
+**Goal:** Community contributors can publish SKILLs to a shared GitHub registry, the platform index stays current automatically, and any user can install a community SKILL with one CLI command.
+
+**Depends on:** Phase 18 (webhook endpoint requires a public URL; CLI install fetches from the registry index)
+**Requirements:** REG-01, REG-02, REG-03
+
+**Success Criteria** (what must be TRUE):
+1. A contributor can open a PR to the `professor-skills/` GitHub org repository, and after merge the SKILL appears in the platform's registry index
+2. When a push is made to `professor-skills/`, the platform index updates automatically via GitHub webhook — no manual sync step required
+3. A user can run `npx course-professor install <skill-name>` and have the SKILL files downloaded and placed correctly without any manual file copying
+4. The CLI `install` command prints a clear error if the skill name does not exist in the registry
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 20 to break down)
+
+---
+
 ## v2.0 Coverage
 
 v2.0 phases:
@@ -398,3 +473,13 @@ v2.0 phases:
 - Phase 16: Sharing and Templates — professor:template-export, professor:template-import
 
 **Coverage:** 4 phases delivering Local Web UI + Retention + Sharing
+
+## v2.1 Coverage
+
+v2.1 phases:
+- Phase 18: Cloud Deployment — Vercel deploy, custom domain, env var management
+- Phase 19: Authentication — Email/password signup, GitHub OAuth, persistent sessions
+- Phase 20: OSS SKILL Registry — GitHub-backed registry, webhook sync, CLI install command
+
+**Requirements mapped:** DEPL-01, DEPL-02, DEPL-03, AUTH-01, AUTH-02, AUTH-03, REG-01, REG-02, REG-03
+**Coverage:** 9/9 v2.1 requirements mapped ✓
