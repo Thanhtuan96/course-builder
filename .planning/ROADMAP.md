@@ -30,7 +30,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 11: Research-Enhanced Hints** - Give hints with keyword to googling or research + useful conferences (completed 2026-03-11)
 - [x] **Phase 12: MCP Documentation** - Document mcp.json for tools needed (notion, obsidian) (verified in README.md)
 - [x] **Phase 13: Client Components** - React split-pane UI with LecturePanel, ChatPanel, command pills (v2.0)
-- [ ] **Phase 14: Integration** - CLI web command, production build, static file serving (v2.0)
+- [x] **Phase 14: Integration** - CLI web command, production build, static file serving (v2.0) (completed 2026-03-13)
 - [ ] **Phase 15: Retention Layer** - SCHEDULE.md, professor:recall, professor:schedule, streak tracking, time tracking (v2.0)
 - [ ] **Phase 16: Sharing and Templates** - professor:template-export, professor:template-import, course sharing workflow (v2.0)
 - [ ] **Phase 17: Auto-generate Exercise Files** - Generate exercise files user can work on directly (exclude learning framework - only need instructions)
@@ -161,7 +161,7 @@ v2.0: 13 → 14 → 15 → 16
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 13. Client Components | 2/2 | Complete   | 2026-03-11 |
-| 14. Integration | 1/1 | Complete   | 2026-03-13 |
+| 14. Integration | 1/1 | Complete    | 2026-03-13 |
 | 15. Retention Layer | 0/1 | Not started | - |
 | 16. Sharing and Templates | 0/1 | Not started | - |
 
