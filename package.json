@@ -7,6 +7,9 @@
     "course-professor": "./bin/cli.js",
     "professor": "./bin/cli.js"
   },
+  "scripts": {
+    "build": "cd web/client && npm run build"
+  },
   "files": [
     "bin/",
     "templates/",
