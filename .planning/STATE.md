@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Phases
-current_phase: 14-integration
-current_plan: 01 (Integration)
-status: planning
-last_updated: "2026-03-13T13:55:46.105Z"
+milestone: v2.1
+milestone_name: Public Launch
+current_phase: not-started
+current_plan: —
+status: defining-requirements
+last_updated: "2026-03-13T00:00:00.000Z"
 progress:
-  total_phases: 19
-  completed_phases: 10
-  total_plans: 19
-  completed_plans: 21
+  total_phases: 3
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Session State
@@ -18,29 +18,35 @@ progress:
 ## Project Reference
 
 See: .planning/PROJECT.md
+**Core value:** The learner builds real understanding by doing — not by reading Claude's code.
+**Current focus:** v2.1 Public Launch
 
 ## Position
 
-**Milestone:** v2.0 Web UI
-**Current phase:** 14-integration
-**Current plan:** 01 (Integration)
-**Status:** Ready to plan
+**Milestone:** v2.1 Public Launch
+**Current phase:** Not started (defining requirements)
+**Current plan:** —
+**Status:** Defining requirements
 
 ## Accumulated Context
 
 ### Roadmap Evolution
 - v1.0 completed: Plugin scaffold, all 14 commands, notes, export, archive, CLI
 - v1.1 completed: Git worktree courses, auto-create exercise files, agent specialization
-- Phase 12: Agent templates and CLI setup for multiple agents
-- Phase 13: React client components with Vite
-- Phase 14: Integration of CLI, Express server, and React client
-- Phase 17: Auto generate exercise files
+- v2.0 in progress: Phase 13 (React client) and Phase 14 (Integration) done; phases 15-17 still pending
+- v2.1 started: Public Launch — cloud deploy, auth, OSS SKILL registry (phases 18-20)
 
-### v2.0 Goals
-- Local Web UI with React frontend
-- Split-pane layout (lecture left, chat right)
-- Streaming chat responses via SSE
-- Markdown rendering with syntax highlighting
+### v2.1 Goals
+- Cloud deployment (Vercel/Railway) with public URL and custom domain
+- Email + GitHub OAuth user authentication
+- `professor-skills/` GitHub org as OSS SKILL registry
+- `npx course-professor install <skill-name>` CLI command
+
+### Platform Roadmap Context
+- Full roadmap design spec: docs/superpowers/specs/2026-03-13-platform-roadmap-design.md
+- v3.0: Non-tech learner expansion (phases 21-23)
+- v3.1: SKILL Creator Loop (phases 24-27)
+- v4.0: Marketplace — freemium + payments + revenue share (phases 28-33)
 
 ### Pending Todos
 - 4 todos (see .planning/todos/pending/)
@@ -61,3 +67,5 @@ See: .planning/PROJECT.md
 - 2026-03-11: Completed plan 13-01 - Client components infrastructure
 - 2026-03-11: Completed plan 13-02 - React components implementation
 - 2026-03-13: Completed plan 14-01 - Integration (Express server, build, production mode)
+- 2026-03-13: Started v2.1 - Public Launch milestone
+- 2026-03-13: Defined v2.1 requirements (DEPL-01-03, AUTH-01-03, REG-01-03)

@@ -127,6 +127,30 @@ Requirements for milestone v2.0 - Local Web UI.
 
 - [x] **WEB-22**: All markdown rendered in browser is sanitized with DOMPurify to prevent XSS
 
+## v2.1 Requirements
+
+Requirements for milestone v2.1 — Public Launch.
+
+### Deployment
+
+- [ ] **DEPL-01**: Platform is accessible at a public URL after deploying to cloud host
+- [ ] **DEPL-02**: User can configure a custom domain to point to the deployed platform
+- [ ] **DEPL-03**: Production environment variables (API keys, DB connection) can be managed without code changes
+
+### Authentication
+
+- [ ] **AUTH-01**: User can sign up with email and password
+- [ ] **AUTH-02**: User can sign up / login with GitHub OAuth
+- [ ] **AUTH-03**: User session persists across browser refresh and revisits
+
+### OSS Registry
+
+- [ ] **REG-01**: Creator can publish a SKILL by opening a PR to the `professor-skills/` GitHub org
+- [ ] **REG-02**: Platform indexes the `professor-skills/` registry and keeps it synced via webhook on push
+- [ ] **REG-03**: User can install a community SKILL via `npx course-professor install <skill-name>`
+
+---
+
 ## Future Requirements
 
 ### Syllabus Creation
@@ -150,8 +174,9 @@ Requirements for milestone v2.0 - Local Web UI.
 | Multiple courses per worktree | One tech per worktree keeps it simple |
 | Worktree branch management | Main branch only for learning |
 | Mobile-responsive UI | Local web UI is desktop-focused for v2.0 |
-| User authentication | Single-user local app, no auth needed |
-| Cloud hosting | Local web only for v2.0 |
+| Cloud course state in v2.1 | Needs DB design — deferred to v3.0 |
+| User profile page in v2.1 | Needs creator loop first (v3.1) |
+| SKILL discovery/search page in v2.1 | Not enough SKILLs to discover yet — v4.0 |
 
 ## Traceability
 
@@ -222,13 +247,24 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WEB-21 | Phase 11 | Pending |
 | WEB-22 | Phase 10 | Complete |
 
+| DEPL-01 | Phase 18 | Pending |
+| DEPL-02 | Phase 18 | Pending |
+| DEPL-03 | Phase 18 | Pending |
+| AUTH-01 | Phase 19 | Pending |
+| AUTH-02 | Phase 19 | Pending |
+| AUTH-03 | Phase 19 | Pending |
+| REG-01 | Phase 20 | Pending |
+| REG-02 | Phase 20 | Pending |
+| REG-03 | Phase 20 | Pending |
+
 **Coverage:**
 - v1.0 requirements: 24 total
 - v1.1 requirements: 16 total
 - v2.0 requirements: 22 total
-- Mapped to phases: 78
+- v2.1 requirements: 9 total
+- Mapped to phases: 87
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-05*
-*Last updated: 2026-03-07 after v1.1 requirements added*
+*Last updated: 2026-03-13 after v2.1 milestone started*
