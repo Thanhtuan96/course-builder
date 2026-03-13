@@ -132,7 +132,7 @@ Plans:
 ## Progress
 
 **Current Milestone:** v2.0 (in progress)
-**v2.0:** 1 of 17 plans complete
+**v2.0:** 3 of 17 plans complete
 
 **Execution Order:**
 v1.1: 9 → 10 → 11 → 12
@@ -161,7 +161,7 @@ v2.0: 13 → 14 → 15 → 16
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 13. Client Components | 2/2 | Complete   | 2026-03-11 |
-| 14. Integration | 1/1 | Planned    | - |
+| 14. Integration | 1/1 | Complete   | 2026-03-13 |
 | 15. Retention Layer | 0/1 | Not started | - |
 | 16. Sharing and Templates | 0/1 | Not started | - |
 
@@ -331,7 +331,7 @@ Plans:
 4. Running `npm run build` in project root creates optimized React bundle in `client/dist/`
 5. When NODE_ENV=production, Express serves static React build from `client/dist/` instead of proxying to Vite dev server
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [x] 14-01-PLAN.md — Implement CLI web command, production build, and static file serving
