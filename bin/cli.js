@@ -43,6 +43,7 @@ Commands:
   init              Auto-detect and set up
   list              List supported agents
   web [port]        Start local web UI (default port: 3000)
+  web --production  Start web UI in production mode (requires build)
   help              Show this help message
 
 Examples:
@@ -52,6 +53,7 @@ Examples:
   npx course-professor setup gemini      # Setup for Gemini CLI
   npx course-professor web               # Start web UI on port 3000
   npx course-professor web 4000          # Start on port 4000
+  npx course-professor web --production  # Start in production mode
 
 Supported agents: ${SUPPORTED_AGENTS.join(', ')}
   `.trim());
@@ -230,6 +232,23 @@ switch (command) {
       process.exit(1);
     }
 
+    // Check for --production flag
+    const isProduction = args.includes('--production');
+    if (isProduction) {
+      process.env.NODE_ENV = 'production';
+    }
+
+    // In production mode, verify build exists
+    if (isProduction) {
+      const distPath = join(webDir, 'client', 'dist');
+      if (!existsSync(distPath)) {
+        console.log('⚠️  Production build not found.');
+        console.log('   Run: npm run build');
+        console.log('   Then: npx course-professor web --production');
+        process.exit(1);
+      }
+    }
+
     // Check for node_modules
     if (!existsSync(join(webDir, 'node_modules'))) {
       console.log('📦 Installing web dependencies...');
@@ -241,9 +260,9 @@ switch (command) {
       }
     }
 
-    // Check for client node_modules
+    // Check for client node_modules (only in dev mode)
     const clientDir = join(webDir, 'client');
-    if (existsSync(clientDir) && !existsSync(join(clientDir, 'node_modules'))) {
+    if (!isProduction && existsSync(clientDir) && !existsSync(join(clientDir, 'node_modules'))) {
       console.log('📦 Installing client dependencies...');
       try {
         execSync('npm install', { cwd: clientDir, stdio: 'inherit' });
@@ -269,13 +288,19 @@ switch (command) {
       process.exit(1);
     }
 
-    // Optional port argument
-    const port = args[1] || process.env.PORT || '3000';
+    // Optional port argument (not allowed with --production)
+    let port = '3000';
+    if (!isProduction) {
+      port = args[1] || process.env.PORT || '3000';
+    } else if (args[1] && args[1] !== '--production') {
+      port = args[1];
+    }
     process.env.PORT = port;
     process.env.COURSES_DIR = process.env.COURSES_DIR || './courses';
 
+    const mode = isProduction ? 'production' : 'development';
     console.log(`
-📚 Starting Professor Web UI on port ${port}...
+ 📚 Starting Professor Web UI on port ${port} (${mode})...
    `);
     
     // Start the server
