@@ -5,12 +5,12 @@ milestone_name: Phases
 current_phase: Not started (roadmap defined, ready for planning)
 current_plan: —
 status: "Roadmap ready — run `/gsd:plan-phase 18` to begin"
-last_updated: "2026-03-14T15:14:05.013Z"
+last_updated: "2026-03-14T15:16:09.000Z"
 progress:
   total_phases: 21
   completed_phases: 10
-  total_plans: 23
-  completed_plans: 22
+  total_plans: 24
+  completed_plans: 23
 ---
 
 # Session State
@@ -47,6 +47,13 @@ See: .planning/PROJECT.md
 - `professor-skills/` GitHub org as OSS SKILL registry with webhook sync
 - `npx course-professor install <skill-name>` CLI command
 
+### Phase 15 Decisions
+- Time tracking uses ISO 8601 timestamps with minute-precision duration calculation
+- Streak tracking uses calendar-day based streak with yesterday/today/2+days logic
+- Duration display format: N min / Nh MMm based on length
+- Streak reset after 2+ days of inactivity (forgiving approach)
+- Fire emoji (🔥) for streaks ≥ 3 days for visual engagement
+
 ### Platform Roadmap Context
 - Full roadmap design spec: docs/superpowers/specs/2026-03-13-platform-roadmap-design.md
 - v3.0: Non-tech learner expansion (phases 21-23)
@@ -76,3 +83,4 @@ See: .planning/PROJECT.md
 - 2026-03-13: Defined v2.1 requirements (DEPL-01-03, AUTH-01-03, REG-01-03)
 - 2026-03-14: Created v2.1 roadmap — phases 18, 19, 20 added to ROADMAP.md
 - 2026-03-14: Completed plan 15-01 - SCHEDULE.md schema and professor:done integration
+- 2026-03-14: Completed plan 15-02 - Time-per-section and streak tracking for COURSE.md

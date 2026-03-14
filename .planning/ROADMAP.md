@@ -367,11 +367,11 @@ Plans:
 5. Streak (days active) and time-per-section are tracked in COURSE.md and visible in `professor:progress`
 6. `professor:export` includes SCHEDULE.md data — flashcards exported as plain Q/A table to Notion; Markdown as-is to Obsidian
 
-**Plans:** 1/4 plans executed
+**Plans:** 2/4 plans executed
 
 Plans:
 - [x] 15-01-PLAN.md — SCHEDULE.md schema and auto-creation on section completion (completed 2026-03-14)
-- [ ] 15-02-PLAN.md — Time-per-section and streak tracking in COURSE.md
+- [x] 15-02-PLAN.md — Time-per-section and streak tracking in COURSE.md (completed 2026-03-14)
 - [ ] 15-03-PLAN.md — professor:recall and professor:schedule commands
 - [ ] 15-04-PLAN.md — Session start integration and export support for SCHEDULE.md
 
