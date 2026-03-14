@@ -33,7 +33,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 12: MCP Documentation** - Document mcp.json for tools needed (notion, obsidian) (verified in README.md)
 - [x] **Phase 13: Client Components** - React split-pane UI with LecturePanel, ChatPanel, command pills (v2.0)
 - [x] **Phase 14: Integration** - CLI web command, production build, static file serving (v2.0) (completed 2026-03-13)
-- [ ] **Phase 15: Retention Layer** - SCHEDULE.md, professor:recall, professor:schedule, streak tracking, time tracking (v2.0)
+- [x] **Phase 15: Retention Layer** - SCHEDULE.md, professor:recall, professor:schedule, streak tracking, time tracking (v2.0) (completed 2026-03-14)
 - [ ] **Phase 16: Sharing and Templates** - professor:template-export, professor:template-import, course sharing workflow (v2.0)
 - [ ] **Phase 17: Auto-generate Exercise Files** - Generate exercise files user can work on directly (exclude learning framework - only need instructions)
 - [ ] **Phase 18: Cloud Deployment** - Deploy to Vercel with public URL, custom domain, and production env var management (v2.1)
@@ -169,7 +169,7 @@ v2.1: 18 → 19 → 20
 |-------|----------------|--------|-----------|
 | 13. Client Components | 2/2 | Complete   | 2026-03-11 |
 | 14. Integration | 1/1 | Complete    | 2026-03-13 |
-| 15. Retention Layer | 3/4 | In Progress|  |
+| 15. Retention Layer | 4/4 | Complete   | 2026-03-14 |
 | 16. Sharing and Templates | 0/1 | Not started | - |
 
 ### v2.1 Phases
@@ -367,7 +367,7 @@ Plans:
 5. Streak (days active) and time-per-section are tracked in COURSE.md and visible in `professor:progress`
 6. `professor:export` includes SCHEDULE.md data — flashcards exported as plain Q/A table to Notion; Markdown as-is to Obsidian
 
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 - [x] 15-01-PLAN.md — SCHEDULE.md schema and auto-creation on section completion (completed 2026-03-14)

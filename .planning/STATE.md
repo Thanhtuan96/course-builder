@@ -5,12 +5,12 @@ milestone_name: Phases
 current_phase: Not started (roadmap defined, ready for planning)
 current_plan: —
 status: "Roadmap ready — run `/gsd:plan-phase 18` to begin"
-last_updated: "2026-03-14T15:21:48.556Z"
+last_updated: "2026-03-14T15:25:54.321Z"
 progress:
   total_phases: 21
-  completed_phases: 10
+  completed_phases: 11
   total_plans: 23
-  completed_plans: 24
+  completed_plans: 25
 ---
 
 # Session State
@@ -84,3 +84,5 @@ See: .planning/PROJECT.md
 - 2026-03-14: Created v2.1 roadmap — phases 18, 19, 20 added to ROADMAP.md
 - 2026-03-14: Completed plan 15-01 - SCHEDULE.md schema and professor:done integration
 - 2026-03-14: Completed plan 15-02 - Time-per-section and streak tracking for COURSE.md
+- 2026-03-14: Completed plan 15-03 - professor:recall and professor:schedule commands
+- 2026-03-14: Completed plan 15-04 - Retention integration with session start and export
