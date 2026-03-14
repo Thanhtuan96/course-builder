@@ -27,7 +27,11 @@ export async function install() {
     const frontmatter = existsSync(frontmatterPath)
       ? readFileSync(frontmatterPath, 'utf-8')
       : '---\ndescription: Socratic learning assistant - professor mode\nglobs: ""\nalwaysApply: false\n---\n';
-    const skill = readFileSync(join(PLUGIN_DIR, 'shared', 'SKILL.md'), 'utf-8');
+    const rawSkill = readFileSync(join(PLUGIN_DIR, 'shared', 'SKILL.md'), 'utf-8');
+    // Strip YAML frontmatter from SKILL.md so the .mdc file has only one frontmatter block
+    const skill = rawSkill.startsWith('---')
+      ? rawSkill.replace(/^---[\s\S]*?---\n*/, '')
+      : rawSkill;
     const combined = frontmatter + '\n' + skill;
     const adapted = substituteTokens(combined, 'cursor');
     writeFileSync(mdcPath, adapted);
