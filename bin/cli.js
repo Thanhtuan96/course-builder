@@ -6,21 +6,14 @@ import { fileURLToPath } from 'url';
 import { createInterface } from 'readline';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SUPPORTED_AGENTS = ['claude', 'opencode', 'gemini', 'agent', 'cursor', 'researcher'];
+const SUPPORTED_AGENTS = ['claude', 'gemini', 'opencode', 'cursor'];
 
-function detectAgent() {
+async function detectAgent() {
   const detected = [];
-  
-  if (process.env.CLAUDE_API_KEY || existsSync(join(process.env.HOME || '', '.claude'))) {
-    detected.push('claude');
+  for (const name of SUPPORTED_AGENTS) {
+    const { detect } = await import(`./platforms/${name}.js`);
+    if (detect()) detected.push(name);
   }
-  if (process.env.OPENCODE_API_KEY || existsSync(join(process.env.HOME || '', '.opencode'))) {
-    detected.push('opencode');
-  }
-  if (process.env.GEMINI_API_KEY || existsSync(join(process.env.HOME || '', '.gemini'))) {
-    detected.push('gemini');
-  }
-  
   return detected;
 }
 
@@ -69,91 +62,13 @@ function listAgents() {
 
 async function setupAgent(agent) {
   const agentLower = agent.toLowerCase();
-  
   if (!SUPPORTED_AGENTS.includes(agentLower)) {
     console.error(`❌ Unsupported agent: ${agent}`);
     console.log(`Supported: ${SUPPORTED_AGENTS.join(', ')}`);
     process.exit(1);
   }
-  
-  const targetDir = join(process.cwd(), `.${agentLower}`);
-  
-  if (existsSync(targetDir)) {
-    console.log(`⚠️  .${agentLower} already exists. Skipping...`);
-  } else {
-    mkdirSync(targetDir, { recursive: true });
-    console.log(`✓ Created .${agentLower}/ directory`);
-  }
-  
-  const templateDir = join(__dirname, '..', 'templates', agentLower);
-  
-  if (existsSync(templateDir)) {
-    const files = readdirSync(templateDir);
-    for (const file of files) {
-      const src = join(templateDir, file);
-      const dest = join(targetDir, file);
-      const isDir = statSync(src).isDirectory();
-      if (isDir) {
-        if (!existsSync(dest)) {
-          mkdirSync(dest, { recursive: true });
-          console.log(`  + ${file}/`);
-        }
-      } else if (existsSync(dest)) {
-        console.log(`  ↔ ${file} (already exists)`);
-      } else {
-        const content = readFileSync(src, 'utf-8');
-        writeFileSync(dest, content);
-        console.log(`  + ${file}`);
-      }
-    }
-  }
-  
-  const sharedDir = join(__dirname, '..', 'shared');
-  
-  function copyRecursive(src, dest) {
-    if (!existsSync(src)) return;
-    
-    const stat = statSync(src);
-    if (stat.isDirectory()) {
-      if (!existsSync(dest)) {
-        mkdirSync(dest, { recursive: true });
-      }
-      const files = readdirSync(src);
-      for (const file of files) {
-        copyRecursive(join(src, file), join(dest, file));
-      }
-    } else {
-      if (!existsSync(dest)) {
-        const content = readFileSync(src, 'utf-8');
-        writeFileSync(dest, content);
-        const relativePath = dest.replace(targetDir + '/', '');
-        console.log(`  + ${relativePath}`);
-      }
-    }
-  }
-  
-  if (existsSync(sharedDir)) {
-    copyRecursive(sharedDir, targetDir);
-  }
-  
-  const pluginJson = join(__dirname, '..', 'plugin.json');
-  const destPlugin = join(targetDir, 'plugin.json');
-  if (!existsSync(destPlugin)) {
-    const content = readFileSync(pluginJson, 'utf-8');
-    writeFileSync(destPlugin, content);
-    console.log(`  + plugin.json`);
-  }
-  
-  console.log(`
-✅ Setup complete for ${agent}!
-
-Next steps:
-1. Restart your ${agent} agent
-2. Run: professor:new-topic to start learning
-3. Or try: professor:help for commands
-
-Course files will be created in: ./courses/
-  `.trim());
+  const { install } = await import(`./platforms/${agentLower}.js`);
+  await install();
 }
 
 function askQuestion(rl, prompt) {
@@ -187,7 +102,7 @@ async function promptAgentSelection(agents) {
 }
 
 async function init() {
-  const detected = detectAgent();
+  const detected = await detectAgent();
 
   if (detected.length === 0) {
     console.log(`❓ No agent detected automatically.\n`);
