@@ -13,9 +13,9 @@ Specific bugs:
 
 | Platform | Bug |
 |---|---|
-| Claude | `templates/claude/plugin.json` is outdated (missing 3 commands + researcher agent); detection uses wrong env var (`CLAUDE_API_KEY` instead of `ANTHROPIC_API_KEY`) |
+| Claude | `templates/claude/plugin.json` is outdated (missing 3 commands + researcher agent + hooks); detection uses wrong env var (`CLAUDE_API_KEY` instead of `ANTHROPIC_API_KEY`) |
 | Gemini | Installs Claude Code plugin files into `.gemini/` — Gemini CLI doesn't read `plugin.json`; commands use `AskUserQuestion` (Claude-only tool); wrong detection env var |
-| OpenCode | Writes `settings.json` but OpenCode reads `opencode.json`; wrong detection env var; `plugin.json` placed there is never read |
+| OpenCode | Writes `settings.json` but OpenCode reads `opencode.json`; `plugin.json` placed there is never read; `instructions` field used incorrectly |
 | Cursor | Puts Claude Code plugin files in `.cursor/` — Cursor reads `.cursor/rules/*.mdc` only; `AskUserQuestion` doesn't exist in Cursor; never auto-detected |
 
 ---
@@ -24,8 +24,8 @@ Specific bugs:
 
 1. **Scope:** Fix all four platforms.
 2. **Command adaptation:** CLI performs token substitution at install time — `shared/` files stay clean, output is adapted per-platform.
-3. **Command routing on Gemini/OpenCode:** Text-pattern triggering via a generated instruction file (`GEMINI.md` / `opencode.json` instructions field). No platform-native slash commands needed.
-4. **Cursor:** Generate `.cursor/rules/professor.mdc` with the Socratic system prompt. Commands triggered by text pattern. No tool calls — `AskUserQuestion` replaced with inline text instructions.
+3. **Command routing on Gemini/OpenCode:** Text-pattern triggering via a generated instruction file (`GEMINI.md` / `.opencode/professor.md`). No platform-native slash commands needed.
+4. **Cursor and OpenCode interactive questions:** Both platforms lack a native structured prompt tool. Both use `null` substitution — `AskUserQuestion` is stripped and replaced with plain inline question text.
 5. **Architecture:** Platform adapter modules (`bin/platforms/{platform}.js`). `cli.js` becomes a thin dispatcher.
 
 ---
@@ -58,7 +58,7 @@ Each adapter exports:
 export const TOOL_SUBSTITUTIONS = {
   claude:   { AskUserQuestion: 'AskUserQuestion' },  // no-op
   gemini:   { AskUserQuestion: 'ask_user' },
-  opencode: { AskUserQuestion: 'question' },
+  opencode: { AskUserQuestion: null },               // null = strip to inline text
   cursor:   { AskUserQuestion: null },               // null = strip to inline text
 };
 ```
@@ -84,7 +84,10 @@ export const TOOL_SUBSTITUTIONS = {
 2. Copy `templates/claude/` files (including synced `plugin.json`)
 3. Call `copySharedFiles('.claude/', 'claude')` — no-op substitution
 
-**Template fix:** Sync `templates/claude/plugin.json` with root `plugin.json` — add `professor:archive`, `professor:switch`, `professor:worktrees`, and the `researcher` agent entry.
+**Template fix:** Sync `templates/claude/plugin.json` with root `plugin.json`:
+- Add commands: `professor:archive`, `professor:switch`, `professor:worktrees`
+- Add agent: `researcher`
+- Add hooks array: `PreCompact` hook entry (currently missing from template)
 
 ---
 
@@ -93,15 +96,19 @@ export const TOOL_SUBSTITUTIONS = {
 **detect():** `process.env.GEMINI_API_KEY` or `process.env.GOOGLE_API_KEY` or `~/.gemini` exists
 
 **install():**
-1. Create `.gemini/` in cwd
-2. Write `.gemini/settings.json` from `templates/gemini/settings.json` (valid Gemini CLI format)
+1. Create `.gemini/` in cwd (only for `settings.json` — no `plugin.json`, no `agents/`, no `commands/`)
+2. Write `.gemini/settings.json` from `templates/gemini/settings.json` (valid Gemini CLI format, skip if exists)
 3. Compile `GEMINI.md` in cwd:
-   - Read `templates/gemini/GEMINI.md` (routing preamble)
-   - Append `shared/SKILL.md` content
+   - If `GEMINI.md` already exists: append professor block between `<!-- professor:start -->` / `<!-- professor:end -->` markers, or skip if markers already present
+   - If new: read `templates/gemini/GEMINI.md` (routing preamble) + append `shared/SKILL.md`
    - Apply `substituteTokens(content, 'gemini')`
    - Write to `./GEMINI.md`
 
-**Template to add:** `templates/gemini/GEMINI.md` — routing preamble that tells the model to recognize `professor:*` text patterns and execute the corresponding command behavior.
+**Context-window note:** Appending the full `shared/SKILL.md` (~440 lines) into `GEMINI.md` injects it into every Gemini session in that project. The routing preamble in `templates/gemini/GEMINI.md` should be a concise stub (command routing table only, ~30 lines) that references the full skill inline, keeping total addition under 100 lines.
+
+**Files NOT written by Gemini adapter:** `plugin.json`, `agents/`, `commands/`, `hooks/` — Gemini CLI does not read any of these from `.gemini/`.
+
+**Template to add:** `templates/gemini/GEMINI.md` — concise routing preamble (~30 lines) mapping `professor:*` text patterns to command behavior, with `ask_user` substitution applied.
 
 ---
 
@@ -111,12 +118,24 @@ export const TOOL_SUBSTITUTIONS = {
 
 **install():**
 1. Create `.opencode/` in cwd
-2. Read `templates/opencode/opencode.json` base template
-3. Inject professor instructions (from `shared/SKILL.md`) into the `instructions` field
-4. Apply `substituteTokens(content, 'opencode')`
-5. Write to `.opencode/opencode.json` (merges with existing if present)
+2. Write professor skill to `.opencode/professor.md`:
+   - Read `shared/SKILL.md`, apply `substituteTokens(content, 'opencode')`
+   - Write to `.opencode/professor.md` (skip if exists)
+3. Read or create `.opencode/opencode.json`:
+   - If exists: merge in `"instructions": [".opencode/professor.md"]`
+   - If new: write from `templates/opencode/opencode.json` template (includes `instructions` entry)
 
-**Template to add:** `templates/opencode/opencode.json` — base config with `$schema`, `permission`, and `instructions` fields matching OpenCode's actual schema.
+**OpenCode `instructions` schema:** The field is `string[]` — an array of file paths or glob patterns relative to the project root. Content is NOT inline. Writing `.opencode/professor.md` and referencing it via `"instructions": [".opencode/professor.md"]` is the correct approach.
+
+**Files NOT written:** `plugin.json`, `settings.json` (replaced by `opencode.json`).
+
+**Template to add:** `templates/opencode/opencode.json`:
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [".opencode/professor.md"]
+}
+```
 
 ---
 
@@ -130,10 +149,10 @@ export const TOOL_SUBSTITUTIONS = {
    - Read `templates/cursor/professor.mdc` (YAML frontmatter)
    - Append `shared/SKILL.md` content
    - Apply `substituteTokens(content, 'cursor')`
-   - Write to `.cursor/rules/professor.mdc`
-3. Do NOT copy `plugin.json`
+   - Write to `.cursor/rules/professor.mdc` (skip if exists)
+3. Do NOT copy `plugin.json`, `agents/`, `commands/`, or `hooks/`
 
-**Template to add:** `templates/cursor/professor.mdc` — YAML frontmatter:
+**Template to add:** `templates/cursor/professor.mdc` — YAML frontmatter only:
 ```yaml
 ---
 description: Socratic learning assistant - professor mode
@@ -146,12 +165,12 @@ alwaysApply: false
 
 ## Detection Fix Summary
 
-| Platform | Old env var | New env var |
+| Platform | Old detection | New detection |
 |---|---|---|
-| Claude | `CLAUDE_API_KEY` | `ANTHROPIC_API_KEY` |
-| Gemini | `GEMINI_API_KEY` | `GEMINI_API_KEY` or `GOOGLE_API_KEY` |
-| OpenCode | `OPENCODE_API_KEY` (removed) | directory-based only |
-| Cursor | (not detected) | `.cursor/` directory check |
+| Claude | `CLAUDE_API_KEY` env or `~/.claude` | `ANTHROPIC_API_KEY` env or `~/.claude` |
+| Gemini | `GEMINI_API_KEY` env or `~/.gemini` | `GEMINI_API_KEY` or `GOOGLE_API_KEY` env or `~/.gemini` |
+| OpenCode | `OPENCODE_API_KEY` env (removed) | `.opencode/` dir or `opencode.json` in cwd |
+| Cursor | (never detected) | `.cursor/` dir in cwd |
 
 ---
 
@@ -159,7 +178,10 @@ alwaysApply: false
 
 **Modify:**
 - `bin/cli.js` — strip platform logic, delegate to adapters
-- `templates/claude/plugin.json` — sync with root `plugin.json`
+- `templates/claude/plugin.json` — sync with root `plugin.json` (commands + researcher + hooks)
+
+**Delete (repo-level `git rm`, not at runtime):**
+- `templates/opencode/settings.json` — replaced by `templates/opencode/opencode.json`
 
 **Create:**
 - `bin/platforms/_shared.js`
@@ -167,8 +189,8 @@ alwaysApply: false
 - `bin/platforms/gemini.js`
 - `bin/platforms/opencode.js`
 - `bin/platforms/cursor.js`
-- `templates/gemini/GEMINI.md`
-- `templates/cursor/professor.mdc`
+- `templates/gemini/GEMINI.md` (concise routing preamble, ~30 lines)
+- `templates/cursor/professor.mdc` (frontmatter only)
 - `templates/opencode/opencode.json`
 
 **Unchanged:**
@@ -181,8 +203,8 @@ alwaysApply: false
 
 ## Success Criteria
 
-- `npx course-professor setup claude` → `.claude/` with correct up-to-date `plugin.json`, professor commands and researcher agent loadable by Claude Code
-- `npx course-professor setup gemini` → `GEMINI.md` in cwd with routing table + professor skill, `ask_user` tool calls throughout
-- `npx course-professor setup opencode` → `.opencode/opencode.json` with valid schema and professor instructions, `question` tool calls throughout
-- `npx course-professor setup cursor` → `.cursor/rules/professor.mdc` with professor system prompt, inline text questions throughout
-- `npx course-professor init` → auto-detects the correct platform(s) using fixed env vars and directory checks
+- `npx course-professor setup claude` → `.claude/` with correct up-to-date `plugin.json` (all 17 commands, 2 agents, PreCompact hook), loadable by Claude Code
+- `npx course-professor setup gemini` → `GEMINI.md` in cwd with routing stub + professor skill, `ask_user` tool calls throughout; `.gemini/settings.json` valid; no spurious `plugin.json` in `.gemini/`
+- `npx course-professor setup opencode` → `.opencode/professor.md` with professor skill (inline text questions), `.opencode/opencode.json` with valid schema referencing it
+- `npx course-professor setup cursor` → `.cursor/rules/professor.mdc` with professor system prompt, inline text questions throughout; no `plugin.json` in `.cursor/`
+- `npx course-professor init` → auto-detects the correct platform(s) using fixed env vars and directory checks; `cursor` is detectable for the first time
