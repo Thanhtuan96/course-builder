@@ -5,12 +5,12 @@ milestone_name: Phases
 current_phase: Not started (roadmap defined, ready for planning)
 current_plan: —
 status: "Roadmap ready — run `/gsd:plan-phase 18` to begin"
-last_updated: "2026-03-14T15:16:09.000Z"
+last_updated: "2026-03-14T15:21:48.556Z"
 progress:
   total_phases: 21
   completed_phases: 10
-  total_plans: 24
-  completed_plans: 23
+  total_plans: 23
+  completed_plans: 24
 ---
 
 # Session State

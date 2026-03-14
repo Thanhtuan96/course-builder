@@ -169,7 +169,7 @@ v2.1: 18 → 19 → 20
 |-------|----------------|--------|-----------|
 | 13. Client Components | 2/2 | Complete   | 2026-03-11 |
 | 14. Integration | 1/1 | Complete    | 2026-03-13 |
-| 15. Retention Layer | 1/4 | In Progress|  |
+| 15. Retention Layer | 3/4 | In Progress|  |
 | 16. Sharing and Templates | 0/1 | Not started | - |
 
 ### v2.1 Phases
@@ -367,7 +367,7 @@ Plans:
 5. Streak (days active) and time-per-section are tracked in COURSE.md and visible in `professor:progress`
 6. `professor:export` includes SCHEDULE.md data — flashcards exported as plain Q/A table to Notion; Markdown as-is to Obsidian
 
-**Plans:** 2/4 plans executed
+**Plans:** 3/4 plans executed
 
 Plans:
 - [x] 15-01-PLAN.md — SCHEDULE.md schema and auto-creation on section completion (completed 2026-03-14)
