@@ -5,9 +5,27 @@ description: Mark the current section complete after demonstrating understanding
 
 Ask the user to explain the core concept of the current section in their own words before marking anything done.
 
+**Calculate and Record Duration:**
+
+1. Get current timestamp: `sectionCompletedAt = new Date().toISOString()`
+2. Read sectionStartedAt from COURSE.md Time Tracking section
+3. Calculate duration: `sectionDuration = sectionCompletedAt - sectionStartedAt`
+4. Round to nearest minute
+5. Update COURSE.md:
+   - In Sections table: add duration to the completed row (e.g., "45 min")
+   - In Progress Log: add entry with Date, Section, Action="Completed", Duration
+   - Clear `**Current Section Started**` field (set to "—")
+   - Clear `**Section Duration**` field (set to "—")
+   - Update `**Last active**: YYYY-MM-DD` to today
+
+**Duration Format:**
+- Under 60 minutes: "N min" (e.g., "45 min")
+- 60+ minutes: "Nh MMm" (e.g., "1h 30m")
+- Over 4 hours: consider capping or flagging (might indicate breaks)
+
 If their explanation is solid:
 - Update `COURSE.md`: change section status to ✅ Done and record the completion date
-- Add a progress log entry in `COURSE.md`
+- Add a progress log entry in `COURSE.md` with duration calculated above
 - **Clear the "Active exercise" field**:
   - Option A: Remove the line entirely
   - Option B: Set to empty (e.g., **Active exercise**: —)
