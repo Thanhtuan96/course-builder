@@ -169,7 +169,7 @@ v2.1: 18 → 19 → 20
 |-------|----------------|--------|-----------|
 | 13. Client Components | 2/2 | Complete   | 2026-03-11 |
 | 14. Integration | 1/1 | Complete    | 2026-03-13 |
-| 15. Retention Layer | 4/4 | Complete   | 2026-03-14 |
+| 15. Retention Layer | 4/4 | Complete    | 2026-03-14 |
 | 16. Sharing and Templates | 0/1 | Not started | - |
 
 ### v2.1 Phases

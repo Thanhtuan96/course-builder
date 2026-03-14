@@ -4,8 +4,8 @@ milestone: v1.1
 milestone_name: Phases
 current_phase: Not started (roadmap defined, ready for planning)
 current_plan: —
-status: "Roadmap ready — run `/gsd:plan-phase 18` to begin"
-last_updated: "2026-03-14T15:25:54.321Z"
+status: planning
+last_updated: "2026-03-14T15:29:58.373Z"
 progress:
   total_phases: 21
   completed_phases: 11
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md
 **Milestone:** v2.1 Public Launch
 **Current phase:** Not started (roadmap defined, ready for planning)
 **Current plan:** —
-**Status:** Roadmap ready — run `/gsd:plan-phase 18` to begin
+**Status:** Ready to plan
 
 ## Accumulated Context
 
