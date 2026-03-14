@@ -14,15 +14,18 @@ export function detect() {
   );
 }
 
-/** Install professor plugin into .claude/ in the current working directory. */
-export async function install() {
-  const targetDir = join(process.cwd(), '.claude');
+/** Install professor plugin. scope = 'global' → ~/.claude/plugins/professor/, 'local' → cwd/.claude/ */
+export async function install(scope = 'local') {
+  const targetDir = scope === 'global'
+    ? join(process.env.HOME || '', '.claude', 'plugins', 'professor')
+    : join(process.cwd(), '.claude');
 
+  const dirLabel = scope === 'global' ? '~/.claude/plugins/professor/' : '.claude/';
   if (!existsSync(targetDir)) {
     mkdirSync(targetDir, { recursive: true });
-    console.log('✓ Created .claude/ directory');
+    console.log(`✓ Created ${dirLabel} directory`);
   } else {
-    console.log('⚠️  .claude/ already exists. Merging...');
+    console.log(`⚠️  ${dirLabel} already exists. Merging...`);
   }
 
   // Copy templates/claude/ files (plugin.json, settings.json)

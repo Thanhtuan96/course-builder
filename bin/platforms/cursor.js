@@ -11,9 +11,10 @@ export function detect() {
   return existsSync(join(process.cwd(), '.cursor'));
 }
 
-/** Install professor for Cursor: writes .cursor/rules/professor.mdc. */
-export async function install() {
-  const rulesDir = join(process.cwd(), '.cursor', 'rules');
+/** Install professor for Cursor. scope = 'global' → ~/.cursor/rules/, 'local' → cwd/.cursor/rules/ */
+export async function install(scope = 'local') {
+  const base = scope === 'global' ? (process.env.HOME || '') : process.cwd();
+  const rulesDir = join(base, '.cursor', 'rules');
   if (!existsSync(rulesDir)) {
     mkdirSync(rulesDir, { recursive: true });
     console.log('✓ Created .cursor/rules/ directory');

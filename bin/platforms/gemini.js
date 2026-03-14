@@ -15,10 +15,11 @@ export function detect() {
   );
 }
 
-/** Install professor for Gemini CLI: writes .gemini/settings.json + GEMINI.md in cwd. */
-export async function install() {
+/** Install professor for Gemini CLI. scope = 'global' → ~/, 'local' → cwd/ */
+export async function install(scope = 'local') {
+  const base = scope === 'global' ? (process.env.HOME || '') : process.cwd();
   // 1. Create .gemini/ and write settings.json
-  const geminiDir = join(process.cwd(), '.gemini');
+  const geminiDir = join(base, '.gemini');
   if (!existsSync(geminiDir)) {
     mkdirSync(geminiDir, { recursive: true });
     console.log('✓ Created .gemini/ directory');
@@ -42,7 +43,7 @@ export async function install() {
     `<!-- professor:start -->\n${preamble}\n${skill}\n<!-- professor:end -->`;
   const adapted = substituteTokens(professorBlock, 'gemini');
 
-  const geminiMdPath = join(process.cwd(), 'GEMINI.md');
+  const geminiMdPath = join(base, 'GEMINI.md');
   if (existsSync(geminiMdPath)) {
     const existing = readFileSync(geminiMdPath, 'utf-8');
     if (existing.includes('<!-- professor:start -->')) {

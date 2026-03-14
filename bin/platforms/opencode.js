@@ -14,9 +14,10 @@ export function detect() {
   );
 }
 
-/** Install professor for OpenCode: writes .opencode/professor.md + merges opencode.json. */
-export async function install() {
-  const targetDir = join(process.cwd(), '.opencode');
+/** Install professor for OpenCode. scope = 'global' → ~/.opencode/, 'local' → cwd/.opencode/ */
+export async function install(scope = 'local') {
+  const base = scope === 'global' ? (process.env.HOME || '') : process.cwd();
+  const targetDir = join(base, '.opencode');
   if (!existsSync(targetDir)) {
     mkdirSync(targetDir, { recursive: true });
     console.log('✓ Created .opencode/ directory');
@@ -45,10 +46,13 @@ export async function install() {
     }
   }
 
+  const instructionsEntry = scope === 'global'
+    ? join(base, '.opencode', 'professor.md')
+    : '.opencode/professor.md';
   if (!config.$schema) config.$schema = 'https://opencode.ai/config.json';
   if (!Array.isArray(config.instructions)) config.instructions = [];
-  if (!config.instructions.includes('.opencode/professor.md')) {
-    config.instructions.push('.opencode/professor.md');
+  if (!config.instructions.includes(instructionsEntry)) {
+    config.instructions.push(instructionsEntry);
   }
 
   writeFileSync(opencodeJsonPath, JSON.stringify(config, null, 2) + '\n');

@@ -39,9 +39,14 @@ Commands:
   web --production  Start web UI in production mode (requires build)
   help              Show this help message
 
+Flags:
+  --global          Install globally (user-wide, e.g. ~/.claude/plugins/professor/)
+  --local           Install locally in the current project (default)
+
 Examples:
   npx course-professor init              # Auto-detect and setup
-  npx course-professor setup claude      # Setup for Claude Code
+  npx course-professor setup claude      # Setup for Claude Code (prompts for scope)
+  npx course-professor setup claude --global   # Install globally
   npx course-professor setup opencode    # Setup for OpenCode
   npx course-professor setup gemini      # Setup for Gemini CLI
   npx course-professor web               # Start web UI on port 3000
@@ -60,6 +65,27 @@ function listAgents() {
   console.log('');
 }
 
+async function promptScope(platform) {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  rl.on('SIGINT', () => { console.log('\n\nAborted.'); rl.close(); process.exit(0); });
+
+  const globalPath = {
+    claude:   '~/.claude/plugins/professor/',
+    gemini:   '~/GEMINI.md',
+    opencode: '~/.opencode/professor.md',
+    cursor:   '~/.cursor/rules/professor.mdc',
+  }[platform] || '~/';
+
+  console.log(`\nInstall scope for ${platform}:`);
+  console.log(`  1. Global — ${globalPath} (available in all projects)`);
+  console.log(`  2. Local  — current project only`);
+
+  const answer = await askQuestion(rl, '\n> ');
+  rl.close();
+  return (answer.trim() === '1' || answer.trim().toLowerCase() === 'global')
+    ? 'global' : 'local';
+}
+
 async function setupAgent(agent) {
   const agentLower = agent.toLowerCase();
   if (!SUPPORTED_AGENTS.includes(agentLower)) {
@@ -67,8 +93,9 @@ async function setupAgent(agent) {
     console.log(`Supported: ${SUPPORTED_AGENTS.join(', ')}`);
     process.exit(1);
   }
+  const scope = isGlobal ? 'global' : isLocal ? 'local' : await promptScope(agentLower);
   const { install } = await import(`./platforms/${agentLower}.js`);
-  await install();
+  await install(scope);
 }
 
 function askQuestion(rl, prompt) {
@@ -135,6 +162,8 @@ async function init() {
 }
 
 const args = process.argv.slice(2);
+const isGlobal = args.includes('--global');
+const isLocal  = args.includes('--local');
 const command = args[0] || 'help';
 
 switch (command) {
