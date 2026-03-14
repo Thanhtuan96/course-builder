@@ -21,6 +21,8 @@
     { "name": "professor:stuck",           "file": "commands/professor/stuck.md" },
     { "name": "professor:syllabus",        "file": "commands/professor/syllabus.md" },
     { "name": "professor:progress",        "file": "commands/professor/progress.md" },
+    { "name": "professor:recall",          "file": "commands/professor/recall.md" },
+    { "name": "professor:schedule",        "file": "commands/professor/schedule.md" },
     { "name": "professor:discuss",         "file": "commands/professor/discuss.md" },
     { "name": "professor:quiz",            "file": "commands/professor/quiz.md" },
     { "name": "professor:capstone",        "file": "commands/professor/capstone.md" },
