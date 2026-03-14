@@ -19,10 +19,9 @@ export default function App() {
   // State
   const [courses, setCourses] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState(null);
-  const [currentPhase, setCurrentPhase] = useState('idle');
+  const [currentPhase] = useState('idle');
   const [activeTab, setActiveTab] = useState('both'); // 'both', 'lecture', or 'chat'
   const [lectureContent, setLectureContent] = useState('');
-  const [chatMessages, setChatMessages] = useState([]);
   const [isMobile, setIsMobile] = useState(false);
 
   // Detect mobile viewport
@@ -41,19 +40,34 @@ export default function App() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Load courses on mount
+  // Load courses on mount and on refresh-courses event
   useEffect(() => {
-    loadCourses();
+    loadCourses(null);
+    const handleRefresh = (e) => loadCourses(e.detail?.slug);
+    window.addEventListener('refresh-courses', handleRefresh);
+    return () => window.removeEventListener('refresh-courses', handleRefresh);
   }, []);
 
-  async function loadCourses() {
+  async function loadCourses(preferSlug = null) {
     try {
       const data = await fetchCourses();
       setCourses(data || []);
-      // Auto-select first course if available
-      if (data && data.length > 0 && !selectedCourse) {
-        setSelectedCourse(data[0]);
-      }
+      if (!data || data.length === 0) return;
+
+      setSelectedCourse(prev => {
+        // If a specific slug is preferred (e.g., just created), select it
+        if (preferSlug) {
+          const target = data.find(c => c.slug === preferSlug);
+          if (target) return target;
+        }
+        // Re-select current to pick up metadata updates
+        if (prev) {
+          const refreshed = data.find(c => c.slug === prev.slug);
+          return refreshed || prev;
+        }
+        // Default: first course
+        return data[0];
+      });
     } catch (err) {
       console.error('Failed to load courses:', err);
     }
@@ -113,21 +127,9 @@ export default function App() {
           />
         }
         chatPanel={
-          <ChatPanel 
+          <ChatPanel
             courseSlug={selectedCourse?.slug}
             currentPhase={currentPhase}
-            onSendMessage={(text, slug, messages) => {
-              // Update local messages
-              setChatMessages(messages);
-              // Update phase based on command
-              if (text.includes('professor:next')) {
-                setCurrentPhase('lecture');
-              } else if (text.includes('professor:review')) {
-                setCurrentPhase('review');
-              } else if (text.includes('professor:done')) {
-                setCurrentPhase('lecture');
-              }
-            }}
           />
         }
       />

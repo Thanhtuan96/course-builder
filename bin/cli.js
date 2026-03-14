@@ -272,20 +272,93 @@ switch (command) {
       }
     }
 
-    // Check for API key (auto-detect from common env vars)
-    const apiKey = process.env.ANTHROPIC_API_KEY 
-      || process.env.CLAUDE_API_KEY 
-      || process.env.OPENAI_API_KEY;
-    
-    if (!apiKey) {
-      // Detect agent for helpful message
-      const detected = detectAgent();
-      console.error('❌ ANTHROPIC_API_KEY not set.');
-      console.log('   Run: export ANTHROPIC_API_KEY=your-key');
-      console.log('   Or: export CLAUDE_API_KEY=your-key');
-      console.log(`   Detected agent: ${detected[0] || 'none'}`);
-      console.log('   Then: npx course-professor web');
-      process.exit(1);
+    // API key only needed for chat feature - not required to start server
+    // Auto-detect from environment, .env file, Claude Code keychain, or config files
+    async function findApiKey() {
+      // 1. Environment variables (highest priority)
+      if (process.env.ANTHROPIC_API_KEY) return { key: process.env.ANTHROPIC_API_KEY, source: 'env' };
+      if (process.env.CLAUDE_API_KEY) return { key: process.env.CLAUDE_API_KEY, source: 'env' };
+      if (process.env.OPENAI_API_KEY) return { key: process.env.OPENAI_API_KEY, source: 'env' };
+
+      // 2. .env file in current working directory
+      const envFile = join(process.cwd(), '.env');
+      if (existsSync(envFile)) {
+        try {
+          const lines = readFileSync(envFile, 'utf-8').split('\n');
+          for (const line of lines) {
+            const m = line.match(/^(ANTHROPIC_API_KEY|CLAUDE_API_KEY|OPENAI_API_KEY)\s*=\s*(.+)$/);
+            if (m) return { key: m[2].trim().replace(/^["']|["']$/g, ''), source: '.env' };
+          }
+        } catch {}
+      }
+
+      // 3. macOS Keychain — look for a raw sk-ant-api key (not OAuth tokens)
+      if (process.platform === 'darwin') {
+        try {
+          const { execSync: _exec } = await import('child_process');
+          for (const svc of ['anthropic-api-key', 'Anthropic API Key', 'ANTHROPIC_API_KEY']) {
+            try {
+              const raw = _exec(`security find-generic-password -s "${svc}" -w`, {
+                encoding: 'utf-8', timeout: 2000, stdio: ['ignore', 'pipe', 'ignore']
+              }).trim();
+              if (raw?.startsWith('sk-ant-api')) return { key: raw, source: `keychain:${svc}` };
+            } catch {}
+          }
+        } catch {}
+      }
+
+      // 4. Claude Code / Anthropic config files
+      const home = process.env.HOME || '';
+      for (const p of [join(home, '.claude', 'settings.json'), join(home, '.anthropic', 'config.json')]) {
+        if (existsSync(p)) {
+          try {
+            const s = JSON.parse(readFileSync(p, 'utf-8'));
+            const k = s.ANTHROPIC_API_KEY || s.apiKey || s.api_key;
+            if (k) return { key: k, source: p };
+          } catch {}
+        }
+      }
+
+      return null;
+    }
+
+    let found = await findApiKey();
+
+    // Interactive prompt if no key found — save to .env so it's auto-detected next time
+    if (!found) {
+      const rl = createInterface({ input: process.stdin, output: process.stdout });
+      console.log('');
+      console.log('🔑 No Anthropic API key detected.');
+      console.log('   Get one at: https://console.anthropic.com/settings/keys');
+      console.log('');
+      const answer = await new Promise(resolve => {
+        rl.question('   Paste your API key (or press Enter to skip chat): ', resolve);
+      });
+      rl.close();
+
+      const trimmed = answer.trim();
+      if (trimmed && trimmed.startsWith('sk-')) {
+        // Save to .env for future runs
+        const envPath = join(process.cwd(), '.env');
+        const line = `ANTHROPIC_API_KEY=${trimmed}\n`;
+        try {
+          // Append only if not already present
+          const existing = existsSync(envPath) ? readFileSync(envPath, 'utf-8') : '';
+          if (!existing.includes('ANTHROPIC_API_KEY')) {
+            writeFileSync(envPath, existing + line);
+            console.log(`   ✅ Saved to .env — won't ask again.\n`);
+          }
+        } catch {}
+        found = { key: trimmed, source: '.env (just saved)' };
+      } else {
+        console.log('   Skipping. Chat feature will be disabled.\n');
+      }
+    }
+
+    const apiKey = found?.key;
+    if (apiKey) {
+      console.log(`✅ API key ready (${found.source})\n`);
+      process.env.ANTHROPIC_API_KEY = apiKey;
     }
 
     // Optional port argument (not allowed with --production)
@@ -296,7 +369,15 @@ switch (command) {
       port = args[1];
     }
     process.env.PORT = port;
-    process.env.COURSES_DIR = process.env.COURSES_DIR || './courses';
+    // Default to ./courses if it has content, otherwise use ./learning
+    let defaultCourses = './courses';
+    if (existsSync('./courses')) {
+      const coursesContent = readdirSync('./courses');
+      if (coursesContent.length === 0) defaultCourses = './learning';
+    } else if (existsSync('./learning')) {
+      defaultCourses = './learning';
+    }
+    process.env.COURSES_DIR = process.env.COURSES_DIR || defaultCourses;
 
     const mode = isProduction ? 'production' : 'development';
     console.log(`

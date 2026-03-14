@@ -15,6 +15,7 @@ import './ChatPanel.css';
  * @param {Function} props.onSendMessage - Callback when message is sent (optional, for external handling)
  */
 export default function ChatPanel({ courseSlug, currentPhase = 'idle', onSendMessage }) {
+  const [sessionId, setSessionId] = useState(null);
   const [messages, setMessages] = useState(() => [
     {
       role: 'assistant',
@@ -40,6 +41,7 @@ export default function ChatPanel({ courseSlug, currentPhase = 'idle', onSendMes
 
   // SSE hook for streaming responses
   const { data: streamedData, error: streamError, connect: startStream, disconnect: stopStream, reset: resetStream } = useSSE('/api/chat', {
+    onSessionId: (id) => setSessionId(id),
     onMessage: (data) => {
       // Accumulated in the data state
     },
@@ -59,10 +61,23 @@ export default function ChatPanel({ courseSlug, currentPhase = 'idle', onSendMes
     onError: (err) => {
       console.error('Stream error:', err);
       setIsStreaming(false);
+      // Replace the empty assistant bubble with the error message
+      setMessages((prev) => {
+        const updated = [...prev];
+        const lastIndex = updated.length - 1;
+        if (lastIndex >= 0 && updated[lastIndex].role === 'assistant' && !updated[lastIndex].content) {
+          updated[lastIndex] = {
+            ...updated[lastIndex],
+            content: `⚠️ ${err.message || 'Connection failed'}`,
+          };
+        }
+        return updated;
+      });
     },
   });
 
   // Update messages with streamed content
+  // streamedData is the accumulated total, so we SET not append
   useEffect(() => {
     if (streamedData && isStreaming) {
       setMessages((prev) => {
@@ -71,7 +86,7 @@ export default function ChatPanel({ courseSlug, currentPhase = 'idle', onSendMes
         if (lastIndex >= 0 && updated[lastIndex].role === 'assistant') {
           updated[lastIndex] = {
             ...updated[lastIndex],
-            content: (updated[lastIndex].content || '') + streamedData,
+            content: streamedData,
           };
         }
         return updated;
@@ -117,6 +132,7 @@ export default function ChatPanel({ courseSlug, currentPhase = 'idle', onSendMes
       startStream('/api/chat', {
         messages: updatedMessages.map(m => ({ role: m.role, content: m.content })),
         courseSlug,
+        sessionId,
       });
     } catch (err) {
       setMessages((prev) => {

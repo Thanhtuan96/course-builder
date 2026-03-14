@@ -27,7 +27,7 @@ export async function fetchCourseFile(slug, file) {
   if (!response.ok) {
     throw new Error(`Failed to fetch course file: ${response.statusText}`);
   }
-  return response.text();
+  return response.json();
 }
 
 /**
@@ -79,4 +79,50 @@ export async function sendChatMessage(message, options = {}) {
   };
   
   return eventSource;
+}
+
+/**
+ * Fetch all exercises for a course
+ * @param {string} slug - Course slug
+ * @returns {Promise<{exercises: Array, activeExercise: string|null}>}
+ */
+export async function fetchExercises(slug) {
+  const response = await fetch(`${API_BASE}/courses/${slug}/exercises`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch exercises: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+/**
+ * Fetch a specific exercise
+ * @param {string} slug - Course slug
+ * @param {string} filename - Exercise filename
+ * @returns {Promise<{content: string, filename: string}>}
+ */
+export async function fetchExercise(slug, filename) {
+  const response = await fetch(`${API_BASE}/courses/${slug}/exercises/${filename}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch exercise: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+/**
+ * Save exercise content
+ * @param {string} slug - Course slug
+ * @param {string} filename - Exercise filename
+ * @param {string} content - Exercise content
+ * @returns {Promise<{success: boolean}>}
+ */
+export async function saveExercise(slug, filename, content) {
+  const response = await fetch(`${API_BASE}/courses/${slug}/exercises/${filename}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content })
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to save exercise: ${response.statusText}`);
+  }
+  return response.json();
 }

@@ -1,15 +1,15 @@
 /**
- * useSSE.js - Server-Sent Events hook for streaming chat responses
+ * useSSE.js - POST-based streaming hook for chat responses
+ * Uses fetch() with ReadableStream instead of EventSource (which only supports GET)
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 /**
- * Custom hook for Server-Sent Events streaming
- * @param {string} url - URL to connect to for SSE
+ * Custom hook for streaming chat responses via POST + SSE
+ * @param {string} url - Default URL (unused, passed per-call in connect)
  * @param {Object} options - Configuration options
- * @param {boolean} options.autoConnect - Whether to connect automatically (default: false)
- * @param {Function} options.onMessage - Called for each message event
+ * @param {Function} options.onMessage - Called for each chunk received
  * @param {Function} options.onError - Called on connection error
  * @param {Function} options.onComplete - Called when stream completes
  */
@@ -17,79 +17,111 @@ export function useSSE(url, options = {}) {
   const [data, setData] = useState('');
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState(null);
-  const eventSourceRef = useRef(null);
+  const abortControllerRef = useRef(null);
   const optionsRef = useRef(options);
 
-  // Update options ref if it changes
   useEffect(() => {
     optionsRef.current = options;
   }, [options]);
 
-  const connect = useCallback((requestUrl, body = null) => {
-    // Close existing connection if any
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
+  const connect = useCallback(async (requestUrl, body = null) => {
+    // Abort any in-flight request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
     }
 
-    // Build URL with query params if body provided
-    let connectionUrl = requestUrl;
-    if (body) {
-      const params = new URLSearchParams();
-      Object.entries(body).forEach(([key, value]) => {
-        if (Array.isArray(value)) {
-          // For messages array, stringify it
-          params.append(key, JSON.stringify(value));
-        } else if (value !== undefined && value !== null) {
-          params.append(key, value);
-        }
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
+    setData('');
+    setError(null);
+    setIsConnected(true);
+
+    try {
+      const response = await fetch(requestUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: body ? JSON.stringify(body) : null,
+        signal: abortController.signal,
       });
-      connectionUrl = `${requestUrl}?${params.toString()}`;
-    }
 
-    const eventSource = new EventSource(connectionUrl);
-    eventSourceRef.current = eventSource;
-
-    eventSource.onopen = () => {
-      setIsConnected(true);
-      setError(null);
-    };
-
-    eventSource.onmessage = (event) => {
-      try {
-        const parsed = JSON.parse(event.data);
-        
-        if (parsed.type === 'text') {
-          setData((prev) => prev + parsed.text);
-          optionsRef.current.onMessage?.(parsed);
-        } else if (parsed.type === 'done') {
-          optionsRef.current.onComplete?.();
-        } else if (parsed.type === 'error') {
-          setError(parsed.message);
-          optionsRef.current.onError?.(parsed.message);
-        }
-      } catch {
-        // Handle raw text messages
-        setData((prev) => prev + event.data);
-        optionsRef.current.onMessage?.(event.data);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-    };
 
-    eventSource.onerror = (err) => {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop(); // Keep last incomplete line
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+
+          const raw = line.slice(6);
+
+          if (raw === '[DONE]') {
+            setIsConnected(false);
+            optionsRef.current.onComplete?.();
+            return;
+          }
+
+          try {
+            const parsed = JSON.parse(raw);
+            if (parsed.content) {
+              // Strip <file path="...">...</file> blocks from visible chat text
+              const visible = parsed.content.replace(/<file path="[^"]*">[\s\S]*?<\/file>/g, '');
+              if (visible) {
+                setData((prev) => prev + visible);
+                optionsRef.current.onMessage?.(parsed);
+              }
+            } else if (parsed.sessionId) {
+              // Store session ID for conversation continuity
+              optionsRef.current.onSessionId?.(parsed.sessionId);
+            } else if (parsed.filesUpdated) {
+              // Course files were saved — trigger UI refresh
+              const slug = parsed.courseSlug;
+              parsed.filesUpdated.forEach(file => {
+                if (file === 'LECTURE.md') window.dispatchEvent(new CustomEvent('refresh-lecture', { detail: { slug } }));
+                if (file === 'COURSE.md') window.dispatchEvent(new CustomEvent('refresh-syllabus', { detail: { slug } }));
+              });
+              // Reload course list; pass slug so App can auto-select it
+              if (parsed.filesUpdated.includes('COURSE.md')) {
+                window.dispatchEvent(new CustomEvent('refresh-courses', { detail: { slug } }));
+              }
+            } else if (parsed.error) {
+              setError(parsed.error);
+              optionsRef.current.onError?.(new Error(parsed.error));
+              return;
+            }
+          } catch {
+            // Skip malformed JSON lines
+          }
+        }
+      }
+
       setIsConnected(false);
-      setError('Connection error');
+      optionsRef.current.onComplete?.();
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      setIsConnected(false);
+      setError(err.message || 'Connection error');
       optionsRef.current.onError?.(err);
-      eventSource.close();
-    };
-
-    return eventSource;
+    }
   }, []);
 
   const disconnect = useCallback(() => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
-      setIsConnected(false);
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
     }
+    setIsConnected(false);
   }, []);
 
   const reset = useCallback(() => {
@@ -100,9 +132,7 @@ export function useSSE(url, options = {}) {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-      }
+      abortControllerRef.current?.abort();
     };
   }, []);
 
