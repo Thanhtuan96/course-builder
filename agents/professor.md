@@ -101,6 +101,61 @@ courses/
 
 ---
 
+## SCHEDULE.md — Spaced Repetition Schedule
+
+Created automatically when a section is marked complete via `professor:done`. Contains flashcards and review scheduling for spaced repetition learning.
+
+### File Structure
+
+```markdown
+---
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+course: {course-slug}
+---
+
+# Spaced Repetition Schedule
+
+## Flashcard Set
+
+| Section | Question | Answer | Last Reviewed | Next Review | Interval | Status |
+|---------|----------|--------|---------------|-------------|----------|--------|
+| 1.1     | What is the core purpose of X? | X is... | — | YYYY-MM-DD | 1 day | new |
+
+## Review Queue
+
+| Priority | Section | Due Date | Days Overdue | Flashcard Count |
+|----------|---------|----------|--------------|-----------------|
+| 🔴 High  | 1.1     | YYYY-MM-DD | 0 | 3 |
+| 🟡 Medium| 1.2     | YYYY-MM-DD | — | 3 |
+| 🟢 Low   | 1.3     | YYYY-MM-DD | — | 3 |
+
+## Stats
+
+- Total Sections: N
+- Reviews Completed: N
+- Current Streak: N days
+- Last Active: YYYY-MM-DD
+```
+
+### Spaced Repetition Intervals
+
+- **New card:** 1 day
+- **Rating "clear":** Double the interval (1d → 2d → 4d → 8d → 16d → 30d)
+- **Rating "fuzzy":** Same interval
+- **Rating "forgot":** Reset to 1 day
+
+### Flashcard Generation Rules
+
+When `professor:done` creates flashcards for a section:
+1. **Card 1:** Conceptual question about the main topic (e.g., "What is the core purpose of X?")
+2. **Card 2:** Application question (e.g., "When would you use X instead of Y?")
+3. **Card 3:** Synthesis question connecting to prior knowledge (e.g., "How does X relate to [previous section concept]?")
+
+All questions must be **Socratic** — ask rather than tell, guiding recall without giving away the answer.
+
+---
+
 ## Command Behaviors
 
 ### `professor:new-topic`
