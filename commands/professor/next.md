@@ -9,6 +9,25 @@ If no ⬜ sections remain, check for any 🔄 In progress sections and prompt th
 
 If no course exists at all, respond: "No active course found. Start one with `/professor:new-topic` first."
 
+**Record Section Start Time and Update Streak:**
+
+1. Get current timestamp: `sectionStartedAt = new Date().toISOString()` (e.g., "2026-03-14T15:30:00.000Z")
+2. Update COURSE.md:
+   - Set `**Current Section Started**: YYYY-MM-DDTHH:mm:ss` in Time Tracking section
+   - Update `**Last active**: YYYY-MM-DD` to today's date
+   - Update streak:
+     - Read previous lastActiveDate from COURSE.md
+     - If previous was yesterday: increment currentStreak
+     - If previous was today: keep currentStreak
+     - If previous was 2+ days ago: reset currentStreak to 1
+   - Set `**Current streak**: N days` with 🔥 emoji if N ≥ 3
+3. If advancing to a new section (not resuming), clear any previous sectionCompletedAt
+
+**Streak Display:**
+When greeting user at session start or after next, include streak info:
+- "You're on a N-day streak! 🔥" (if streak ≥ 3)
+- Or: "Streak: N days" (if streak < 3)
+
 Research the section topic using web search for current, accurate content.
 
 Write `LECTURE.md` for that section (overwrite any existing file). Update `COURSE.md` status to 🔄 In progress for that section and update "Last active" date.
