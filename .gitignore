@@ -22,3 +22,5 @@ analysis/
 /learning/**
 node_modules
 .env
+milestone
+GEMINI.md
