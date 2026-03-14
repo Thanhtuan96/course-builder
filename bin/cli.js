@@ -334,15 +334,17 @@ switch (command) {
   }
 
   case 'init':
-  case 'setup':
+  case 'setup': {
     printBanner();
     console.log('');
-    if (args[1]) {
-      await setupAgent(args[1]);
+    const agentArg = args.slice(1).find(a => !a.startsWith('--'));
+    if (agentArg) {
+      await setupAgent(agentArg);
     } else {
       await init();
     }
     break;
+  }
     
   case 'list':
     listAgents();
