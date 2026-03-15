@@ -35,7 +35,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 14: Integration** - CLI web command, production build, static file serving (v2.0) (completed 2026-03-13)
 - [x] **Phase 15: Retention Layer** - SCHEDULE.md, professor:recall, professor:schedule, streak tracking, time tracking (v2.0) (completed 2026-03-14)
 - [x] **Phase 16: Sharing and Templates** - professor:template-export, professor:template-import, course sharing workflow (v2.0) (completed 2026-03-15)
-- [ ] **Phase 17: Auto-generate Exercise Files** - Generate exercise files user can work on directly (exclude learning framework - only need instructions)
+- [x] **Phase 17: Auto-generate Exercise Files** - Generate exercise files user can work on directly (exclude learning framework - only need instructions) (completed 2026-03-15)
 - [ ] **Phase 18: Cloud Deployment** - Deploy to Vercel with public URL, custom domain, and production env var management (v2.1)
 - [ ] **Phase 19: Authentication** - Email + password signup, GitHub OAuth login, persistent sessions (v2.1)
 - [ ] **Phase 20: OSS SKILL Registry** - GitHub-backed community registry, webhook sync, CLI install command (v2.1)
@@ -171,7 +171,7 @@ v2.1: 18 → 19 → 20
 | 14. Integration | 1/1 | Complete    | 2026-03-13 |
 | 15. Retention Layer | 4/4 | Complete    | 2026-03-14 |
 | 16. Sharing and Templates | 1/1 | Complete    | 2026-03-15 |
-| 17. Auto-generate Exercise Files | 1/1 | Planned     | - |
+| 17. Auto-generate Exercise Files | 1/1 | Complete    | 2026-03-15 |
 
 ### v2.1 Phases
 
@@ -401,7 +401,7 @@ Plans:
 **Goal:** Generate self-contained exercise files that users can work on directly without needing LECTURE.md visible. Differentiate between coding exercises (skeleton code with TODOs) and non-coding exercises (pure instructions only).
 **Requirements**: TBD
 **Depends on:** Phase 16
-**Plans:** 1/1 plans
+**Plans:** 1/1 plans complete
 
 Plans:
 - [x] 17-01-PLAN.md — Enhance exercise generation with topic detection, self-contained coding/non-coding templates
