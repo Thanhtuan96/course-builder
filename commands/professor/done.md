@@ -1,103 +1,36 @@
 ---
 name: professor:done
-description: Mark the current section complete after demonstrating understanding
+description: Mark the current section complete after demonstrating understanding (via Coach agent)
 ---
 
-Ask the user to explain the core concept of the current section in their own words before marking anything done.
+# Professor:done → Coach Gate
 
-**Calculate and Record Duration:**
+This command routes to the **Coach agent** for self-assessment before marking complete.
 
-1. Get current timestamp: `sectionCompletedAt = new Date().toISOString()`
-2. Read sectionStartedAt from COURSE.md Time Tracking section
-3. Calculate duration: `sectionDuration = sectionCompletedAt - sectionStartedAt`
-4. Round to nearest minute
-5. Update COURSE.md:
-   - In Sections table: add duration to the completed row (e.g., "45 min")
-   - In Progress Log: add entry with Date, Section, Action="Completed", Duration
-   - Clear `**Current Section Started**` field (set to "—")
-   - Clear `**Section Duration**` field (set to "—")
-   - Update `**Last active**: YYYY-MM-DD` to today
+## Flow:
 
-**Duration Format:**
-- Under 60 minutes: "N min" (e.g., "45 min")
-- 60+ minutes: "Nh MMm" (e.g., "1h 30m")
-- Over 4 hours: consider capping or flagging (might indicate breaks)
+1. **Coach Gate (first):**
+   - Read LEARNING-LOG.md for Reasoning Trail
+   - Coach asks: "Looking back at this section — what was the hardest concept for you?"
+   - Coach asks follow-up targeting weakest point
+   - Coach decides:
+     - **If solid:** "You demonstrate solid understanding. Say 'confirm' to complete."
+     - **If shaky:** One more round, then Coach decides:
+       - Mark done with ⚠️ watch-this flag, OR
+       - Ask learner to try once more
 
-If their explanation is solid:
-- Update `COURSE.md`: change section status to ✅ Done and record the completion date
-- Add a progress log entry in `COURSE.md` with duration calculated above
-- **Clear the "Active exercise" field**:
-  - Option A: Remove the line entirely
-  - Option B: Set to empty (e.g., **Active exercise**: —)
-- **Create or update SCHEDULE.md** for spaced repetition (see below)
-- Check if all sections are now ✅ Done — if so, trigger the Capstone Unlock message
+2. **Professor completes (after Coach approval):**
+   - User says "confirm" after Coach approval
+   - Professor calculates and records duration
+   - Professor updates COURSE.md (section status → ✅ Done)
+   - Professor adds Progress Log entry
+   - Professor clears "Active exercise" field
+   - Professor creates/updates SCHEDULE.md with flashcards
+   - Professor checks if all sections done → trigger Capstone Unlock if complete
 
-If their explanation is shaky:
-- Give Socratic feedback pointing to what is unclear
-- Do not mark the section done until understanding is demonstrated
+## Watch-this Flag:
 
----
-
-## SCHEDULE.md Creation
-
-When marking a section complete, create or update `SCHEDULE.md` in the course directory.
-
-**File location:**
-- For worktree courses: `learning/{slug}/SCHEDULE.md`
-- For legacy courses: `courses/{slug}/SCHEDULE.md`
-
-**If SCHEDULE.md doesn't exist, create it:**
-
-```markdown
----
-created: YYYY-MM-DD
-updated: YYYY-MM-DD
-course: {course-slug}
----
-
-# Spaced Repetition Schedule
-
-## Flashcard Set
-
-| Section | Question | Answer | Last Reviewed | Next Review | Interval | Status |
-|---------|----------|--------|---------------|-------------|----------|--------|
-
-## Review Queue
-
-| Priority | Section | Due Date | Days Overdue | Flashcard Count |
-|----------|---------|----------|--------------|-----------------|
-
-## Stats
-
-- Total Sections: 0
-- Reviews Completed: 0
-- Current Streak: 0 days
-- Last Active: YYYY-MM-DD
-```
-
-**Generate 3 Socratic flashcards for the completed section:**
-
-1. **Card 1 — Conceptual:** Question about the main topic (e.g., "What is the core purpose of X?")
-2. **Card 2 — Application:** When/where to use it (e.g., "When would you use X instead of Y?")
-3. **Card 3 — Synthesis:** Connect to prior knowledge (e.g., "How does X relate to [previous section concept]?")
-
-**Add flashcards to the Flashcard Set table:**
-- Section: Section number and name (e.g., "1.1 Introduction")
-- Question: Socratic question (asks, doesn't tell)
-- Answer: Brief, accurate answer
-- Last Reviewed: "—"
-- Next Review: Tomorrow's date (YYYY-MM-DD)
-- Interval: "1 day"
-- Status: "new"
-
-**Add section to Review Queue:**
-- Priority: 🔴 High (new items always high priority)
-- Section: Section number and name
-- Due Date: Tomorrow (YYYY-MM-DD)
-- Days Overdue: "—"
-- Flashcard Count: 3
-
-**Update Stats section:**
-- Increment Total Sections by 1
-- Set Last Active to today's date
-- Update `updated` field in frontmatter
+If Coach marks done with ⚠️ watch-this:
+- Coach writes to LEARNING-LOG.md Reasoning Trail: "⚠️ watch-this: [concept]"
+- Navigator reads this flag when building bridges in future sections
+- Professor does NOT write watch-this flags (Coach owns that)
