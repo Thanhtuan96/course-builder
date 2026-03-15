@@ -174,6 +174,7 @@ v2.1: 18 → 19 → 20
 | 16. Sharing and Templates | 1/1 | Complete    | 2026-03-15 |
 | 17. Auto-generate Exercise Files | 1/1 | Complete    | 2026-03-15 |
 | 17.1. Coach Agent | 2/2 | Complete    | 2026-03-15 |
+| 17.1.1. Spotter Agent | 2/2 | Planned     | - |
 
 ### v2.1 Phases
 
@@ -431,6 +432,31 @@ Plans:
 Plans:
 - [ ] 17.1-01-PLAN.md — Create Coach agent + update Professor with routing table and LEARNING-LOG format
 - [ ] 17.1-02-PLAN.md — Wire commands to Coach + register in plugin.json
+
+---
+
+### Phase 17.1.1: Spotter Agent (Exercise Companion)
+
+**Goal:** Implement Spotter agent for mid-work check-ins, breaking exercise isolation by being present when learner asks for check-in.
+
+**Depends on:** Phase 17.1 (Coach Agent)
+
+**Requirements:** TBD
+
+**Success Criteria** (what must be TRUE):
+1. User can invoke professor:spotter command and receive check-in flow
+2. Spotter asks position question (a/b/c/d) and responds appropriately per routing table
+3. Spotter routes to Coach when learner selects "ready for review"
+4. Spotter appends to Attempt Log in LEARNING-LOG.md
+5. professor:hint reads attempt log before applying hint layers
+6. professor:next reminds learner about spotter at end of lecture
+7. Spotter agent and professor:spotter command registered in plugin.json
+
+**Plans:** 2/2 plans complete
+
+Plans:
+- [ ] 17.1.1-01-PLAN.md — Create Spotter agent + command + Professor format
+- [ ] 17.1.1-02-PLAN.md — Wire hint, next, plugin.json
 
 ---
 
