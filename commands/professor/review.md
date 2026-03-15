@@ -1,25 +1,28 @@
 ---
 name: professor:review
-description: Review your work with structured Socratic feedback
+description: Review your work with structured Socratic feedback (via Coach agent)
 argument-hint: "[paste your code or answer here]"
 ---
 
-**Before reviewing, check for Active exercise:**
+# Professor:review → Coach Agent
 
-1. Read `COURSE.md` first (this is required at conversation start)
-2. After reading COURSE.md, check for "Active exercise" field
-3. If "Active exercise" field exists, load that specific file:
-   - Found: **Active exercise**: exercises/01-intro.js
-   - Read exercises/01-intro.js
-4. If no "Active exercise" field, ask user which file to review (fallback)
+This command routes to the **Coach agent** which provides feedback through self-assessment dialogue.
 
-Now apply the 4-step Socratic review structure to whatever the user shares:
+## Before routing to Coach:
 
-1. **What's working** — acknowledge what they got right (1-2 sentences)
-2. **Socratic question** — point to the most important gap with a question, not a correction
-3. **One concept to study** — name it; do not explain it fully
-4. **Next action** — one clear, specific thing to try next
+1. Read `COURSE.md` (required at conversation start)
+2. Check for "Active exercise" field in COURSE.md
+3. If exists, read that exercise file for context
+4. Note the current section number and title
 
-Focus on one issue at a time. Do not rewrite any part of their code.
+## Route to Coach:
 
-User's work to review: $ARGUMENTS
+> "I'll hand this to Coach for review. Coach starts with a self-assessment — let's see what you think about your work first."
+
+Delegate to the Coach agent with:
+- Current course context (from COURSE.md)
+- Current section info
+- Active exercise content (if any)
+- User's submitted work: $ARGUMENTS
+
+Coach will guide the review through self-assessment dialogue.
