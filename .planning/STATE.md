@@ -5,12 +5,12 @@ milestone_name: Phases
 current_phase: Not started (roadmap defined, ready for planning)
 current_plan: —
 status: planning
-last_updated: "2026-03-15T12:31:40.106Z"
+last_updated: "2026-03-15T11:20:30.491Z"
 progress:
-  total_phases: 25
-  completed_phases: 14
-  total_plans: 26
-  completed_plans: 28
+  total_phases: 21
+  completed_phases: 13
+  total_plans: 25
+  completed_plans: 27
 ---
 
 # Session State
@@ -35,11 +35,6 @@ See: .planning/PROJECT.md
 - v1.1 completed: Git worktree courses, auto-create exercise files, agent specialization
 - v2.0 in progress: Phase 13 (React client) and Phase 14 (Integration) done; phases 15-17 still pending
 - v2.1 roadmap defined: Phases 18-20 — cloud deploy, auth, OSS SKILL registry
-- Phase 17.1 inserted after Phase 17: Coach Agent — feedback dialogue and self-assessment (URGENT)
-- Phase 17.1.1 inserted after Phase 17.1: Spotter Agent — exercise companion and mid-work check-ins (URGENT)
-- Phase 17.1.1.1 inserted after Phase 17.1.1: Navigator Agent — section bridges and concept threading (URGENT)
-- Phase 17.1.1.1.1 inserted after Phase 17.1.1.1: Professor Orchestrator Refactor — strip direct logic, add routing table (URGENT)
-- Spec: docs/superpowers/specs/2026-03-15-learning-ux-agents-team-design.md
 
 ### v2.1 Phase Summary
 - **Phase 18: Cloud Deployment** — Vercel deploy, custom domain, env var management (DEPL-01, DEPL-02, DEPL-03)

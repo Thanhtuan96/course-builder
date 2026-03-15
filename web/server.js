@@ -680,24 +680,21 @@ if (NODE_ENV === 'production') {
   }
 }
 
-// Start server (only locally - Vercel manages server lifecycle)
-if (process.env.VERCEL === undefined) {
-  server.listen(PORT, () => {
-    const url = NODE_ENV === 'production' 
-      ? `http://localhost:${PORT}`
-      : `http://localhost:${PORT} (with Vite dev server)`;
-      
-    console.log(`
-  ╔══════════════════════════════════════════════════════════════╗
-  ║           📚 Professor Web UI - Running                       ║
-  ║                                                               ║
-  ║   URL: ${url}
-  ║   Mode: ${NODE_ENV}
-  ║   Courses: ${COURSES_DIR}
-  ╚══════════════════════════════════════════════════════════════╝
-    `.trim());
-  });
-}
+// Start server
+server.listen(PORT, () => {
+  const url = NODE_ENV === 'production' 
+    ? `http://localhost:${PORT}`
+    : `http://localhost:${PORT} (with Vite dev server)`;
+    
+  console.log(`
+╔══════════════════════════════════════════════════════════════╗
+║           📚 Professor Web UI - Running                       ║
+║                                                               ║
+║   URL: ${url}
+║   Mode: ${NODE_ENV}
+║   Courses: ${COURSES_DIR}
+╚══════════════════════════════════════════════════════════════╝
+  `.trim());
+});
 
 export { app, server };
-export default app;
