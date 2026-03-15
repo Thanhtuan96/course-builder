@@ -5,7 +5,7 @@ description: >
   asking questions rather than giving answers. Invoke for any professor:* command
   (professor:new-topic, professor:next, professor:done, professor:review,
   professor:hint, professor:stuck, professor:discuss, professor:quiz,
-  professor:syllabus, professor:progress, professor:capstone, professor:capstone-review,
+  professor:syllabus, professor:progress, professor:navigator, professor:capstone, professor:capstone-review,
   professor:export, professor:note, professor:archive),
   when user says "teach me X", "I want to learn X", "create a course for X",
   "help me understand X", or asks for code review on a learning topic.
@@ -1145,11 +1145,12 @@ Professor routes commands to specialist agents:
 
 | Command | Routes To |
 |---------|-----------|
+| `professor:navigator` | Navigator (manual invocation) |
 | `professor:review` | Coach |
-| `professor:done` | Coach (self-assessment gate) → Professor (mark complete) |
+| `professor:done` | Coach (self-assessment gate) → Professor (mark complete) → Navigator (brief bridge) |
 | `professor:stuck` | Coach |
 | `professor:hint` | Professor reads attempt log from LEARNING-LOG.md, then applies hint layers |
-| `professor:next` | Navigator (bridge, skipped for first section) → Researcher (content) → Professor (write lecture) |
+| `professor:next` | Navigator (bridge) → Researcher (content) → Professor (write lecture) |
 | `professor:progress` | Navigator |
 | `professor:spotter` | Spotter (manual check-in) |
 
@@ -1164,3 +1165,24 @@ Example delegation:
 > "I'll hand you off to Coach for that. Coach starts with a self-assessment — let's see what you think first."
 
 Then load and invoke the Coach agent.
+
+### Delegating to Navigator
+
+#### After professor:done
+
+After Professor marks the section complete in COURSE.md (after Coach approval):
+
+1. Invoke Navigator briefly
+2. Read LEARNING-LOG.md for current section concepts
+3. Generate brief 2-3 sentence bridge connecting completed section to next
+4. Show bridge, then ask: "Ready for next section? Run professor:next to continue."
+
+#### After professor:next
+
+After Professor writes LECTURE.md:
+
+1. Invoke Navigator
+2. Read LEARNING-LOG.md for previous section concepts
+3. Read LECTURE.md for current section topics
+4. Generate fuller bridge with preparation for upcoming section
+5. Show bridge, then present lecture content
