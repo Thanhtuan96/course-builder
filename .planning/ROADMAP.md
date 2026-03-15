@@ -575,13 +575,16 @@ Plans:
 
 ### Phase 21: research and polish current agent plan to work in real world
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** Polish all 5 agent files (Professor, Coach, Spotter, Navigator, Researcher) for cross-platform compatibility across Claude Code, Cursor, Gemini CLI, and OpenCode — removing Claude Code-specific patterns and adding self-contained fallback behavior where needed.
+**Requirements**: COMPAT-01, COMPAT-02, COMPAT-03, COMPAT-04, COMPAT-05, COMPAT-06, COMPAT-07
 **Depends on:** Phase 20
-**Plans:** 0 plans
+**Plans:** 4 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 21 to break down)
+- [ ] 21-01-PLAN.md — Refactor professor.md: remove routing:/actions: frontmatter, remove AskUserQuestion, trim body, add platform-conditional delegation blocks
+- [ ] 21-02-PLAN.md — Polish coach.md, spotter.md, navigator.md, researcher.md: add mode: subagent, model: inherit, platform-agnostic return language
+- [ ] 21-03-PLAN.md — Sync agents/ to shared/ via bin/sync-shared.sh, add missing navigator.md, update SKILL.md with multi-agent architecture table
+- [ ] 21-04-PLAN.md — Run compatibility checklist and get human sign-off
 
 ---
 
