@@ -175,7 +175,7 @@ v2.1: 18 → 19 → 20
 | 17. Auto-generate Exercise Files | 1/1 | Complete    | 2026-03-15 |
 | 17.1. Coach Agent | 2/2 | Complete    | 2026-03-15 |
 | 17.1.1. Spotter Agent | 2/2 | Complete    | 2026-03-15 |
-| 17.1.1.1. Navigator Agent | 1/2 | In Progress | - |
+| 17.1.1.1. Navigator Agent | 2/2 | Complete   | 2026-03-15 |
 
 ### v2.1 Phases
 
@@ -476,7 +476,7 @@ Plans:
 4. Learner's "aha moments" from Coach feedback are threaded forward by Navigator
 5. Navigator appends bridge summaries to LEARNING-LOG.md
 
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 17.1.1.1-01-PLAN.md — Create Navigator agent
