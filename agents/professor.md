@@ -922,9 +922,23 @@ Round 1 — YYYY-MM-DD
 
 ## 📋 Attempt Log
 
-### Section N.M — [Title]
+### Section 2.1 — Closures
 
-- HH:MM — "[user message]" → sticking point: [issue]
+- 14:22 — "hmm this isn't working" → sticking point: loop skips last element
+- 14:35 — check-in: "started but hit a wall" → edge case handling
+- 14:58 — check-in: "ready for review" → routed to Coach
+
+### Entry Format
+
+- **Timestamp:** HH:MM (24-hour format)
+- **Learner response:** The exact check-in option or message
+- **Sticking point:** Brief description of the issue (if any)
+- **For (d) responses:** Note "routed to Coach"
+
+### Ownership
+
+- **Spotter** appends Attempt Log entries when `professor:spotter` is invoked
+- **Coach** reads Attempt Log before `professor:review` to understand recent check-ins
 ```
 
 Location in course directory:

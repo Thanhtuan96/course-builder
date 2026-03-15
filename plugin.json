@@ -14,6 +14,10 @@
     {
       "name": "coach",
       "file": "agents/coach.md"
+    },
+    {
+      "name": "spotter",
+      "file": "agents/spotter.md"
     }
   ],
   "commands": [
@@ -37,7 +41,8 @@
     { "name": "professor:template-export", "file": "commands/professor/template-export.md" },
     { "name": "professor:template-import", "file": "commands/professor/template-import.md" },
     { "name": "professor:worktrees",      "file": "commands/professor/worktrees.md" },
-    { "name": "professor:switch",         "file": "commands/professor/switch.md" }
+    { "name": "professor:switch",         "file": "commands/professor/switch.md" },
+    { "name": "professor:spotter",        "file": "commands/professor/spotter.md" }
   ],
   "hooks": [
     {
