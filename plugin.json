@@ -30,6 +30,8 @@
     { "name": "professor:note",            "file": "commands/professor/note.md" },
     { "name": "professor:export",          "file": "commands/professor/export.md" },
     { "name": "professor:archive",        "file": "commands/professor/archive.md" },
+    { "name": "professor:template-export", "file": "commands/professor/template-export.md" },
+    { "name": "professor:template-import", "file": "commands/professor/template-import.md" },
     { "name": "professor:worktrees",      "file": "commands/professor/worktrees.md" },
     { "name": "professor:switch",         "file": "commands/professor/switch.md" }
   ],
