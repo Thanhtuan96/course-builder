@@ -175,7 +175,7 @@ v2.1: 18 → 19 → 20
 | 17. Auto-generate Exercise Files | 1/1 | Complete    | 2026-03-15 |
 | 17.1. Coach Agent | 2/2 | Complete    | 2026-03-15 |
 | 17.1.1. Spotter Agent | 2/2 | Complete    | 2026-03-15 |
-| 17.1.1.1. Navigator Agent | 2/2 | Complete   | 2026-03-15 |
+| 17.1.1.1. Navigator Agent | 2/2 | Complete    | 2026-03-15 |
 
 ### v2.1 Phases
 
