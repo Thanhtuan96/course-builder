@@ -127,6 +127,12 @@ Requirements for milestone v2.0 - Local Web UI.
 
 - [x] **WEB-22**: All markdown rendered in browser is sanitized with DOMPurify to prevent XSS
 
+### Sharing and Templates
+
+- [ ] **SHR-01**: `professor:template-export` creates template file with course structure only
+- [ ] **SHR-02**: `professor:template-import <path>` reads template and creates course
+- [ ] **SHR-03**: Exported template is valid Markdown readable without tools
+
 ## v2.1 Requirements
 
 Requirements for milestone v2.1 — Public Launch.
@@ -246,6 +252,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WEB-20 | Phase 11 | Pending |
 | WEB-21 | Phase 11 | Pending |
 | WEB-22 | Phase 10 | Complete |
+| SHR-01 | Phase 16 | Pending |
+| SHR-02 | Phase 16 | Pending |
+| SHR-03 | Phase 16 | Pending |
 | DEPL-01 | Phase 18 | Pending |
 | DEPL-02 | Phase 18 | Pending |
 | DEPL-03 | Phase 18 | Pending |
@@ -259,9 +268,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 **Coverage:**
 - v1.0 requirements: 24 total
 - v1.1 requirements: 16 total
-- v2.0 requirements: 22 total
+- v2.0 requirements: 25 total
 - v2.1 requirements: 9 total
-- Mapped to phases: 87
+- Mapped to phases: 90
 - Unmapped: 0 ✓
 
 ---
