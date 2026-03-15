@@ -43,8 +43,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Milestones
 
 **v1.1 (Complete):** Phases 1-12 ✓
-**v2.0 (In Progress):** Phases 13-17 — Local Web UI, Retention Layer, Sharing & Templates, Auto-generate Exercise Files
-**v2.1 (Planned):** Phases 18-20 — Cloud Deployment, Authentication, OSS SKILL Registry
+**v2.0 (Complete):** Phases 13-17 — Local Web UI, Retention Layer, Sharing & Templates, Auto-generate Exercise Files ✓
+**v2.1 (Deferred):** Phases 18-20 — Cloud Deployment, Authentication, OSS SKILL Registry (focusing on CLI/skills first)
 
 ## Phase Details
 
@@ -415,6 +415,8 @@ Plans:
 **Depends on:** Phase 14 (production build must exist before deploying)
 **Requirements:** DEPL-01, DEPL-02, DEPL-03
 
+**Status:** DEFERRED — Focus on CLI/skills first. Will revisit later.
+
 **Success Criteria** (what must be TRUE):
 1. Visiting the public Vercel URL loads the web UI without error from any network
 2. A custom domain (e.g. `professor.yourdomain.com`) resolves to the deployed platform
@@ -435,6 +437,8 @@ Plans:
 **Depends on:** Phase 18 (OAuth callbacks require a public URL; session cookies require a stable domain)
 **Requirements:** AUTH-01, AUTH-02, AUTH-03
 
+**Status:** DEFERRED — Focus on CLI/skills first. Will revisit later.
+
 **Success Criteria** (what must be TRUE):
 1. A new visitor can sign up with email and password and land on the app as an authenticated user
 2. An existing user can click "Continue with GitHub" and complete OAuth login without entering a password
@@ -454,6 +458,8 @@ Plans:
 
 **Depends on:** Phase 18 (webhook endpoint requires a public URL; CLI install fetches from the registry index)
 **Requirements:** REG-01, REG-02, REG-03
+
+**Status:** DEFERRED — Focus on CLI/skills first. Will revisit later.
 
 **Success Criteria** (what must be TRUE):
 1. A contributor can open a PR to the `professor-skills/` GitHub org repository, and after merge the SKILL appears in the platform's registry index

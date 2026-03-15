@@ -18,9 +18,12 @@ analysis/
 /docs/plans
 /docs/superpowers
 
-/courses/**
-/learning/**
+courses/**
+learning/**
 node_modules
 .env
 milestone
 GEMINI.md
+
+dist
+/web/client/dist

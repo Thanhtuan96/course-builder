@@ -1,38 +1,39 @@
 {
-  "name": "course-professor",
-  "version": "1.0.3",
-  "description": "A Socratic learning assistant - teaches by asking questions instead of giving answers. Works with Claude Code, OpenCode, Gemini CLI, and other AI agents.",
-  "type": "module",
-  "bin": {
-    "course-professor": "./bin/cli.js",
-    "professor": "./bin/cli.js"
-  },
-  "scripts": {
-    "build": "cd web/client && npm run build"
-  },
-  "files": [
-    "bin/",
-    "templates/",
-    "shared/",
-    "plugin.json"
-  ],
-  "keywords": [
-    "learning",
-    "socratic",
-    "education",
-    "ai",
-    "claude",
-    "opencode",
-    "teacher",
-    "course"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Thanhtuan96/course-learning-plugin"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "author": "ronnie-tk",
-  "license": "MIT"
+    "name": "course-professor",
+    "version": "1.0.2",
+    "description": "A Socratic learning assistant - teaches by asking questions instead of giving answers. Works with Claude Code, OpenCode, Gemini CLI, and other AI agents.",
+    "type": "module",
+    "bin": {
+        "course-professor": "./bin/cli.js",
+        "professor": "./bin/cli.js"
+    },
+    "scripts": {
+        "build": "cd web/client && npm run build",
+        "start": "cd web && node server.js"
+    },
+    "files": [
+        "bin/",
+        "templates/",
+        "shared/",
+        "plugin.json"
+    ],
+    "keywords": [
+        "learning",
+        "socratic",
+        "education",
+        "ai",
+        "claude",
+        "opencode",
+        "teacher",
+        "course"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Thanhtuan96/course-learning-plugin"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "author": "ronnie-tk",
+    "license": "MIT"
 }

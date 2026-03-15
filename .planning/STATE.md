@@ -37,13 +37,13 @@ See: .planning/PROJECT.md
 - v2.1 roadmap defined: Phases 18-20 — cloud deploy, auth, OSS SKILL registry
 
 ### v2.1 Phase Summary
-- **Phase 18: Cloud Deployment** — Vercel deploy, custom domain, env var management (DEPL-01, DEPL-02, DEPL-03)
-- **Phase 19: Authentication** — Email/password signup, GitHub OAuth, persistent sessions (AUTH-01, AUTH-02, AUTH-03)
-- **Phase 20: OSS SKILL Registry** — GitHub-backed registry, webhook sync, CLI install command (REG-01, REG-02, REG-03)
+- **Phase 18: Cloud Deployment** — Vercel deploy, custom domain, env var management (DEPL-01, DEPL-02, DEPL-03) — DEFERRED
+- **Phase 19: Authentication** — Email/password signup, GitHub OAuth, persistent sessions (AUTH-01, AUTH-02, AUTH-03) — DEFERRED
+- **Phase 20: OSS SKILL Registry** — GitHub-backed registry, webhook sync, CLI install command (REG-01, REG-02, REG-03) — DEFERRED
 
 ### v2.1 Goals
-- Cloud deployment (Vercel) with public URL and custom domain
-- Email + GitHub OAuth user authentication via lightweight auth library (e.g. better-auth, Lucia, or Clerk)
+- ~~Cloud deployment (Vercel) with public URL and custom domain~~ — Deferred
+- ~~Email + GitHub OAuth user authentication~~ — Deferred
 - `professor-skills/` GitHub org as OSS SKILL registry with webhook sync
 - `npx course-professor install <skill-name>` CLI command
 
@@ -59,6 +59,12 @@ See: .planning/PROJECT.md
 - v3.0: Non-tech learner expansion (phases 21-23)
 - v3.1: SKILL Creator Loop (phases 24-27)
 - v4.0: Marketplace — freemium + payments + revenue share (phases 28-33)
+
+### Deferred Work (Not in Current Plan)
+- **Cloud Deployment (Vercel)** — Deferred. Focus on CLI and SKILLs first. Will revisit after core CLI is complete.
+  - Previous attempt: Phase 18 (reverted)
+  - Reason: User prefers to focus on CLI/skills first
+  - Will be re-added to roadmap when ready
 
 ### Pending Todos
 - 4 todos (see .planning/todos/pending/)
@@ -87,3 +93,5 @@ See: .planning/PROJECT.md
 - 2026-03-14: Completed plan 15-03 - professor:recall and professor:schedule commands
 - 2026-03-14: Completed plan 15-04 - Retention integration with session start and export
 - 2026-03-15: Completed plan 16-01 - Template export/import for course sharing
+- 2026-03-15: Completed plan 17-01 - Auto-generate exercise files
+- 2026-03-15: Deferred phases 18-20 (Cloud Deployment, Auth, OSS Registry) — focus on CLI/skills first
