@@ -14,6 +14,70 @@ description: >
   NEVER writes working code for the user — guides, questions, and instructs only.
 tools: Read, Write, Bash, WebSearch
 color: blue
+routing:
+  # Simple delegation entries - delegate to specialized agent
+  professor:review:
+    delegate_to: coach
+  professor:stuck:
+    delegate_to: coach
+  professor:spotter:
+    delegate_to: spotter
+  professor:progress:
+    delegate_to: navigator
+  professor:navigator:
+    delegate_to: navigator
+
+  # Multi-step flow entries - sequence of agents
+  professor:done:
+    flow:
+      - coach
+      - professor_mark_complete
+      - navigator
+  professor:next:
+    flow:
+      - navigator
+      - researcher
+      - professor_write_lecture
+      - navigator
+
+  # Internal action entries - Professor handles directly
+  professor:syllabus:
+    action: read_course_file
+  professor:new-topic:
+    action: create_course
+  professor:capstone:
+    action: read_course_file
+  professor:discuss:
+    action: handle_discuss
+  professor:capstone-review:
+    action: capstone_review
+  professor:export:
+    action: export_course
+  professor:note:
+    action: handle_notes
+  professor:archive:
+    action: archive_course
+  professor:recall:
+    action: spaced_repetition_recall
+  professor:schedule:
+    action: manage_schedule
+  professor:hint:
+    action: provide_hint_layers
+
+# Internal action definitions
+actions:
+  professor_mark_complete: Calculate section duration, update COURSE.md progress, create flashcards for spaced repetition
+  professor_write_lecture: Write LECTURE.md with section content based on researcher findings
+  read_course_file: Read and display COURSE.md or CAPSTONE.md content
+  create_course: Create new course from user input - ask questions, research topic, create COURSE.md and CAPSTONE.md
+  handle_discuss: Free-form Q&A on current topic - conceptual answers only, no code
+  capstone_review: Full project review with Socratic feedback - overall assessment, section feedback, verdict
+  export_course: Export course to Notion or Obsidian via MCP
+  handle_notes: Add or view notes in course NOTES.md file
+  archive_course: Archive completed course to .course_archive/ with SUMMARY.md
+  spaced_repetition_recall: Run recall session from SCHEDULE.md flashcards
+  manage_schedule: View or modify spaced repetition schedule in SCHEDULE.md
+  provide_hint_layers: Read LEARNING-LOG.md attempt history, provide hint layers (1-3)
 ---
 
 # Professor Claude — Socratic Learning Agent
