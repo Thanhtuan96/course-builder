@@ -34,7 +34,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 13: Client Components** - React split-pane UI with LecturePanel, ChatPanel, command pills (v2.0)
 - [x] **Phase 14: Integration** - CLI web command, production build, static file serving (v2.0) (completed 2026-03-13)
 - [x] **Phase 15: Retention Layer** - SCHEDULE.md, professor:recall, professor:schedule, streak tracking, time tracking (v2.0) (completed 2026-03-14)
-- [ ] **Phase 16: Sharing and Templates** - professor:template-export, professor:template-import, course sharing workflow (v2.0)
+- [x] **Phase 16: Sharing and Templates** - professor:template-export, professor:template-import, course sharing workflow (v2.0) (completed 2026-03-15)
 - [ ] **Phase 17: Auto-generate Exercise Files** - Generate exercise files user can work on directly (exclude learning framework - only need instructions)
 - [ ] **Phase 18: Cloud Deployment** - Deploy to Vercel with public URL, custom domain, and production env var management (v2.1)
 - [ ] **Phase 19: Authentication** - Email + password signup, GitHub OAuth login, persistent sessions (v2.1)
@@ -170,7 +170,7 @@ v2.1: 18 → 19 → 20
 | 13. Client Components | 2/2 | Complete   | 2026-03-11 |
 | 14. Integration | 1/1 | Complete    | 2026-03-13 |
 | 15. Retention Layer | 4/4 | Complete    | 2026-03-14 |
-| 16. Sharing and Templates | 1/1 | Not started | - |
+| 16. Sharing and Templates | 1/1 | Complete   | 2026-03-15 |
 
 ### v2.1 Phases
 
@@ -390,7 +390,7 @@ Plans:
 2. `professor:template-import <path>` reads a TEMPLATE.md file and creates a new course with pre-built syllabus; user still runs `professor:next` to generate lectures
 3. Exported template is valid Markdown readable without any tool and importable by any Professor installation
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 16-01-PLAN.md — Template export and import commands

@@ -5,12 +5,12 @@ milestone_name: Phases
 current_phase: Not started (roadmap defined, ready for planning)
 current_plan: —
 status: planning
-last_updated: "2026-03-14T15:29:58.373Z"
+last_updated: "2026-03-15T10:26:30.127Z"
 progress:
   total_phases: 21
-  completed_phases: 11
-  total_plans: 23
-  completed_plans: 25
+  completed_phases: 12
+  total_plans: 24
+  completed_plans: 26
 ---
 
 # Session State
@@ -86,3 +86,4 @@ See: .planning/PROJECT.md
 - 2026-03-14: Completed plan 15-02 - Time-per-section and streak tracking for COURSE.md
 - 2026-03-14: Completed plan 15-03 - professor:recall and professor:schedule commands
 - 2026-03-14: Completed plan 15-04 - Retention integration with session start and export
+- 2026-03-15: Completed plan 16-01 - Template export/import for course sharing

@@ -129,9 +129,9 @@ Requirements for milestone v2.0 - Local Web UI.
 
 ### Sharing and Templates
 
-- [ ] **SHR-01**: `professor:template-export` creates template file with course structure only
-- [ ] **SHR-02**: `professor:template-import <path>` reads template and creates course
-- [ ] **SHR-03**: Exported template is valid Markdown readable without tools
+- [x] **SHR-01**: `professor:template-export` creates template file with course structure only
+- [x] **SHR-02**: `professor:template-import <path>` reads template and creates course
+- [x] **SHR-03**: Exported template is valid Markdown readable without tools
 
 ## v2.1 Requirements
 
@@ -252,9 +252,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WEB-20 | Phase 11 | Pending |
 | WEB-21 | Phase 11 | Pending |
 | WEB-22 | Phase 10 | Complete |
-| SHR-01 | Phase 16 | Pending |
-| SHR-02 | Phase 16 | Pending |
-| SHR-03 | Phase 16 | Pending |
+| SHR-01 | Phase 16 | Complete |
+| SHR-02 | Phase 16 | Complete |
+| SHR-03 | Phase 16 | Complete |
 | DEPL-01 | Phase 18 | Pending |
 | DEPL-02 | Phase 18 | Pending |
 | DEPL-03 | Phase 18 | Pending |
