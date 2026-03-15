@@ -173,7 +173,7 @@ v2.1: 18 → 19 → 20
 | 15. Retention Layer | 4/4 | Complete    | 2026-03-14 |
 | 16. Sharing and Templates | 1/1 | Complete    | 2026-03-15 |
 | 17. Auto-generate Exercise Files | 1/1 | Complete    | 2026-03-15 |
-| 17.1. Coach Agent | 2/2 | Complete   | 2026-03-15 |
+| 17.1. Coach Agent | 2/2 | Complete    | 2026-03-15 |
 
 ### v2.1 Phases
 
