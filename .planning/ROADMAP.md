@@ -476,10 +476,11 @@ Plans:
 4. Learner's "aha moments" from Coach feedback are threaded forward by Navigator
 5. Navigator appends bridge summaries to LEARNING-LOG.md
 
-**Plans:** 0 plans (to be planned)
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 17.1.1.1 to break down)
+- [x] 17.1.1.1-01-PLAN.md — Create Navigator agent
+- [x] 17.1.1.1-02-PLAN.md — Wire commands and register
 
 ---
 
