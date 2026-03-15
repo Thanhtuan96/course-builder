@@ -139,9 +139,9 @@ Requirements for milestone v2.1 — Public Launch.
 
 ### Deployment
 
-- [ ] **DEPL-01**: Platform is accessible at a public URL after deploying to cloud host
-- [ ] **DEPL-02**: User can configure a custom domain to point to the deployed platform
-- [ ] **DEPL-03**: Production environment variables (API keys, DB connection) can be managed without code changes
+- [x] **DEPL-01**: Platform is accessible at a public URL after deploying to cloud host
+- [x] **DEPL-02**: User can configure a custom domain to point to the deployed platform
+- [x] **DEPL-03**: Production environment variables (API keys, DB connection) can be managed without code changes
 
 ### Authentication
 
@@ -255,9 +255,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SHR-01 | Phase 16 | Complete |
 | SHR-02 | Phase 16 | Complete |
 | SHR-03 | Phase 16 | Complete |
-| DEPL-01 | Phase 18 | Pending |
-| DEPL-02 | Phase 18 | Pending |
-| DEPL-03 | Phase 18 | Pending |
+| DEPL-01 | Phase 18 | Complete |
+| DEPL-02 | Phase 18 | Complete |
+| DEPL-03 | Phase 18 | Complete |
 | AUTH-01 | Phase 19 | Pending |
 | AUTH-02 | Phase 19 | Pending |
 | AUTH-03 | Phase 19 | Pending |

@@ -36,7 +36,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 15: Retention Layer** - SCHEDULE.md, professor:recall, professor:schedule, streak tracking, time tracking (v2.0) (completed 2026-03-14)
 - [x] **Phase 16: Sharing and Templates** - professor:template-export, professor:template-import, course sharing workflow (v2.0) (completed 2026-03-15)
 - [x] **Phase 17: Auto-generate Exercise Files** - Generate exercise files user can work on directly (exclude learning framework - only need instructions) (completed 2026-03-15)
-- [ ] **Phase 18: Cloud Deployment** - Deploy to Vercel with public URL, custom domain, and production env var management (v2.1)
+- [x] **Phase 18: Cloud Deployment** - Deploy to Vercel with public URL, custom domain, and production env var management (v2.1) (completed 2026-03-15)
 - [ ] **Phase 19: Authentication** - Email + password signup, GitHub OAuth login, persistent sessions (v2.1)
 - [ ] **Phase 20: OSS SKILL Registry** - GitHub-backed community registry, webhook sync, CLI install command (v2.1)
 
@@ -177,7 +177,7 @@ v2.1: 18 → 19 → 20
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 18. Cloud Deployment | 0/TBD | Not started | - |
+| 18. Cloud Deployment | 1/1 | Complete   | 2026-03-15 |
 | 19. Authentication | 0/TBD | Not started | - |
 | 20. OSS SKILL Registry | 0/TBD | Not started | - |
 
@@ -461,7 +461,7 @@ Plans:
 3. Rotating or adding an environment variable (API key, secret) in the Vercel dashboard takes effect on the next request without any code change or redeployment
 4. A new deployment triggered by a `git push` to main completes successfully and serves the updated app
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [x] 18-01-PLAN.md — Vercel deployment configuration, server export, deployment docs
