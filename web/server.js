@@ -698,3 +698,4 @@ server.listen(PORT, () => {
 });
 
 export { app, server };
+export default app;
