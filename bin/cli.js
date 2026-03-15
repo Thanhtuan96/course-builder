@@ -3,10 +3,29 @@
 import { existsSync, mkdirSync, symlinkSync, readFileSync, writeFileSync, readdirSync, cpSync, statSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { createInterface } from 'readline';
+import chalk from 'chalk';
+import inquirer from 'inquirer';
+import ora from 'ora';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SUPPORTED_AGENTS = ['claude', 'gemini', 'opencode', 'cursor'];
+
+// Theme: consistent symbols + colors (chalk respects NO_COLOR / FORCE_COLOR)
+const THEME = {
+  success: '✅',
+  warning: '⚠️',
+  error: '❌',
+  info: '→',
+};
+const STYLE = {
+  success: (s) => chalk.green(THEME.success + ' ' + s),
+  warning: (s) => chalk.yellow(THEME.warning + ' ' + s),
+  error: (s) => chalk.red(THEME.error + ' ' + s),
+  info: (s) => chalk.dim(THEME.info + ' ' + s),
+};
+function style(type, text) {
+  return STYLE[type](text);
+}
 
 async function detectAgent() {
   const detected = [];
@@ -18,57 +37,83 @@ async function detectAgent() {
 }
 
 function printBanner() {
-  console.log(`
-╔══════════════════════════════════════════════════════════════╗
-║           📚 Course Professor - Socratic Learning            ║
-║                                                               ║
-║    Teaches by asking questions, not giving answers.          ║
-╚══════════════════════════════════════════════════════════════╝
-  `.trim());
+  const c = chalk.cyan;
+  const art = `
+          _____                   _______                   _____
+         /\\    \\                 /::\\    \\                 /\\    \\
+        /::\\    \\               /::::\\    \\               /::\\    \\
+       /::::\\    \\             /::::::\\    \\             /::::\\    \\
+      /::::::\\    \\           /::::::::\\    \\           /::::::\\    \\
+     /:::/\\:::\\    \\         /:::/~~\\:::\\    \\         /:::/\\:::\\    \\
+    /:::/__\\:::\\    \\       /:::/    \\:::\\    \\       /:::/__\\:::\\    \\
+    \\:::\\   \\:::\\    \\     /:::/    / \\:::\\    \\     /::::\\   \\:::\\    \\
+  ___\\:::\\   \\:::\\    \\   /:::/____/   \\:::\\____\\   /::::::\\   \\:::\\    \\
+ /\\   \\:::\\   \\:::\\    \\ |:::|    |     |:::|    | /:::/\\:::\\   \\:::\\ ___\\
+/::\\   \\:::\\   \\:::\\____\\|:::|____|     |:::|____|/:::/__\\:::\\   \\:::|    |
+\\:::\\   \\:::\\   \\::/    / \\:::\\   _\\___/:::/    / \\:::\\   \\:::\\  /:::|____|
+ \\:::\\   \\:::\\   \\/____/   \\:::\\ |::| /:::/    /   \\:::\\   \\:::\\/:::/    /
+  \\:::\\   \\:::\\    \\        \\:::\\|::|/:::/    /     \\:::\\   \\::::::/    /
+   \\:::\\   \\:::\\____\\        \\::::::::::/    /       \\:::\\   \\::::/    /
+    \\:::\\  /:::/    /         \\::::::::/    /         \\:::\\  /:::/    /
+     \\:::\\/:::/    /           \\::::::/    /           \\:::\\/:::/    /
+      \\::::::/    /             \\::::/____/             \\::::::/    /
+       \\::::/    /               |::|    |               \\::::/    /
+        \\::/    /                |::|____|                \\::/____/
+         \\/____/                  ~~                       ~~`;
+  const line = chalk.dim('─'.repeat(52));
+  console.log(
+    '\n' + line + '\n' + c(art.trimEnd()) + '\n\n' + chalk.cyan.dim('  ◆  skill quest builder  ◆') + '\n' + line + '\n'
+  );
 }
 
 function printUsage() {
   console.log(`
 Usage: course-professor [command] [options]
 
-Commands:
-  setup [agent]     Set up Professor for a specific agent
-  init              Auto-detect and set up
-  list              List supported agents
-  web [port]        Start local web UI (default port: 3000)
-  web --production  Start web UI in production mode (requires build)
-  help              Show this help message
+Description:
+  Socratic learning assistant — teaches by asking questions. Set up for your
+  agent (Claude Code, Gemini, OpenCode, Cursor) or start the web UI.
 
-Flags:
+COMMANDS
+  ${chalk.bold('setup')} [agent]     Set up Professor for a specific agent
+  ${chalk.bold('init')}              Auto-detect and set up
+  ${chalk.bold('list')}              List supported agents
+  ${chalk.bold('web')} [port]        Start local web UI (default port: 3000)
+  ${chalk.bold('web')} --production  Start web UI in production mode (requires build)
+  ${chalk.bold('help')}              Show this help message
+
+FLAGS
   --global          Install globally (user-wide, e.g. ~/.claude/plugins/professor/)
   --local           Install locally in the current project (default)
 
-Examples:
-  npx course-professor init              # Auto-detect and setup
-  npx course-professor setup claude      # Setup for Claude Code (prompts for scope)
+EXAMPLES
+  npx course-professor init                    # Auto-detect and setup
+  npx course-professor setup claude            # Setup for Claude Code (prompts for scope)
   npx course-professor setup claude --global   # Install globally
-  npx course-professor setup opencode    # Setup for OpenCode
-  npx course-professor setup gemini      # Setup for Gemini CLI
-  npx course-professor web               # Start web UI on port 3000
-  npx course-professor web 4000          # Start on port 4000
-  npx course-professor web --production  # Start in production mode
+  npx course-professor setup opencode          # Setup for OpenCode
+  npx course-professor setup gemini           # Setup for Gemini CLI
+  npx course-professor web                    # Start web UI on port 3000
+  npx course-professor web 4000                # Start on port 4000
+  npx course-professor web --production       # Start in production mode
 
-Supported agents: ${SUPPORTED_AGENTS.join(', ')}
+SUPPORTED AGENTS
+  ${SUPPORTED_AGENTS.join(', ')}
   `.trim());
 }
 
 function listAgents() {
-  console.log('\nSupported agents:');
-  SUPPORTED_AGENTS.forEach(agent => {
-    console.log(`  - ${agent}`);
+  console.log('\nSupported agents:\n');
+  SUPPORTED_AGENTS.forEach((agent, i) => {
+    console.log(`  ${i + 1}. ${agent}`);
   });
-  console.log('');
+  console.log('\nUse course-professor setup <agent> to install.\n');
 }
 
 async function promptScope(platform) {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  rl.on('SIGINT', () => { console.log('\n\nAborted.'); rl.close(); process.exit(0); });
-
+  if (!process.stdin.isTTY) {
+    console.error(style('error', 'Non-interactive mode. Run with --local or --global.'));
+    process.exit(1);
+  }
   const globalPath = {
     claude:   '~/.claude/plugins/professor/',
     gemini:   '~/GEMINI.md',
@@ -76,21 +121,25 @@ async function promptScope(platform) {
     cursor:   '~/.cursor/rules/professor.mdc',
   }[platform] || '~/';
 
-  console.log(`\nInstall scope for ${platform}:`);
-  console.log(`  1. Global — ${globalPath} (available in all projects)`);
-  console.log(`  2. Local  — current project only`);
-
-  const answer = await askQuestion(rl, '\n> ');
-  rl.close();
-  return (answer.trim() === '1' || answer.trim().toLowerCase() === 'global')
-    ? 'global' : 'local';
+  const { scope } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'scope',
+      message: `Install scope for ${platform}:`,
+      choices: [
+        { name: `Global — ${globalPath} (available in all projects)`, value: 'global' },
+        { name: 'Local — current project only', value: 'local' },
+      ],
+      default: 'local',
+    },
+  ]);
+  return scope;
 }
 
 async function setupAgent(agent) {
   const agentLower = agent.toLowerCase();
   if (!SUPPORTED_AGENTS.includes(agentLower)) {
-    console.error(`❌ Unsupported agent: ${agent}`);
-    console.log(`Supported: ${SUPPORTED_AGENTS.join(', ')}`);
+    console.error(style('error', `Unsupported agent: ${agent}. Supported: ${SUPPORTED_AGENTS.join(', ')}. Run 'course-professor list' for details.`));
     process.exit(1);
   }
   const scope = isGlobal ? 'global' : isLocal ? 'local' : await promptScope(agentLower);
@@ -98,65 +147,39 @@ async function setupAgent(agent) {
   await install(scope);
 }
 
-function askQuestion(rl, prompt) {
-  return new Promise(resolve => rl.question(prompt, resolve));
-}
-
 async function promptAgentSelection(agents) {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-
-  rl.on('SIGINT', () => {
-    console.log('\n\nAborted.');
-    rl.close();
-    process.exit(0);
-  });
-
-  let choice;
-  while (true) {
-    const answer = (await askQuestion(rl, '\n> ')).trim();
-    const num = parseInt(answer, 10);
-    if (!isNaN(num) && num >= 1 && num <= agents.length) {
-      choice = agents[num - 1];
-      break;
-    } else if (SUPPORTED_AGENTS.includes(answer.toLowerCase())) {
-      choice = answer.toLowerCase();
-      break;
-    }
-    console.log(`Invalid choice. Enter 1-${agents.length} or a supported agent name (${SUPPORTED_AGENTS.join(', ')}).`);
+  if (!process.stdin.isTTY) {
+    console.error(style('error', "Non-interactive mode. Run with: course-professor setup <agent> --local or --global"));
+    process.exit(1);
   }
-  rl.close();
-  return choice;
+  const { agent } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'agent',
+      message: 'Which agent would you like to set up?',
+      choices: agents.map((a) => ({ name: a, value: a })),
+    },
+  ]);
+  return agent;
 }
 
 async function init() {
   const detected = await detectAgent();
 
   if (detected.length === 0) {
-    console.log(`❓ No agent detected automatically.\n`);
-    console.log('Which agent would you like to set up?');
-    console.log('Enter a number or agent name:\n');
-    SUPPORTED_AGENTS.forEach((agent, i) => {
-      console.log(`  ${i + 1}. ${agent}`);
-    });
-
+    console.log(style('info', 'No agent detected automatically.\n'));
     const choice = await promptAgentSelection(SUPPORTED_AGENTS);
     await setupAgent(choice);
     return;
   }
 
   if (detected.length === 1) {
-    console.log(`🔍 Detected: ${detected[0]}\n`);
+    console.log(style('info', `Detected: ${detected[0]}\n`));
     await setupAgent(detected[0]);
     return;
   }
 
-  console.log(`🔍 Multiple agents detected: ${detected.join(', ')}\n`);
-  console.log('Which agent would you like to set up?');
-  console.log('Enter a number or agent name:\n');
-  detected.forEach((agent, i) => {
-    console.log(`  ${i + 1}. ${agent}`);
-  });
-
+  console.log(style('info', `Multiple agents detected: ${detected.join(', ')}\n`));
   const choice = await promptAgentSelection(detected);
   await setupAgent(choice);
 }
@@ -172,7 +195,7 @@ switch (command) {
     const webDir = join(__dirname, '..', 'web');
 
     if (!existsSync(webDir)) {
-      console.error('❌ Web UI not found. Make sure the plugin is fully installed.');
+      console.error(style('error', "Web UI not found. Ensure the package is fully installed (e.g. run from repo root or after npm install)."));
       process.exit(1);
     }
 
@@ -186,20 +209,22 @@ switch (command) {
     if (isProduction) {
       const distPath = join(webDir, 'client', 'dist');
       if (!existsSync(distPath)) {
-        console.log('⚠️  Production build not found.');
-        console.log('   Run: npm run build');
-        console.log('   Then: npx course-professor web --production');
+        console.error(style('warning', 'Production build not found.'));
+        console.error('   From repo root: npm run build');
+        console.error('   Then: npx course-professor web --production');
         process.exit(1);
       }
     }
 
     // Check for node_modules
     if (!existsSync(join(webDir, 'node_modules'))) {
-      console.log('📦 Installing web dependencies...');
+      const spinner = ora('Installing web dependencies…').start();
       try {
-        execSync('npm install', { cwd: webDir, stdio: 'inherit' });
+        execSync('npm install', { cwd: webDir, stdio: 'pipe' });
+        spinner.succeed('Web dependencies installed.');
       } catch {
-        console.error('❌ Failed to install web dependencies.');
+        spinner.fail('Web dependencies failed.');
+        console.error(style('error', `Check your network and try: cd ${webDir} && npm install`));
         process.exit(1);
       }
     }
@@ -207,11 +232,13 @@ switch (command) {
     // Check for client node_modules (only in dev mode)
     const clientDir = join(webDir, 'client');
     if (!isProduction && existsSync(clientDir) && !existsSync(join(clientDir, 'node_modules'))) {
-      console.log('📦 Installing client dependencies...');
+      const spinner = ora('Installing client dependencies…').start();
       try {
-        execSync('npm install', { cwd: clientDir, stdio: 'inherit' });
+        execSync('npm install', { cwd: clientDir, stdio: 'pipe' });
+        spinner.succeed('Client dependencies installed.');
       } catch {
-        console.error('❌ Failed to install client dependencies.');
+        spinner.fail('Client dependencies failed.');
+        console.error(style('error', `Check your network and try: cd ${clientDir} && npm install`));
         process.exit(1);
       }
     }
@@ -270,38 +297,42 @@ switch (command) {
 
     // Interactive prompt if no key found — save to .env so it's auto-detected next time
     if (!found) {
-      const rl = createInterface({ input: process.stdin, output: process.stdout });
-      console.log('');
-      console.log('🔑 No Anthropic API key detected.');
-      console.log('   Get one at: https://console.anthropic.com/settings/keys');
-      console.log('');
-      const answer = await new Promise(resolve => {
-        rl.question('   Paste your API key (or press Enter to skip chat): ', resolve);
-      });
-      rl.close();
-
-      const trimmed = answer.trim();
-      if (trimmed && trimmed.startsWith('sk-')) {
-        // Save to .env for future runs
-        const envPath = join(process.cwd(), '.env');
-        const line = `ANTHROPIC_API_KEY=${trimmed}\n`;
-        try {
-          // Append only if not already present
-          const existing = existsSync(envPath) ? readFileSync(envPath, 'utf-8') : '';
-          if (!existing.includes('ANTHROPIC_API_KEY')) {
-            writeFileSync(envPath, existing + line);
-            console.log(`   ✅ Saved to .env — won't ask again.\n`);
-          }
-        } catch {}
-        found = { key: trimmed, source: '.env (just saved)' };
+      if (!process.stdin.isTTY) {
+        console.log(style('info', 'No API key. Chat disabled. Add ANTHROPIC_API_KEY to .env or environment later.\n'));
       } else {
-        console.log('   Skipping. Chat feature will be disabled.\n');
+        console.log('');
+        console.log(style('info', 'No Anthropic API key detected.'));
+        console.log('   Get one at: https://console.anthropic.com/settings/keys');
+        console.log('   (Key will be saved to .env if you paste one; otherwise chat will be disabled.)');
+        console.log('');
+        const { apiKeyInput } = await inquirer.prompt([
+          {
+            type: 'input',
+            name: 'apiKeyInput',
+            message: 'Paste your API key (or press Enter to skip):',
+          },
+        ]);
+        const trimmed = (apiKeyInput || '').trim();
+        if (trimmed && trimmed.startsWith('sk-')) {
+          const envPath = join(process.cwd(), '.env');
+          const line = `ANTHROPIC_API_KEY=${trimmed}\n`;
+          try {
+            const existing = existsSync(envPath) ? readFileSync(envPath, 'utf-8') : '';
+            if (!existing.includes('ANTHROPIC_API_KEY')) {
+              writeFileSync(envPath, existing + line);
+              console.log(`   ${style('success', "Saved to .env — won't ask again.")}\n`);
+            }
+          } catch {}
+          found = { key: trimmed, source: '.env (just saved)' };
+        } else {
+          console.log('   Skipping. Chat disabled. You can add a key later to .env or environment.\n');
+        }
       }
     }
 
     const apiKey = found?.key;
     if (apiKey) {
-      console.log(`✅ API key ready (${found.source})\n`);
+      console.log(style('success', `API key loaded (${found.source}).\n`));
       process.env.ANTHROPIC_API_KEY = apiKey;
     }
 
@@ -324,9 +355,11 @@ switch (command) {
     process.env.COURSES_DIR = process.env.COURSES_DIR || defaultCourses;
 
     const mode = isProduction ? 'production' : 'development';
-    console.log(`
- 📚 Starting Professor Web UI on port ${port} (${mode})...
-   `);
+    const coursesDir = process.env.COURSES_DIR || defaultCourses;
+    console.log('');
+    console.log(style('info', 'Starting Professor Web UI…'));
+    console.log(`   Mode: ${mode} | Port: ${port} | Courses: ${coursesDir}`);
+    console.log('');
     
     // Start the server
     await import(join(webDir, 'server.js'));
