@@ -1,0 +1,53 @@
+/**
+ * CommandPills.css - Styles for CommandPills component
+ */
+
+.command-pills {
+  display: flex;
+  gap: 8px;
+  padding: 8px 16px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--color-border, #2d3148);
+  background: var(--color-bg-secondary, #1a1d27);
+}
+
+.command-pill {
+  background: var(--color-bg-tertiary, #1a1d27);
+  border: 1px solid var(--color-border-light, #3d4263);
+  color: var(--color-accent-light, #a5b4fc);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-family: monospace;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.command-pill:hover:not(:disabled) {
+  background: var(--color-bg-hover, #252836);
+  border-color: var(--color-accent, #7c8cf8);
+  transform: translateY(-1px);
+}
+
+.command-pill:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.command-pill:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .command-pills {
+    padding: 8px 12px;
+    gap: 6px;
+  }
+
+  .command-pill {
+    padding: 5px 10px;
+    font-size: 11px;
+  }
+}

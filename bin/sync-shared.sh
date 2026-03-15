@@ -11,7 +11,7 @@ cp commands/professor/*.md shared/commands/professor/
 echo "✓ commands/professor/ synced"
 
 # Sync agents
-cp agents/*.md shared/agents/professor.md
+cp agents/*.md shared/agents/
 echo "✓ agents/professor.md synced"
 
 # Sync hooks

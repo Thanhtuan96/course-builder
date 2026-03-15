@@ -14,5 +14,16 @@ analysis/
 # Export configuration (user-specific vault path)
 .export-config.json
 
+.course_archive
 /docs/plans
 /docs/superpowers
+
+courses/**
+learning/**
+node_modules
+.env
+milestone
+GEMINI.md
+
+dist
+/web/client/dist

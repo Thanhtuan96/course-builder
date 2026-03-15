@@ -1,7 +1,7 @@
 # Requirements: Course Learning Plugin
 
 **Defined:** 2026-03-05
-**Updated:** 2026-03-08
+**Updated:** 2026-03-14
 **Core Value:** The learner builds real understanding by doing — not by reading Claude's code.
 
 ## v1.0 Requirements
@@ -106,26 +106,56 @@ Requirements for milestone v2.0 - Local Web UI.
 
 ### Web Frontend
 
-- [ ] **WEB-09**: React client displays split-pane layout (lecture panel left, chat panel right)
-- [ ] **WEB-10**: LecturePanel renders LECTURE.md with markdown (marked) and syntax highlighting
-- [ ] **WEB-11**: LecturePanel auto-refreshes when WebSocket receives lecture-updated event
-- [ ] **WEB-12**: ChatPanel streams Claude responses character-by-character via SSE
-- [ ] **WEB-13**: ChatPanel displays context-aware command pills that change based on learning phase
-- [ ] **WEB-14**: Command pills: idle phase shows `professor:new-topic`, lecture shows `professor:hint/review/quiz`, exercise shows `professor:hint/stuck/review`, review shows `professor:done/hint`
-- [ ] **WEB-15**: Course selector dropdown in top bar to switch between courses
-- [ ] **WEB-16**: Progress indicator shows current course name and last active timestamp
+- [x] **WEB-09**: React client displays split-pane layout (lecture panel left, chat panel right)
+- [x] **WEB-10**: LecturePanel renders LECTURE.md with markdown (marked) and syntax highlighting
+- [x] **WEB-11**: LecturePanel auto-refreshes when WebSocket receives lecture-updated event
+- [x] **WEB-12**: ChatPanel streams Claude responses character-by-character via SSE
+- [x] **WEB-13**: ChatPanel displays context-aware command pills that change based on learning phase
+- [x] **WEB-14**: Command pills: idle phase shows `professor:new-topic`, lecture shows `professor:hint/review/quiz`, exercise shows `professor:hint/stuck/review`, review shows `professor:done/hint`
+- [x] **WEB-15**: Course selector dropdown in top bar to switch between courses
+- [x] **WEB-16**: Progress indicator shows current course name and last active timestamp
 
 ### Integration
 
-- [ ] **WEB-17**: `bin/cli.js` has `web` command to launch Express server
-- [ ] **WEB-18**: `npx course-professor web [port]` starts web UI on specified port
+- [x] **WEB-17**: `bin/cli.js` has `web` command to launch Express server
+- [x] **WEB-18**: `npx course-professor web [port]` starts web UI on specified port
 - [ ] **WEB-19**: Web UI reads/writes same `courses/` directory as CLI
 - [ ] **WEB-20**: Production build: `npm run build` creates optimized React bundle
 - [ ] **WEB-21**: Production mode: Express serves static React build from `client/dist/`
 
 ### Security
 
-- [ ] **WEB-22**: All markdown rendered in browser is sanitized with DOMPurify to prevent XSS
+- [x] **WEB-22**: All markdown rendered in browser is sanitized with DOMPurify to prevent XSS
+
+### Sharing and Templates
+
+- [x] **SHR-01**: `professor:template-export` creates template file with course structure only
+- [x] **SHR-02**: `professor:template-import <path>` reads template and creates course
+- [x] **SHR-03**: Exported template is valid Markdown readable without tools
+
+## v2.1 Requirements
+
+Requirements for milestone v2.1 — Public Launch.
+
+### Deployment
+
+- [ ] **DEPL-01**: Platform is accessible at a public URL after deploying to cloud host
+- [ ] **DEPL-02**: User can configure a custom domain to point to the deployed platform
+- [ ] **DEPL-03**: Production environment variables (API keys, DB connection) can be managed without code changes
+
+### Authentication
+
+- [ ] **AUTH-01**: User can sign up with email and password
+- [ ] **AUTH-02**: User can sign up / login with GitHub OAuth
+- [ ] **AUTH-03**: User session persists across browser refresh and revisits
+
+### OSS Registry
+
+- [ ] **REG-01**: Creator can publish a SKILL by opening a PR to the `professor-skills/` GitHub org
+- [ ] **REG-02**: Platform indexes the `professor-skills/` registry and keeps it synced via webhook on push
+- [ ] **REG-03**: User can install a community SKILL via `npx course-professor install <skill-name>`
+
+---
 
 ## Future Requirements
 
@@ -150,8 +180,9 @@ Requirements for milestone v2.0 - Local Web UI.
 | Multiple courses per worktree | One tech per worktree keeps it simple |
 | Worktree branch management | Main branch only for learning |
 | Mobile-responsive UI | Local web UI is desktop-focused for v2.0 |
-| User authentication | Single-user local app, no auth needed |
-| Cloud hosting | Local web only for v2.0 |
+| Cloud course state in v2.1 | Needs DB design — deferred to v3.0 |
+| User profile page in v2.1 | Needs creator loop first (v3.1) |
+| SKILL discovery/search page in v2.1 | Not enough SKILLs to discover yet — v4.0 |
 
 ## Traceability
 
@@ -207,28 +238,41 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WEB-06 | Phase 9 | Complete |
 | WEB-07 | Phase 9 | Complete |
 | WEB-08 | Phase 9 | Complete |
-| WEB-09 | Phase 10 | Pending |
-| WEB-10 | Phase 10 | Pending |
-| WEB-11 | Phase 10 | Pending |
-| WEB-12 | Phase 10 | Pending |
-| WEB-13 | Phase 10 | Pending |
-| WEB-14 | Phase 10 | Pending |
-| WEB-15 | Phase 10 | Pending |
-| WEB-16 | Phase 10 | Pending |
-| WEB-17 | Phase 11 | Pending |
-| WEB-18 | Phase 11 | Pending |
+| WEB-09 | Phase 10 | Complete |
+| WEB-10 | Phase 10 | Complete |
+| WEB-11 | Phase 10 | Complete |
+| WEB-12 | Phase 10 | Complete |
+| WEB-13 | Phase 10 | Complete |
+| WEB-14 | Phase 10 | Complete |
+| WEB-15 | Phase 10 | Complete |
+| WEB-16 | Phase 10 | Complete |
+| WEB-17 | Phase 11 | Complete |
+| WEB-18 | Phase 11 | Complete |
 | WEB-19 | Phase 11 | Pending |
 | WEB-20 | Phase 11 | Pending |
 | WEB-21 | Phase 11 | Pending |
-| WEB-22 | Phase 10 | Pending |
+| WEB-22 | Phase 10 | Complete |
+| SHR-01 | Phase 16 | Complete |
+| SHR-02 | Phase 16 | Complete |
+| SHR-03 | Phase 16 | Complete |
+| DEPL-01 | Phase 18 | Pending |
+| DEPL-02 | Phase 18 | Pending |
+| DEPL-03 | Phase 18 | Pending |
+| AUTH-01 | Phase 19 | Pending |
+| AUTH-02 | Phase 19 | Pending |
+| AUTH-03 | Phase 19 | Pending |
+| REG-01 | Phase 20 | Pending |
+| REG-02 | Phase 20 | Pending |
+| REG-03 | Phase 20 | Pending |
 
 **Coverage:**
 - v1.0 requirements: 24 total
 - v1.1 requirements: 16 total
-- v2.0 requirements: 22 total
-- Mapped to phases: 78
+- v2.0 requirements: 25 total
+- v2.1 requirements: 9 total
+- Mapped to phases: 90
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-05*
-*Last updated: 2026-03-07 after v1.1 requirements added*
+*Last updated: 2026-03-14 after v2.1 roadmap phases 18-20 created*

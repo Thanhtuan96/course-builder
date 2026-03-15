@@ -1,0 +1,52 @@
+/**
+ * MobileTabSwitcher.css - Styles for MobileTabSwitcher component
+ */
+
+.mobile-tab-switcher {
+  display: none;
+  background: var(--color-bg-secondary, #1a1d27);
+  border-bottom: 1px solid var(--color-border, #2d3148);
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.mobile-tab-button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--color-text-muted, #64748b);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mobile-tab-button:hover {
+  background: var(--color-bg-hover, #252836);
+}
+
+.mobile-tab-button.active {
+  color: var(--color-accent, #7c8cf8);
+  border-bottom-color: var(--color-accent, #7c8cf8);
+}
+
+.mobile-tab-icon {
+  font-size: 16px;
+}
+
+.mobile-tab-label {
+  font-size: 14px;
+}
+
+/* Only show on mobile */
+@media (max-width: 768px) {
+  .mobile-tab-switcher {
+    display: flex;
+  }
+}

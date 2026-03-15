@@ -8,6 +8,8 @@ v1.1 adds agent support (Cursor), agent specialization, research-enhanced hints,
 
 v2.0 adds Local Web UI (React + Express), Retention Layer (spaced repetition, flashcards, streaks), and Sharing & Templates (course template export/import).
 
+v2.1 adds cloud deployment (Vercel), email + GitHub OAuth authentication, and an open SKILL registry backed by the `professor-skills/` GitHub org.
+
 ## Phases
 
 **Phase Numbering:**
@@ -30,15 +32,20 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 11: Research-Enhanced Hints** - Give hints with keyword to googling or research + useful conferences (completed 2026-03-11)
 - [x] **Phase 12: MCP Documentation** - Document mcp.json for tools needed (notion, obsidian) (verified in README.md)
 - [x] **Phase 13: Client Components** - React split-pane UI with LecturePanel, ChatPanel, command pills (v2.0)
-- [ ] **Phase 14: Integration** - CLI web command, production build, static file serving (v2.0)
-- [ ] **Phase 15: Retention Layer** - SCHEDULE.md, professor:recall, professor:schedule, streak tracking, time tracking (v2.0)
-- [ ] **Phase 16: Sharing and Templates** - professor:template-export, professor:template-import, course sharing workflow (v2.0)
-- [ ] **Phase 17: Auto-generate Exercise Files** - Generate exercise files user can work on directly (exclude learning framework - only need instructions)
+- [x] **Phase 14: Integration** - CLI web command, production build, static file serving (v2.0) (completed 2026-03-13)
+- [x] **Phase 15: Retention Layer** - SCHEDULE.md, professor:recall, professor:schedule, streak tracking, time tracking (v2.0) (completed 2026-03-14)
+- [x] **Phase 16: Sharing and Templates** - professor:template-export, professor:template-import, course sharing workflow (v2.0) (completed 2026-03-15)
+- [x] **Phase 17: Auto-generate Exercise Files** - Generate exercise files user can work on directly (exclude learning framework - only need instructions) (completed 2026-03-15)
+- [x] **Phase 17.1: Coach Agent** - Create Coach agent with self-assessment dialogue for professor:review, professor:done, professor:stuck (completed 2026-03-15)
+- [ ] **Phase 18: Cloud Deployment** - Deploy to Vercel with public URL, custom domain, and production env var management (v2.1)
+- [ ] **Phase 19: Authentication** - Email + password signup, GitHub OAuth login, persistent sessions (v2.1)
+- [ ] **Phase 20: CLI Install Command** - `npx course-professor install <course-name>` and `npx course-professor list` — fetches directly from professor-skills/registry on GitHub, no server required
 
 ## Milestones
 
 **v1.1 (Complete):** Phases 1-12 ✓
-**v2.0 (Next):** Phases 13-17 — Local Web UI, Retention Layer, Sharing & Templates, Auto-generate Exercise Files
+**v2.0 (Complete):** Phases 13-17 — Local Web UI, Retention Layer, Sharing & Templates, Auto-generate Exercise Files ✓
+**v2.1 (Active):** Phases 18-20 — Cloud Deployment (deferred), Authentication (deferred), CLI Registry Install
 
 ## Phase Details
 
@@ -131,12 +138,13 @@ Plans:
 
 ## Progress
 
-**Current Milestone:** v1.1 (in progress)
-**v2.0:** Pending
+**Current Milestone:** v2.0 (in progress)
+**v2.0:** 3 of 17 plans complete
 
 **Execution Order:**
 v1.1: 9 → 10 → 11 → 12
 v2.0: 13 → 14 → 15 → 16
+v2.1: 18 → 19 → 20
 
 ### v1.1 Phases
 
@@ -156,14 +164,27 @@ v2.0: 13 → 14 → 15 → 16
 | 11. Research-Enhanced Hints | 1/1 | Complete    | 2026-03-11 |
 | 12. MCP Documentation | 0/1 | Not started | - |
 
-### v2.0 Phases (Pending)
+### v2.0 Phases
 
-| Phase | Plans Complete | Status |
-|-------|----------------|--------|
-| 13. Client Components | 0/2 | Not started |
-| 14. Integration | 0/1 | Not started |
-| 15. Retention Layer | 0/1 | Not started |
-| 16. Sharing and Templates | 0/1 | Not started |
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 13. Client Components | 2/2 | Complete   | 2026-03-11 |
+| 14. Integration | 1/1 | Complete    | 2026-03-13 |
+| 15. Retention Layer | 4/4 | Complete    | 2026-03-14 |
+| 16. Sharing and Templates | 1/1 | Complete    | 2026-03-15 |
+| 17. Auto-generate Exercise Files | 1/1 | Complete    | 2026-03-15 |
+| 17.1. Coach Agent | 2/2 | Complete    | 2026-03-15 |
+| 17.1.1. Spotter Agent | 2/2 | Complete    | 2026-03-15 |
+| 17.1.1.1. Navigator Agent | 2/2 | Complete    | 2026-03-15 |
+| 17.1.1.1.1. Professor Orchestrator | 3/3 | Complete    | 2026-03-15 |
+
+### v2.1 Phases
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 18. Cloud Deployment | 0/TBD | Not started | - |
+| 19. Authentication | 0/TBD | Not started | - |
+| 20. OSS SKILL Registry | 0/TBD | Not started | - |
 
 ### Phase 6: Course Archive and Context Management
 
@@ -331,10 +352,10 @@ Plans:
 4. Running `npm run build` in project root creates optimized React bundle in `client/dist/`
 5. When NODE_ENV=production, Express serves static React build from `client/dist/` instead of proxying to Vite dev server
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 14-01-PLAN.md — Implement CLI web command, production build, and static file serving
+- [x] 14-01-PLAN.md — Implement CLI web command, production build, and static file serving
 
 ### Phase 15: Retention Layer
 
@@ -352,10 +373,13 @@ Plans:
 5. Streak (days active) and time-per-section are tracked in COURSE.md and visible in `professor:progress`
 6. `professor:export` includes SCHEDULE.md data — flashcards exported as plain Q/A table to Notion; Markdown as-is to Obsidian
 
-**Plans:** 0 plans
+**Plans:** 4/4 plans complete
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 15 to break down)
+- [x] 15-01-PLAN.md — SCHEDULE.md schema and auto-creation on section completion (completed 2026-03-14)
+- [x] 15-02-PLAN.md — Time-per-section and streak tracking in COURSE.md (completed 2026-03-14)
+- [ ] 15-03-PLAN.md — professor:recall and professor:schedule commands
+- [ ] 15-04-PLAN.md — Session start integration and export support for SCHEDULE.md
 
 ---
 
@@ -372,20 +396,195 @@ Plans:
 2. `professor:template-import <path>` reads a TEMPLATE.md file and creates a new course with pre-built syllabus; user still runs `professor:next` to generate lectures
 3. Exported template is valid Markdown readable without any tool and importable by any Professor installation
 
-**Plans:** 0 plans
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 16 to break down)
+- [ ] 16-01-PLAN.md — Template export and import commands
 
 ### Phase 17: auto generate excercise files that user can work on directly (exclude learning framework- only need instructions)
 
-**Goal:** [To be planned]
+**Goal:** Generate self-contained exercise files that users can work on directly without needing LECTURE.md visible. Differentiate between coding exercises (skeleton code with TODOs) and non-coding exercises (pure instructions only).
 **Requirements**: TBD
 **Depends on:** Phase 16
+**Plans:** 1/1 plans complete
+
+Plans:
+- [x] 17-01-PLAN.md — Enhance exercise generation with topic detection, self-contained coding/non-coding templates
+
+---
+
+### Phase 17.1: Coach Agent (Feedback Dialogue)
+
+**Goal:** Create Coach agent that owns professor:review, professor:done, professor:stuck with self-assessment dialogue. Every Coach interaction opens with a self-assessment question before providing feedback.
+
+**Depends on:** Phase 17
+
+**Requirements:** TBD
+
+**Success Criteria** (what must be TRUE):
+1. Every Coach interaction starts with self-assessment question ("Before I look at your work — what do you think about it?")
+2. Learner's self-assessment shapes everything Coach says next
+3. Reasoning trail stored in LEARNING-LOG.md (max 5 rounds per section)
+4. Done gate requires Coach self-assessment before marking complete
+5. Watch-this flag can mark weak areas for Navigator to pick up
+6. Professor routes review/done/stuck to Coach
+
+**Plans:** 2/2 plans complete
+
+Plans:
+- [ ] 17.1-01-PLAN.md — Create Coach agent + update Professor with routing table and LEARNING-LOG format
+- [ ] 17.1-02-PLAN.md — Wire commands to Coach + register in plugin.json
+
+---
+
+### Phase 17.1.1: Spotter Agent (Exercise Companion)
+
+**Goal:** Implement Spotter agent for mid-work check-ins, breaking exercise isolation by being present when learner asks for check-in.
+
+**Depends on:** Phase 17.1 (Coach Agent)
+
+**Requirements:** TBD
+
+**Success Criteria** (what must be TRUE):
+1. User can invoke professor:spotter command and receive check-in flow
+2. Spotter asks position question (a/b/c/d) and responds appropriately per routing table
+3. Spotter routes to Coach when learner selects "ready for review"
+4. Spotter appends to Attempt Log in LEARNING-LOG.md
+5. professor:hint reads attempt log before applying hint layers
+6. professor:next reminds learner about spotter at end of lecture
+7. Spotter agent and professor:spotter command registered in plugin.json
+
+**Plans:** 2/2 plans complete
+
+Plans:
+- [ ] 17.1.1-01-PLAN.md — Create Spotter agent + command + Professor format
+- [ ] 17.1.1-02-PLAN.md — Wire hint, next, plugin.json
+
+---
+
+### Phase 17.1.1.1: Navigator Agent (Section Bridges and Concept Threading)
+
+**Goal:** Create Navigator agent that helps learners see connections between sections and threads concepts across a course. Navigator appears between sections to reinforce learning by showing "what you just learned → what comes next" bridges.
+
+**Depends on:** Phase 17.1.1 (Spotter Agent)
+
+**Requirements:** TBD
+
+**Success Criteria** (what must be TRUE):
+1. Navigator appears automatically between sections (not invoked — flows from section completion)
+2. Navigator shows "bridge" content: how current section concepts connect to next section
+3. Concept threading: Navigator maintains a lightweight "concept map" showing how key ideas recur across sections
+4. Learner's "aha moments" from Coach feedback are threaded forward by Navigator
+5. Navigator appends bridge summaries to LEARNING-LOG.md
+
+**Plans:** 2/2 plans complete
+
+Plans:
+- [x] 17.1.1.1-01-PLAN.md — Create Navigator agent
+- [x] 17.1.1.1-02-PLAN.md — Wire commands and register
+
+---
+
+### Phase 17.1.1.1.1: Professor Orchestrator Refactor
+
+**Goal:** Refactor the Professor agent to use a routing table instead of direct command logic. Strip all command-specific code from the Professor agent and delegate to specialized agents (Coach, Spotter, Navigator) via explicit routing rules.
+
+**Depends on:** Phase 17.1.1.1 (Navigator Agent)
+
+**Requirements:** TBD
+
+**Success Criteria** (what must be TRUE):
+1. Professor agent uses a routing table to delegate commands to specialized agents
+2. All command-specific logic removed from Professor — no more direct hint/stuck/review handling
+3. Routing table is declarative and easy to modify
+4. New commands can be added by adding entries to routing table, not by editing Professor code
+
+**Plans:** 3/3 plans complete
+
+Plans:
+- [x] 17.1.1.1.1-01-PLAN.md — Add YAML routing table to Professor frontmatter
+- [x] 17.1.1.1.1-02-PLAN.md — Strip command behaviors from Professor body
+- [x] 17.1.1.1.1-03-PLAN.md — Gap closure: Add 5 missing routing entries (quiz, template-export, template-import, worktrees, switch)
+
+---
+
+### Phase 18: Cloud Deployment
+
+**Goal:** The platform runs at a stable public URL with production-safe configuration — no local machine required to access the app.
+
+**Depends on:** Phase 14 (production build must exist before deploying)
+**Requirements:** DEPL-01, DEPL-02, DEPL-03
+
+**Status:** DEFERRED — Focus on CLI/skills first. Will revisit later.
+
+**Success Criteria** (what must be TRUE):
+1. Visiting the public Vercel URL loads the web UI without error from any network
+2. A custom domain (e.g. `professor.yourdomain.com`) resolves to the deployed platform
+3. Rotating or adding an environment variable (API key, secret) in the Vercel dashboard takes effect on the next request without any code change or redeployment
+4. A new deployment triggered by a `git push` to main completes successfully and serves the updated app
+
 **Plans:** 0 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 17 to break down)
+- [ ] TBD (run /gsd:plan-phase 18 to break down)
+
+---
+
+### Phase 19: Authentication
+
+**Goal:** Users can create accounts and stay signed in — via email/password or GitHub — with sessions that survive browser restarts.
+
+**Depends on:** Phase 18 (OAuth callbacks require a public URL; session cookies require a stable domain)
+**Requirements:** AUTH-01, AUTH-02, AUTH-03
+
+**Status:** DEFERRED — Focus on CLI/skills first. Will revisit later.
+
+**Success Criteria** (what must be TRUE):
+1. A new visitor can sign up with email and password and land on the app as an authenticated user
+2. An existing user can click "Continue with GitHub" and complete OAuth login without entering a password
+3. A logged-in user who closes the browser tab and returns later is still authenticated without being asked to log in again
+4. An unauthenticated user who navigates to a protected route is redirected to the login page, then returned to their original destination after login
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 19 to break down)
+
+---
+
+### Phase 20: CLI Install Command
+
+**Goal:** Any user can browse available community courses and install one with a single CLI command. The registry is `professor-skills/registry` on GitHub — no hosted server required.
+
+**Depends on:** Nothing hosted. Registry repo (`professor-skills/registry`) exists externally and is already functional.
+**Requirements:** REG-03
+
+**External dependency:** `github.com/professor-skills/registry` — separate repo, already built. Contains `index.json` with `courses[]` and `skills[]` arrays, and raw files at `courses/{name}/COURSE.md`.
+
+**Success Criteria** (what must be TRUE):
+1. `npx course-professor list` fetches `index.json` from GitHub raw URL and prints available courses (name, level, section count, description)
+2. `npx course-professor install <course-name>` downloads `COURSE.md` and `meta.json` from `professor-skills/registry` into the local plugin and confirms success
+3. If the course name is not found in `index.json`, CLI prints a clear error with available course names
+4. If GitHub is unreachable, CLI prints a helpful error (not a raw fetch crash)
+5. Installed course is usable immediately with `professor:new-topic` (professor detects the template and pre-fills the syllabus)
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 20 to break down)
+
+### Phase 21: research and polish current agent plan to work in real world
+
+**Goal:** Polish all 5 agent files (Professor, Coach, Spotter, Navigator, Researcher) for cross-platform compatibility across Claude Code, Cursor, Gemini CLI, and OpenCode — removing Claude Code-specific patterns and adding self-contained fallback behavior where needed.
+**Requirements**: COMPAT-01, COMPAT-02, COMPAT-03, COMPAT-04, COMPAT-05, COMPAT-06, COMPAT-07
+**Depends on:** Phase 20
+**Plans:** 4 plans
+
+Plans:
+- [ ] 21-01-PLAN.md — Refactor professor.md: remove routing:/actions: frontmatter, remove AskUserQuestion, trim body, add platform-conditional delegation blocks
+- [ ] 21-02-PLAN.md — Polish coach.md, spotter.md, navigator.md, researcher.md: add mode: subagent, model: inherit, platform-agnostic return language
+- [ ] 21-03-PLAN.md — Sync agents/ to shared/ via bin/sync-shared.sh, add missing navigator.md, update SKILL.md with multi-agent architecture table
+- [ ] 21-04-PLAN.md — Run compatibility checklist and get human sign-off
 
 ---
 
@@ -398,3 +597,13 @@ v2.0 phases:
 - Phase 16: Sharing and Templates — professor:template-export, professor:template-import
 
 **Coverage:** 4 phases delivering Local Web UI + Retention + Sharing
+
+## v2.1 Coverage
+
+v2.1 phases:
+- Phase 18: Cloud Deployment — Vercel deploy, custom domain, env var management (DEFERRED)
+- Phase 19: Authentication — Email/password signup, GitHub OAuth, persistent sessions (DEFERRED)
+- Phase 20: CLI Install Command — `npx course-professor install/list`, fetches from professor-skills/registry GitHub org
+
+**Active:** Phase 20 only. Phases 18-19 deferred until CLI community is active.
+**External:** Registry repo (`professor-skills/registry`) is complete and separate — courses/ and skills/ split, validate.js + build-index.js + GitHub Actions all working.

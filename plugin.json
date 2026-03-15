@@ -10,6 +10,18 @@
     {
       "name": "researcher",
       "file": "agents/researcher.md"
+    },
+    {
+      "name": "coach",
+      "file": "agents/coach.md"
+    },
+    {
+      "name": "spotter",
+      "file": "agents/spotter.md"
+    },
+    {
+      "name": "navigator",
+      "file": "agents/navigator.md"
     }
   ],
   "commands": [
@@ -21,6 +33,8 @@
     { "name": "professor:stuck",           "file": "commands/professor/stuck.md" },
     { "name": "professor:syllabus",        "file": "commands/professor/syllabus.md" },
     { "name": "professor:progress",        "file": "commands/professor/progress.md" },
+    { "name": "professor:recall",          "file": "commands/professor/recall.md" },
+    { "name": "professor:schedule",        "file": "commands/professor/schedule.md" },
     { "name": "professor:discuss",         "file": "commands/professor/discuss.md" },
     { "name": "professor:quiz",            "file": "commands/professor/quiz.md" },
     { "name": "professor:capstone",        "file": "commands/professor/capstone.md" },
@@ -28,8 +42,12 @@
     { "name": "professor:note",            "file": "commands/professor/note.md" },
     { "name": "professor:export",          "file": "commands/professor/export.md" },
     { "name": "professor:archive",        "file": "commands/professor/archive.md" },
+    { "name": "professor:template-export", "file": "commands/professor/template-export.md" },
+    { "name": "professor:template-import", "file": "commands/professor/template-import.md" },
     { "name": "professor:worktrees",      "file": "commands/professor/worktrees.md" },
-    { "name": "professor:switch",         "file": "commands/professor/switch.md" }
+    { "name": "professor:switch",         "file": "commands/professor/switch.md" },
+    { "name": "professor:spotter",        "file": "commands/professor/spotter.md" },
+    { "name": "professor:navigator",   "file": "commands/professor/navigator.md" }
   ],
   "hooks": [
     {

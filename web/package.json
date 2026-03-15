@@ -1,0 +1,10 @@
+{
+  "name": "professor-web",
+  "version": "2.0.0",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "express": "^4.21.0",
+    "cors": "^2.8.5"
+  }
+}
