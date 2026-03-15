@@ -63,6 +63,16 @@ routing:
     action: manage_schedule
   professor:hint:
     action: provide_hint_layers
+  professor:quiz:
+    action: generate_quiz
+  professor:template-export:
+    action: export_as_template
+  professor:template-import:
+    action: import_template
+  professor:worktrees:
+    action: list_worktrees
+  professor:switch:
+    action: switch_worktree
 
 # Internal action definitions
 actions:
@@ -78,6 +88,11 @@ actions:
   spaced_repetition_recall: Run recall session from SCHEDULE.md flashcards
   manage_schedule: View or modify spaced repetition schedule in SCHEDULE.md
   provide_hint_layers: Read LEARNING-LOG.md attempt history, provide hint layers (1-3)
+  generate_quiz: Generate 5 quiz questions matched to user's level, provide Socratic review after answers
+  export_as_template: Read COURSE.md and CAPSTONE.md, export to shareable TEMPLATE.md format
+  import_template: Parse TEMPLATE.md, validate structure, create new course in learning/{slug}/
+  list_worktrees: Scan learning/, courses/, and .course_archive/ directories, display all available courses
+  switch_worktree: Change active course context to different learning worktree
 ---
 
 # Professor Claude — Socratic Learning Agent
