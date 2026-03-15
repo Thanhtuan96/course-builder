@@ -39,13 +39,13 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 17.1: Coach Agent** - Create Coach agent with self-assessment dialogue for professor:review, professor:done, professor:stuck (completed 2026-03-15)
 - [ ] **Phase 18: Cloud Deployment** - Deploy to Vercel with public URL, custom domain, and production env var management (v2.1)
 - [ ] **Phase 19: Authentication** - Email + password signup, GitHub OAuth login, persistent sessions (v2.1)
-- [ ] **Phase 20: OSS SKILL Registry** - GitHub-backed community registry, webhook sync, CLI install command (v2.1)
+- [ ] **Phase 20: CLI Install Command** - `npx course-professor install <course-name>` and `npx course-professor list` — fetches directly from professor-skills/registry on GitHub, no server required
 
 ## Milestones
 
 **v1.1 (Complete):** Phases 1-12 ✓
 **v2.0 (Complete):** Phases 13-17 — Local Web UI, Retention Layer, Sharing & Templates, Auto-generate Exercise Files ✓
-**v2.1 (Deferred):** Phases 18-20 — Cloud Deployment, Authentication, OSS SKILL Registry (focusing on CLI/skills first)
+**v2.1 (Active):** Phases 18-20 — Cloud Deployment (deferred), Authentication (deferred), CLI Registry Install
 
 ## Phase Details
 
@@ -174,7 +174,7 @@ v2.1: 18 → 19 → 20
 | 16. Sharing and Templates | 1/1 | Complete    | 2026-03-15 |
 | 17. Auto-generate Exercise Files | 1/1 | Complete    | 2026-03-15 |
 | 17.1. Coach Agent | 2/2 | Complete    | 2026-03-15 |
-| 17.1.1. Spotter Agent | 2/2 | Planned     | - |
+| 17.1.1. Spotter Agent | 2/2 | Complete    | 2026-03-15 |
 
 ### v2.1 Phases
 
@@ -452,7 +452,7 @@ Plans:
 6. professor:next reminds learner about spotter at end of lecture
 7. Spotter agent and professor:spotter command registered in plugin.json
 
-**Plans:** 2/2 plans complete
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 17.1.1-01-PLAN.md — Create Spotter agent + command + Professor format
@@ -504,20 +504,21 @@ Plans:
 
 ---
 
-### Phase 20: OSS SKILL Registry
+### Phase 20: CLI Install Command
 
-**Goal:** Community contributors can publish SKILLs to a shared GitHub registry, the platform index stays current automatically, and any user can install a community SKILL with one CLI command.
+**Goal:** Any user can browse available community courses and install one with a single CLI command. The registry is `professor-skills/registry` on GitHub — no hosted server required.
 
-**Depends on:** Phase 18 (webhook endpoint requires a public URL; CLI install fetches from the registry index)
-**Requirements:** REG-01, REG-02, REG-03
+**Depends on:** Nothing hosted. Registry repo (`professor-skills/registry`) exists externally and is already functional.
+**Requirements:** REG-03
 
-**Status:** DEFERRED — Focus on CLI/skills first. Will revisit later.
+**External dependency:** `github.com/professor-skills/registry` — separate repo, already built. Contains `index.json` with `courses[]` and `skills[]` arrays, and raw files at `courses/{name}/COURSE.md`.
 
 **Success Criteria** (what must be TRUE):
-1. A contributor can open a PR to the `professor-skills/` GitHub org repository, and after merge the SKILL appears in the platform's registry index
-2. When a push is made to `professor-skills/`, the platform index updates automatically via GitHub webhook — no manual sync step required
-3. A user can run `npx course-professor install <skill-name>` and have the SKILL files downloaded and placed correctly without any manual file copying
-4. The CLI `install` command prints a clear error if the skill name does not exist in the registry
+1. `npx course-professor list` fetches `index.json` from GitHub raw URL and prints available courses (name, level, section count, description)
+2. `npx course-professor install <course-name>` downloads `COURSE.md` and `meta.json` from `professor-skills/registry` into the local plugin and confirms success
+3. If the course name is not found in `index.json`, CLI prints a clear error with available course names
+4. If GitHub is unreachable, CLI prints a helpful error (not a raw fetch crash)
+5. Installed course is usable immediately with `professor:new-topic` (professor detects the template and pre-fills the syllabus)
 
 **Plans:** 0 plans
 
@@ -539,9 +540,9 @@ v2.0 phases:
 ## v2.1 Coverage
 
 v2.1 phases:
-- Phase 18: Cloud Deployment — Vercel deploy, custom domain, env var management
-- Phase 19: Authentication — Email/password signup, GitHub OAuth, persistent sessions
-- Phase 20: OSS SKILL Registry — GitHub-backed registry, webhook sync, CLI install command
+- Phase 18: Cloud Deployment — Vercel deploy, custom domain, env var management (DEFERRED)
+- Phase 19: Authentication — Email/password signup, GitHub OAuth, persistent sessions (DEFERRED)
+- Phase 20: CLI Install Command — `npx course-professor install/list`, fetches from professor-skills/registry GitHub org
 
-**Requirements mapped:** DEPL-01, DEPL-02, DEPL-03, AUTH-01, AUTH-02, AUTH-03, REG-01, REG-02, REG-03
-**Coverage:** 9/9 v2.1 requirements mapped ✓
+**Active:** Phase 20 only. Phases 18-19 deferred until CLI community is active.
+**External:** Registry repo (`professor-skills/registry`) is complete and separate — courses/ and skills/ split, validate.js + build-index.js + GitHub Actions all working.
