@@ -5,12 +5,12 @@ milestone_name: Phases
 current_phase: Not started (roadmap defined, ready for planning)
 current_plan: —
 status: planning
-last_updated: "2026-03-15T15:26:17.643Z"
+last_updated: "2026-03-15T16:37:21.297Z"
 progress:
-  total_phases: 24
-  completed_phases: 16
-  total_plans: 31
-  completed_plans: 33
+  total_phases: 26
+  completed_phases: 17
+  total_plans: 38
+  completed_plans: 36
 ---
 
 # Session State
@@ -109,3 +109,4 @@ See: .planning/PROJECT.md
 - 2026-03-15: Phase 21 (Vercel-compatible server) removed — irrelevant while web platform is deferred
 - 2026-03-15: Registry repo (professor-skills/registry) complete externally — courses/+skills/ split, validate+build scripts, GitHub Actions
 - 2026-03-16: Completed plan 17.1.1.1.1-02 — Professor orchestrator refactor (stripped command behaviors, added routing table reference)
+- 2026-03-16: Completed plan 17.1.1.1.1-03 — Added 5 missing routing entries (quiz, template-export, template-import, worktrees, switch)

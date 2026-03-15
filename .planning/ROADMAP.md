@@ -176,7 +176,7 @@ v2.1: 18 → 19 → 20
 | 17.1. Coach Agent | 2/2 | Complete    | 2026-03-15 |
 | 17.1.1. Spotter Agent | 2/2 | Complete    | 2026-03-15 |
 | 17.1.1.1. Navigator Agent | 2/2 | Complete    | 2026-03-15 |
-| 17.1.1.1.1. Professor Orchestrator | 2/3 | Gap closure  | 2026-03-16 |
+| 17.1.1.1.1. Professor Orchestrator | 3/3 | Complete    | 2026-03-15 |
 
 ### v2.1 Phases
 
@@ -499,12 +499,12 @@ Plans:
 3. Routing table is declarative and easy to modify
 4. New commands can be added by adding entries to routing table, not by editing Professor code
 
-**Plans:** 3 plans (including gap closure)
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 17.1.1.1.1-01-PLAN.md — Add YAML routing table to Professor frontmatter
 - [x] 17.1.1.1.1-02-PLAN.md — Strip command behaviors from Professor body
-- [ ] 17.1.1.1.1-03-PLAN.md — Gap closure: Add 5 missing routing entries (quiz, template-export, template-import, worktrees, switch)
+- [x] 17.1.1.1.1-03-PLAN.md — Gap closure: Add 5 missing routing entries (quiz, template-export, template-import, worktrees, switch)
 
 ---
 
