@@ -408,6 +408,46 @@ Plans:
 
 ---
 
+### Phase 17.1: Coach Agent — feedback dialogue and self-assessment (INSERTED)
+
+**Goal:** [Urgent work - to be planned]
+**Requirements**: TBD
+**Depends on:** Phase 17
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 17.1 to break down)
+
+### Phase 17.1.1: Spotter Agent — exercise companion and mid-work check-ins (INSERTED)
+
+**Goal:** [Urgent work - to be planned]
+**Requirements**: TBD
+**Depends on:** Phase 17.1
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 17.1.1 to break down)
+
+### Phase 17.1.1.1: Navigator Agent — section bridges and concept threading (INSERTED)
+
+**Goal:** [Urgent work - to be planned]
+**Requirements**: TBD
+**Depends on:** Phase 17.1.1
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 17.1.1.1 to break down)
+
+### Phase 17.1.1.1.1: Professor Orchestrator Refactor — strip direct logic, add routing table (INSERTED)
+
+**Goal:** [Urgent work - to be planned]
+**Requirements**: TBD
+**Depends on:** Phase 17.1.1.1
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 17.1.1.1.1 to break down)
+
 ### Phase 18: Cloud Deployment
 
 **Goal:** The platform runs at a stable public URL with production-safe configuration — no local machine required to access the app.
@@ -421,10 +461,10 @@ Plans:
 3. Rotating or adding an environment variable (API key, secret) in the Vercel dashboard takes effect on the next request without any code change or redeployment
 4. A new deployment triggered by a `git push` to main completes successfully and serves the updated app
 
-**Plans:** 0 plans
+**Plans:** 1 plan
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 18 to break down)
+- [x] 18-01-PLAN.md — Vercel deployment configuration, server export, deployment docs
 
 ---
 
