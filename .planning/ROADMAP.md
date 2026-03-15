@@ -36,6 +36,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 15: Retention Layer** - SCHEDULE.md, professor:recall, professor:schedule, streak tracking, time tracking (v2.0) (completed 2026-03-14)
 - [x] **Phase 16: Sharing and Templates** - professor:template-export, professor:template-import, course sharing workflow (v2.0) (completed 2026-03-15)
 - [x] **Phase 17: Auto-generate Exercise Files** - Generate exercise files user can work on directly (exclude learning framework - only need instructions) (completed 2026-03-15)
+- [ ] **Phase 17.1: Coach Agent** - Create Coach agent with self-assessment dialogue for professor:review, professor:done, professor:stuck
 - [ ] **Phase 18: Cloud Deployment** - Deploy to Vercel with public URL, custom domain, and production env var management (v2.1)
 - [ ] **Phase 19: Authentication** - Email + password signup, GitHub OAuth login, persistent sessions (v2.1)
 - [ ] **Phase 20: OSS SKILL Registry** - GitHub-backed community registry, webhook sync, CLI install command (v2.1)
@@ -172,6 +173,7 @@ v2.1: 18 → 19 → 20
 | 15. Retention Layer | 4/4 | Complete    | 2026-03-14 |
 | 16. Sharing and Templates | 1/1 | Complete    | 2026-03-15 |
 | 17. Auto-generate Exercise Files | 1/1 | Complete    | 2026-03-15 |
+| 17.1. Coach Agent | 0/2 | Not started | - |
 
 ### v2.1 Phases
 
@@ -405,6 +407,30 @@ Plans:
 
 Plans:
 - [x] 17-01-PLAN.md — Enhance exercise generation with topic detection, self-contained coding/non-coding templates
+
+---
+
+### Phase 17.1: Coach Agent (Feedback Dialogue)
+
+**Goal:** Create Coach agent that owns professor:review, professor:done, professor:stuck with self-assessment dialogue. Every Coach interaction opens with a self-assessment question before providing feedback.
+
+**Depends on:** Phase 17
+
+**Requirements:** TBD
+
+**Success Criteria** (what must be TRUE):
+1. Every Coach interaction starts with self-assessment question ("Before I look at your work — what do you think about it?")
+2. Learner's self-assessment shapes everything Coach says next
+3. Reasoning trail stored in LEARNING-LOG.md (max 5 rounds per section)
+4. Done gate requires Coach self-assessment before marking complete
+5. Watch-this flag can mark weak areas for Navigator to pick up
+6. Professor routes review/done/stuck to Coach
+
+**Plans:** 2 plans
+
+Plans:
+- [ ] 17.1-01-PLAN.md — Create Coach agent + update Professor with routing table and LEARNING-LOG format
+- [ ] 17.1-02-PLAN.md — Wire commands to Coach + register in plugin.json
 
 ---
 
