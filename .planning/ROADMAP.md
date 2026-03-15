@@ -36,7 +36,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 15: Retention Layer** - SCHEDULE.md, professor:recall, professor:schedule, streak tracking, time tracking (v2.0) (completed 2026-03-14)
 - [x] **Phase 16: Sharing and Templates** - professor:template-export, professor:template-import, course sharing workflow (v2.0) (completed 2026-03-15)
 - [x] **Phase 17: Auto-generate Exercise Files** - Generate exercise files user can work on directly (exclude learning framework - only need instructions) (completed 2026-03-15)
-- [ ] **Phase 17.1: Coach Agent** - Create Coach agent with self-assessment dialogue for professor:review, professor:done, professor:stuck
+- [x] **Phase 17.1: Coach Agent** - Create Coach agent with self-assessment dialogue for professor:review, professor:done, professor:stuck (completed 2026-03-15)
 - [ ] **Phase 18: Cloud Deployment** - Deploy to Vercel with public URL, custom domain, and production env var management (v2.1)
 - [ ] **Phase 19: Authentication** - Email + password signup, GitHub OAuth login, persistent sessions (v2.1)
 - [ ] **Phase 20: OSS SKILL Registry** - GitHub-backed community registry, webhook sync, CLI install command (v2.1)
@@ -173,7 +173,7 @@ v2.1: 18 → 19 → 20
 | 15. Retention Layer | 4/4 | Complete    | 2026-03-14 |
 | 16. Sharing and Templates | 1/1 | Complete    | 2026-03-15 |
 | 17. Auto-generate Exercise Files | 1/1 | Complete    | 2026-03-15 |
-| 17.1. Coach Agent | 1/2 | In Progress|  |
+| 17.1. Coach Agent | 2/2 | Complete   | 2026-03-15 |
 
 ### v2.1 Phases
 
@@ -426,7 +426,7 @@ Plans:
 5. Watch-this flag can mark weak areas for Navigator to pick up
 6. Professor routes review/done/stuck to Coach
 
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 17.1-01-PLAN.md — Create Coach agent + update Professor with routing table and LEARNING-LOG format

@@ -5,12 +5,12 @@ milestone_name: Phases
 current_phase: Not started (roadmap defined, ready for planning)
 current_plan: —
 status: planning
-last_updated: "2026-03-15T14:06:25.395Z"
+last_updated: "2026-03-15T14:11:18.307Z"
 progress:
   total_phases: 22
-  completed_phases: 13
+  completed_phases: 14
   total_plans: 27
-  completed_plans: 28
+  completed_plans: 29
 ---
 
 # Session State
@@ -95,3 +95,4 @@ See: .planning/PROJECT.md
 - 2026-03-15: Completed plan 16-01 - Template export/import for course sharing
 - 2026-03-15: Completed plan 17-01 - Auto-generate exercise files
 - 2026-03-15: Deferred phases 18-20 (Cloud Deployment, Auth, OSS Registry) — focus on CLI/skills first
+- 2026-03-15: Completed plan 17.1-02 - Coach agent integration (review, done, stuck commands wired to Coach)
