@@ -108,4 +108,4 @@ See: .planning/PROJECT.md
 - 2026-03-15: Phase 20 re-scoped to CLI install command only (no server, no webhook) — registry repo is external and complete
 - 2026-03-15: Phase 21 (Vercel-compatible server) removed — irrelevant while web platform is deferred
 - 2026-03-15: Registry repo (professor-skills/registry) complete externally — courses/+skills/ split, validate+build scripts, GitHub Actions
-- 2026-03-16: Completed plan 17.1.1.1.1-01 — YAML routing table to Professor frontmatter
+- 2026-03-16: Completed plan 17.1.1.1.1-02 — Professor orchestrator refactor (stripped command behaviors, added routing table reference)
