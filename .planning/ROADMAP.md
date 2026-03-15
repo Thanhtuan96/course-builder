@@ -176,6 +176,7 @@ v2.1: 18 → 19 → 20
 | 17.1. Coach Agent | 2/2 | Complete    | 2026-03-15 |
 | 17.1.1. Spotter Agent | 2/2 | Complete    | 2026-03-15 |
 | 17.1.1.1. Navigator Agent | 2/2 | Complete    | 2026-03-15 |
+| 17.1.1.1.1. Professor Orchestrator | 0/TBD | Not started | - |
 
 ### v2.1 Phases
 
@@ -484,6 +485,27 @@ Plans:
 
 ---
 
+### Phase 17.1.1.1.1: Professor Orchestrator Refactor
+
+**Goal:** Refactor the Professor agent to use a routing table instead of direct command logic. Strip all command-specific code from the Professor agent and delegate to specialized agents (Coach, Spotter, Navigator) via explicit routing rules.
+
+**Depends on:** Phase 17.1.1.1 (Navigator Agent)
+
+**Requirements:** TBD
+
+**Success Criteria** (what must be TRUE):
+1. Professor agent uses a routing table to delegate commands to specialized agents
+2. All command-specific logic removed from Professor — no more direct hint/stuck/review handling
+3. Routing table is declarative and easy to modify
+4. New commands can be added by adding entries to routing table, not by editing Professor code
+
+**Plans:** 0 plans (to be planned)
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 17.1.1.1.1 to break down)
+
+---
+
 ### Phase 18: Cloud Deployment
 
 **Goal:** The platform runs at a stable public URL with production-safe configuration — no local machine required to access the app.
@@ -548,6 +570,16 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 20 to break down)
+
+### Phase 21: research and polish current agent plan to work in real world
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 20
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 21 to break down)
 
 ---
 
