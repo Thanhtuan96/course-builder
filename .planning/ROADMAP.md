@@ -452,7 +452,7 @@ Plans:
 6. professor:next reminds learner about spotter at end of lecture
 7. Spotter agent and professor:spotter command registered in plugin.json
 
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 17.1.1-01-PLAN.md — Create Spotter agent + command + Professor format

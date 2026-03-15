@@ -5,12 +5,12 @@ milestone_name: Phases
 current_phase: Not started (roadmap defined, ready for planning)
 current_plan: —
 status: planning
-last_updated: "2026-03-15T14:14:15.382Z"
+last_updated: "2026-03-15T14:44:04.233Z"
 progress:
-  total_phases: 22
-  completed_phases: 14
-  total_plans: 27
-  completed_plans: 29
+  total_phases: 23
+  completed_phases: 15
+  total_plans: 29
+  completed_plans: 31
 ---
 
 # Session State
@@ -37,15 +37,23 @@ See: .planning/PROJECT.md
 - v2.1 roadmap defined: Phases 18-20 — cloud deploy, auth, OSS SKILL registry
 
 ### v2.1 Phase Summary
-- **Phase 18: Cloud Deployment** — Vercel deploy, custom domain, env var management (DEPL-01, DEPL-02, DEPL-03) — DEFERRED
-- **Phase 19: Authentication** — Email/password signup, GitHub OAuth, persistent sessions (AUTH-01, AUTH-02, AUTH-03) — DEFERRED
-- **Phase 20: OSS SKILL Registry** — GitHub-backed registry, webhook sync, CLI install command (REG-01, REG-02, REG-03) — DEFERRED
+- **Phase 18: Cloud Deployment** — DEFERRED. Needs filesystem + CLI replacement for serverless. Revisit after CLI community active.
+- **Phase 19: Authentication** — DEFERRED. Depends on Phase 18.
+- **Phase 20: CLI Install Command** — ACTIVE. `npx course-professor install <course-name>` + `npx course-professor list`. Fetches from `professor-skills/registry` GitHub directly. No server needed.
 
 ### v2.1 Goals
 - ~~Cloud deployment (Vercel) with public URL and custom domain~~ — Deferred
 - ~~Email + GitHub OAuth user authentication~~ — Deferred
-- `professor-skills/` GitHub org as OSS SKILL registry with webhook sync
-- `npx course-professor install <skill-name>` CLI command
+- `npx course-professor install <course-name>` — install a community course template locally
+- `npx course-professor list` — browse available courses from registry
+
+### Registry Repo (External — Complete)
+- **Repo:** `professor-skills/registry` (separate repo, not this one)
+- **Status:** Built and validated — `courses/` + `skills/` separation, `index.json` with `courses[]` + `skills[]` arrays
+- **Philosophy:** COURSE = syllabus template for learning. SKILL = real problem-solver built by a learner after completing a course (earned gate).
+- **Contribution:** courses/ open to anyone via PR. skills/ earned — must complete course + capstone first.
+- **No server:** CLI fetches `index.json` from GitHub raw URL, downloads files directly. GitHub Actions rebuild index on merge.
+- **Phase 21 (Vercel server) removed** — was irrelevant once web platform deferred.
 
 ### Phase 15 Decisions
 - Time tracking uses ISO 8601 timestamps with minute-precision duration calculation
@@ -96,3 +104,6 @@ See: .planning/PROJECT.md
 - 2026-03-15: Completed plan 17-01 - Auto-generate exercise files
 - 2026-03-15: Deferred phases 18-20 (Cloud Deployment, Auth, OSS Registry) — focus on CLI/skills first
 - 2026-03-15: Completed plan 17.1-02 - Coach agent integration (review, done, stuck commands wired to Coach)
+- 2026-03-15: Phase 20 re-scoped to CLI install command only (no server, no webhook) — registry repo is external and complete
+- 2026-03-15: Phase 21 (Vercel-compatible server) removed — irrelevant while web platform is deferred
+- 2026-03-15: Registry repo (professor-skills/registry) complete externally — courses/+skills/ split, validate+build scripts, GitHub Actions
