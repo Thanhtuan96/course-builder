@@ -175,6 +175,7 @@ v2.1: 18 → 19 → 20
 | 17. Auto-generate Exercise Files | 1/1 | Complete    | 2026-03-15 |
 | 17.1. Coach Agent | 2/2 | Complete    | 2026-03-15 |
 | 17.1.1. Spotter Agent | 2/2 | Complete    | 2026-03-15 |
+| 17.1.1.1. Navigator Agent | 0/TBD | Not started | - |
 
 ### v2.1 Phases
 
@@ -457,6 +458,28 @@ Plans:
 Plans:
 - [ ] 17.1.1-01-PLAN.md — Create Spotter agent + command + Professor format
 - [ ] 17.1.1-02-PLAN.md — Wire hint, next, plugin.json
+
+---
+
+### Phase 17.1.1.1: Navigator Agent (Section Bridges and Concept Threading)
+
+**Goal:** Create Navigator agent that helps learners see connections between sections and threads concepts across a course. Navigator appears between sections to reinforce learning by showing "what you just learned → what comes next" bridges.
+
+**Depends on:** Phase 17.1.1 (Spotter Agent)
+
+**Requirements:** TBD
+
+**Success Criteria** (what must be TRUE):
+1. Navigator appears automatically between sections (not invoked — flows from section completion)
+2. Navigator shows "bridge" content: how current section concepts connect to next section
+3. Concept threading: Navigator maintains a lightweight "concept map" showing how key ideas recur across sections
+4. Learner's "aha moments" from Coach feedback are threaded forward by Navigator
+5. Navigator appends bridge summaries to LEARNING-LOG.md
+
+**Plans:** 0 plans (to be planned)
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 17.1.1.1 to break down)
 
 ---
 
