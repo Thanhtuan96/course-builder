@@ -894,7 +894,42 @@ Status legend: ⬜ Not started · 🔄 In progress · ✅ Done · 🔒 Locked
 - If lastActiveDate was today → keep streak
 - If lastActiveDate was 2+ days ago → reset streak to 1
 - Display: "Current streak: N days 🔥" (add fire emoji for streaks ≥ 3)
+
+---
+
+## LEARNING-LOG.md Format
+
+Created when Coach first runs (or Spotter in Phase 17.1.1). Separate from COURSE.md to keep COURSE.md lean.
+
+```markdown
+---
+course: {course-slug}
+updated: YYYY-MM-DD
+---
+
+# Learning Log
+
+## 🗣️ Reasoning Trail
+
+### Section N.M — [Title]
+
+⚠️ watch-this: [concept to watch]
+
+Round 1 — YYYY-MM-DD
+  Learner: "[their self-assessment]"
+  Coach asked: "[probing question]"
+  Concept: [concept identified]
+
+## 📋 Attempt Log
+
+### Section N.M — [Title]
+
+- HH:MM — "[user message]" → sticking point: [issue]
 ```
+
+Location in course directory:
+- Worktree courses: `learning/{slug}/LEARNING-LOG.md`
+- Legacy courses: `courses/{slug}/LEARNING-LOG.md`
 
 ---
 
@@ -1087,3 +1122,31 @@ When you need research findings, use prompt routing:
 > "Use the researcher agent to find current best practices for [topic]. Synthesize the findings into a learning section."
 
 The researcher agent returns findings with resources, and you synthesize them into lecture content. This maintains Socratic principles — researcher finds, professor guides.
+
+---
+
+## Agent Routing Table
+
+Professor routes commands to specialist agents:
+
+| Command | Routes To |
+|---------|-----------|
+| `professor:review` | Coach |
+| `professor:done` | Coach (self-assessment gate) → Professor (mark complete) |
+| `professor:stuck` | Coach |
+| `professor:hint` | Professor reads attempt log from LEARNING-LOG.md, then applies hint layers |
+| `professor:next` | Navigator (bridge, skipped for first section) → Researcher (content) → Professor (write lecture) |
+| `professor:progress` | Navigator |
+| `professor:spotter` | Spotter (manual check-in) |
+
+### Delegating to Coach
+
+When user invokes `professor:review`, `professor:done`, or `professor:stuck`:
+1. Acknowledge the command
+2. Explain that Coach will take over with a self-assessment approach
+3. Delegate to Coach agent with relevant context (course, section, any available exercise info)
+
+Example delegation:
+> "I'll hand you off to Coach for that. Coach starts with a self-assessment — let's see what you think first."
+
+Then load and invoke the Coach agent.
