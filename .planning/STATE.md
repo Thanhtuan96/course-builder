@@ -35,6 +35,7 @@ See: .planning/PROJECT.md
 - v1.1 completed: Git worktree courses, auto-create exercise files, agent specialization
 - v2.0 in progress: Phase 13 (React client) and Phase 14 (Integration) done; phases 15-17 still pending
 - v2.1 roadmap defined: Phases 18-20 — cloud deploy, auth, OSS SKILL registry
+- Phase 21 added: research and polish current agent plan to work in real world
 
 ### v2.1 Phase Summary
 - **Phase 18: Cloud Deployment** — DEFERRED. Needs filesystem + CLI replacement for serverless. Revisit after CLI community active.
@@ -107,5 +108,4 @@ See: .planning/PROJECT.md
 - 2026-03-15: Phase 20 re-scoped to CLI install command only (no server, no webhook) — registry repo is external and complete
 - 2026-03-15: Phase 21 (Vercel-compatible server) removed — irrelevant while web platform is deferred
 - 2026-03-15: Registry repo (professor-skills/registry) complete externally — courses/+skills/ split, validate+build scripts, GitHub Actions
-- 2026-03-16: Completed plan 17.1.1.1-01 — Navigator agent for section bridges and concept threading
-- 2026-03-16: Completed plan 17.1.1.1-02 — Navigator integration (professor:navigator command, routing table, plugin.json)
+- 2026-03-16: Completed plan 17.1.1.1.1-01 — YAML routing table to Professor frontmatter
