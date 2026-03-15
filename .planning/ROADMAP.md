@@ -499,10 +499,11 @@ Plans:
 3. Routing table is declarative and easy to modify
 4. New commands can be added by adding entries to routing table, not by editing Professor code
 
-**Plans:** 0 plans (to be planned)
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 17.1.1.1.1 to break down)
+- [x] 17.1.1.1.1-01-PLAN.md — Add YAML routing table to Professor frontmatter
+- [x] 17.1.1.1.1-02-PLAN.md — Strip command behaviors from Professor body
 
 ---
 
