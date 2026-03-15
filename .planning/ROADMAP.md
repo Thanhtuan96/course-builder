@@ -173,7 +173,7 @@ v2.1: 18 → 19 → 20
 | 15. Retention Layer | 4/4 | Complete    | 2026-03-14 |
 | 16. Sharing and Templates | 1/1 | Complete    | 2026-03-15 |
 | 17. Auto-generate Exercise Files | 1/1 | Complete    | 2026-03-15 |
-| 17.1. Coach Agent | 0/2 | Not started | - |
+| 17.1. Coach Agent | 1/2 | In Progress|  |
 
 ### v2.1 Phases
 
@@ -426,7 +426,7 @@ Plans:
 5. Watch-this flag can mark weak areas for Navigator to pick up
 6. Professor routes review/done/stuck to Coach
 
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 17.1-01-PLAN.md — Create Coach agent + update Professor with routing table and LEARNING-LOG format
