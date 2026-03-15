@@ -171,6 +171,7 @@ v2.1: 18 → 19 → 20
 | 14. Integration | 1/1 | Complete    | 2026-03-13 |
 | 15. Retention Layer | 4/4 | Complete    | 2026-03-14 |
 | 16. Sharing and Templates | 1/1 | Complete    | 2026-03-15 |
+| 17. Auto-generate Exercise Files | 1/1 | Planned     | - |
 
 ### v2.1 Phases
 
@@ -397,13 +398,13 @@ Plans:
 
 ### Phase 17: auto generate excercise files that user can work on directly (exclude learning framework- only need instructions)
 
-**Goal:** [To be planned]
+**Goal:** Generate self-contained exercise files that users can work on directly without needing LECTURE.md visible. Differentiate between coding exercises (skeleton code with TODOs) and non-coding exercises (pure instructions only).
 **Requirements**: TBD
 **Depends on:** Phase 16
-**Plans:** 0 plans
+**Plans:** 1/1 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 17 to break down)
+- [x] 17-01-PLAN.md — Enhance exercise generation with topic detection, self-contained coding/non-coding templates
 
 ---
 
