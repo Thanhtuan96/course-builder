@@ -38,42 +38,89 @@ Write `LECTURE.md` for that section (overwrite any existing file). Update `COURS
    - First check `learning/{slug}/` (worktree courses - Phase 7)
    - Fall back to `courses/{slug}/` (legacy)
 
-2. **Determine exercise file path**:
-   - Use `exercises/{NN}-{section-slug}.js` pattern
+2. **Detect topic type** (coding vs non-coding):
+   - Scan section title and LECTURE.md content for keywords:
+     - **Coding keywords** → coding exercise: "implement", "function", "write code", "program", "algorithm", "build", "create component", "API", "database", "query", "class", "method", "return", "input", "output"
+     - **Non-coding keywords** → non-coding exercise: "analyze", "explain", "compare", "prove", "mark", "calculate", "design", "describe", "discuss", "evaluate", "assess"
+   - Also detect from course name: React → coding, Python → coding, SQL → coding
+   - Default to coding exercise if unclear
+
+3. **Detect technology type** for file extension:
+   - React/JS/Node → `.jsx` (or `.js` if no React detected)
+   - TypeScript → `.ts`
+   - Python → `.py`
+   - SQL → `.sql`
+   - Go → `.go`
+   - Rust → `.rs`
+   - Java → `.java`
+   - Non-coding → `.md`
+
+4. **Determine exercise file path**:
+   - Use `exercises/{NN}-{section-slug}.{ext}` pattern
    - Extract section number from COURSE.md
-   - Determine file extension based on topic type (js, ts, py, sql, etc.)
 
-3. **Detect topic type**:
-   - Parse COURSE.md for hints about topic type
-   - Common framework indicators: React, Next.js, Express, Django, Vue, etc.
-   - Default to standalone if unclear
+5. **Create exercise file** (skip if already exists):
 
-4. **Create exercise file template** (skip if already exists):
-   - Write template file with:
-     - Comments describing the exercise task
-     - Function signatures / skeleton code
-     - TODO comments marking where to implement
-   - DO NOT write working code - only skeleton
+   **For CODING exercises** - generate skeleton code:
+   ```javascript
+   // ========================================
+   // Exercise: [Exercise Title]
+   // ========================================
+   //
+   // Objective: [1-2 sentences what user should accomplish]
+   //
+   // Example:
+   //   Input: [example input]
+   //   Output: [expected output]
+   //
+   // Constraints:
+   //   - [Constraint 1]
+   //   - [Constraint 2]
+   //
+   // Work on this file directly - you can complete it without the lecture visible.
+   // ========================================
 
-5. **Update COURSE.md**:
+   // TODO: [Task 1 description]
+   function yourFunction(param) {
+     // Your implementation here
+   }
+
+   // TODO: [Task 2 description - if applicable]
+   // function anotherFunction() { }
+
+   module.exports = { yourFunction };
+   ```
+
+   **For NON-CODING exercises** - generate pure instructions:
+   ```markdown
+   # Exercise: [Exercise Title]
+
+   ## Objective
+   [What user should accomplish - 1-2 sentences]
+
+   ## Instructions
+   Complete the following:
+   
+   1. [Instruction 1]
+   2. [Instruction 2]
+   3. [Instruction 3]
+
+   ## Your Answer
+   [Space for user's response - either free text or specific format]
+
+   ## Verification
+   [What makes a good answer - criteria for self-verification]
+
+   ## Resources
+   - [Reference to LECTURE.md section]
+   - [Any additional hints without giving the answer]
+   ```
+
+6. **Update COURSE.md**:
    - Add/update "Active exercise" field:
      ```
      **Active exercise**: exercises/01-intro.js
      ```
    - This field is read by review/hint/stuck commands
-
-Example template created:
-```javascript
-// Exercise: [Task description]
-// See LECTURE.md for full instructions
-
-// TODO: Implement [specific task]
-function yourFunction(param) {
-  // Your code here
-}
-
-// TODO: Add test cases
-module.exports = { yourFunction };
-```
 
 Present the section content in chat, then prompt the user to attempt the exercise on their own.
