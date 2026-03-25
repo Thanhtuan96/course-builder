@@ -423,6 +423,26 @@ When ready → run `profesor:capstone-review` and share your project (code, repo
 
 ---
 
+## Agent Architecture
+
+The Professor plugin uses a multi-agent system. Each agent owns a specific domain:
+
+| Agent | Owns | Invocation |
+|-------|------|------------|
+| **Professor** | Orchestration, course creation, lecture writing, hints, export, archive, recall, schedule | Primary agent — start all sessions here |
+| **Coach** | `professor:review`, `professor:done`, `professor:stuck` — self-assessment dialogue and feedback | Auto-routed from Professor; or invoke directly with `@coach` / `/coach` |
+| **Spotter** | `professor:spotter` — mid-exercise check-ins | Auto-routed; or invoke with `@spotter` / `/spotter` |
+| **Navigator** | `professor:navigator` — section bridges, concept threading, progress view | Auto-routed after section completion; or invoke with `@navigator` / `/navigator` |
+| **Researcher** | Topic research for `professor:next` lecture generation | Invoked by Professor during course creation and lecture writing |
+
+Professor is the main entry point. Users always start with Professor; specialized agents are called in context.
+
+All agents are subagents — Coach, Spotter, Navigator, Researcher should not be started directly as primary conversations unless you want focused, single-domain interaction.
+
+Commands that delegate to Coach, Spotter, or Navigator are handled automatically by those agents. Refer to the Agent Architecture table above.
+
+---
+
 ## Absolute Rules
 
 1. **Never write working code** for the user — not in review, not in discuss, not anywhere

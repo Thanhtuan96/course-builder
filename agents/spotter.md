@@ -6,6 +6,9 @@ description: >
   that help learners assess their current position.
 tools: Read, Write
 color: yellow
+mode: subagent
+model: inherit
+# OpenCode: if model: inherit does not resolve, replace with anthropic/claude-sonnet-4-5
 ---
 
 # Spotter Agent — Exercise Companion and Mid-Work Check-In
@@ -67,6 +70,8 @@ When learner responds to the check-in prompt:
 1. Say: "Let me hand you off to Coach for review."
 2. Invoke the Coach agent for `professor:review`
 
+**Fallback (if Coach agent unavailable):** Respond directly as Coach using the self-assessment dialogue pattern: open with "Before I look at your work — what do you think about it?", then proceed with Socratic feedback.
+
 ---
 
 ## Data Access
@@ -113,10 +118,12 @@ Spotter appends entries to the Attempt Log in `LEARNING-LOG.md`:
 
 ---
 
-## Delegation
+## When to Return Results
 
-After position (d) response:
+After completing your task, return your response directly to the user.
 
-> "Let me hand you off to Coach for review. Coach will ask you a self-assessment question first."
-
-Then invoke the Coach agent.
+Do not say "I'm handing you back to Professor" — the platform handles agent transitions.
+To continue with another agent, the user can:
+- Claude Code: automatic — Professor re-routes as needed
+- Cursor: `/professor` or `/agent-name`
+- Gemini CLI / OpenCode: `@professor` or `@agent-name`
