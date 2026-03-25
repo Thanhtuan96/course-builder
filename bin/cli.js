@@ -12,8 +12,8 @@ import {
   installCourse,
 } from './registry-helpers.js';
 
-import { existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync, statSync } from 'fs';
-import { join, dirname } from 'path';
+import { existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync, statSync, mkdtempSync } from 'fs';
+import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
 import chalk from 'chalk';
@@ -571,6 +571,184 @@ switch (command) {
     break;
   }
 
+  case 'publish': {
+    const {
+      validateSourceCourse,
+      validateSourceSkill,
+      buildStagingDir,
+      generateBrowserFallbackUrl,
+      style,
+    } = await import('./registry-helpers.js');
+
+    const { execSync } = await import('child_process');
+
+    // Parse args
+    const isDryRun = args.includes('--dry-run');
+    const isForce  = args.includes('--force');
+    const typeIdx  = args.indexOf('--type');
+    const typeArg  = typeIdx !== -1 ? args[typeIdx + 1] : null;
+    const pathIdx  = args.indexOf('--path');
+    const pathArg  = pathIdx !== -1 ? args[pathIdx + 1] : null;
+    const nameArg  = args.find((a) => a.startsWith('--name='))?.split('=')[1];
+
+    const sourceDir = pathArg || process.cwd();
+    const slug      = nameArg || basename(sourceDir);
+
+    // Auto-detect type
+    let contentType = typeArg;
+    if (!contentType) {
+      const hasSkill  = existsSync(join(sourceDir, 'SKILL.md')) && existsSync(join(sourceDir, 'COMPLETION.md'));
+      const hasCourse = existsSync(join(sourceDir, 'COURSE.md'));
+      if (hasSkill && hasCourse) {
+        console.error(style('error', 'Both course and skill detected. Use --type course|skill to specify.'));
+        process.exit(1);
+      }
+      contentType = hasSkill ? 'skill' : hasCourse ? 'course' : null;
+      if (!contentType) {
+        console.error(style('error', 'No COURSE.md or SKILL.md found. Run from a course directory.'));
+        process.exit(1);
+      }
+    }
+    if (contentType !== 'course' && contentType !== 'skill') {
+      console.error(style('error', '--type must be "course" or "skill".'));
+      process.exit(1);
+    }
+
+    // Validate source
+    const validator = contentType === 'course' ? validateSourceCourse(sourceDir) : validateSourceSkill(sourceDir);
+    if (!validator.valid) {
+      for (const err of validator.errors) console.error(style('error', err));
+      process.exit(1);
+    }
+
+    // Build staging dir
+    const stagingDir = buildStagingDir(contentType, slug, sourceDir);
+
+    if (isDryRun) {
+      console.log(style('info', `Dry run — packaged files at: ${stagingDir}`));
+      console.log(style('info', 'Contents:'));
+      for (const f of readdirSync(stagingDir)) console.log(`  - ${f}`);
+      process.exit(0);
+    }
+
+    // gh availability check
+    const ghAvailable = (() => {
+      try {
+        execSync('gh --version', { stdio: 'ignore' });
+        return true;
+      } catch { return false; }
+    })();
+
+    if (!ghAvailable) {
+      const url = generateBrowserFallbackUrl(contentType, slug);
+      console.log(style('warning', 'gh CLI not found — using browser fallback.'));
+      console.log(`  Open this URL to create a PR manually:`);
+      console.log(chalk.blue(`  ${url}`));
+      console.log(style('info', `Your packaged files are at: ${stagingDir}`));
+      console.log(style('info', 'Upload them to the PR after opening the browser.'));
+      process.exit(0);
+    }
+
+    // gh auth check
+    try { execSync('gh auth status', { stdio: 'ignore' }); } catch {
+      const url = generateBrowserFallbackUrl(contentType, slug);
+      console.log(style('warning', 'gh not authenticated — using browser fallback.'));
+      console.log(chalk.blue(`  ${url}`));
+      console.log(style('info', `Your packaged files are at: ${stagingDir}`));
+      process.exit(0);
+    }
+
+    // Setup git credentials (Eng Decision 2 — use gh auth setup-git, not token URL injection)
+    try {
+      execSync('gh auth setup-git', { stdio: 'pipe' });
+    } catch {
+      console.error(style('error', 'gh auth setup-git failed. Run gh auth login first.'));
+      process.exit(1);
+    }
+
+    // Fork
+    const forkSpinner = ora('Forking registry…').start();
+    try {
+      execSync('gh repo fork professor-skills-hub/courses-skills-registry --clone=false', { stdio: 'pipe' });
+      forkSpinner.succeed();
+    } catch (err) {
+      forkSpinner.fail();
+      console.error(style('error', `Fork failed: ${err.message}`));
+      process.exit(1);
+    }
+
+    // Clone fork to temp dir
+    let forkUrl;
+    try {
+      const remoteOut = execSync('git remote get-url origin', { encoding: 'utf-8', stdio: 'pipe' });
+      forkUrl = remoteOut.trim();
+    } catch {
+      forkSpinner.fail();
+      console.error(style('error', 'Could not get fork URL. Is your fork ready?'));
+      process.exit(1);
+    }
+
+    const tmpDir    = mkdtempSync(join(os.tmpdir(), 'professor-publish-'));
+    const repoDir   = join(tmpDir, 'repo');
+    const cloneSpinner = ora('Cloning fork…').start();
+    try {
+      execSync(`git clone --depth=1 "${forkUrl}" "${repoDir}"`, { stdio: 'pipe' });
+      cloneSpinner.succeed();
+    } catch (err) {
+      cloneSpinner.fail();
+      console.error(style('error', `Clone failed: ${err.message}`));
+      rmSync(tmpDir, { recursive: true, force: true });
+      process.exit(1);
+    }
+
+    // Copy files to destination dir
+    const destDir = join(repoDir, contentType === 'course' ? 'courses' : 'skills', slug);
+    mkdirSync(destDir, { recursive: true });
+    for (const f of readdirSync(stagingDir)) {
+      const src = join(stagingDir, f);
+      if (statSync(src).isFile()) {
+        writeFileSync(join(destDir, f), readFileSync(src));
+      }
+    }
+
+    // Branch, commit, push
+    const branch    = `contribute/${contentType}/${slug}`;
+    const commitMsg = `Add ${contentType}: ${slug}`;
+    try {
+      execSync(`git checkout -b "${branch}"`,           { cwd: repoDir, stdio: 'pipe' });
+      execSync(`git add . && git commit -m "${commitMsg}"`, { cwd: repoDir, stdio: 'pipe' });
+      const pushFlags = isForce ? '-f' : '';
+      execSync(`git push origin "${branch}" ${pushFlags}`.trim(), { cwd: repoDir, stdio: 'pipe' });
+    } catch (err) {
+      console.error(style('error', `Git push failed: ${err.message}`));
+      rmSync(tmpDir, { recursive: true, force: true });
+      process.exit(1);
+    }
+
+    // Create PR
+    const prSpinner = ora('Creating PR…').start();
+    let prUrl;
+    try {
+      const prJson = execSync(
+        `gh pr create --json url --jq .url --title "${commitMsg}" --body "Published via course-professor publish."`,
+        { cwd: repoDir, encoding: 'utf-8', stdio: 'pipe' }
+      );
+      prUrl = JSON.parse(prJson.trim()).url;
+      prSpinner.succeed();
+      console.log(style('success', `PR created: ${prUrl}`));
+    } catch (err) {
+      prSpinner.fail();
+      console.error(style('error', `PR creation failed: ${err.message}`));
+      rmSync(tmpDir, { recursive: true, force: true });
+      process.exit(1);
+    }
+
+    // Cleanup
+    rmSync(tmpDir,    { recursive: true, force: true });
+    rmSync(stagingDir, { recursive: true, force: true });
+    process.exit(0);
+  }
+
   case 'list':
     console.log('\nSupported agents:\n');
     SUPPORTED_AGENTS.forEach((agent, i) => {
@@ -640,6 +818,7 @@ COMMANDS
   ${chalk.bold('installed')}                List all installed skills
   ${chalk.bold('remove')} <skill-name>     Remove an installed skill
   ${chalk.bold('web')} [port]           Start local web UI (default port: 3000)
+  ${chalk.bold('publish')} [options]     Publish a course or skill to the community registry
   ${chalk.bold('web')} --production     Start web UI in production mode (requires build)
   ${chalk.bold('help')}                 Show this help message
 
@@ -662,6 +841,8 @@ EXAMPLES
   npx course-professor update --all                    # Update all installed skills
   npx course-professor installed                        # List installed skills
   npx course-professor remove react-hooks-reviewer     # Remove a skill
+  npx course-professor publish --dry-run                 # Preview packaged files (no GitHub)
+  npx course-professor publish --type skill --name foo   # Publish a skill
   npx course-professor web                     # Start web UI on port 3000
 
 SUPPORTED AGENTS

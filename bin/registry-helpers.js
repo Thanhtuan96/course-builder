@@ -205,6 +205,154 @@ export async function installSkill(itemName, scope, { force = false, index = nul
   console.log('');
 }
 
+// ─── Source validation (inlined from validate.js — separate repo, no runtime import) ──
+
+/**
+ * Validate a course source directory for publish.
+ * Checks: COURSE.md exists with ≥3 sections (⬜/🔄/✅ status markers).
+ * @param {string} dir
+ * @returns {{ valid: boolean, errors: string[] }}
+ */
+export function validateSourceCourse(dir) {
+  const errors = [];
+  if (!existsSync(join(dir, 'COURSE.md'))) {
+    errors.push('COURSE.md not found');
+    return { valid: false, errors };
+  }
+  try {
+    const content = readFileSync(join(dir, 'COURSE.md'), 'utf-8');
+    // Match status markers anywhere in a line (handles table cells like "| 1 | Intro | ⬜ Not started |")
+    const sectionCount = (content.match(/[⬜🔄✅]/g) || []).length;
+    if (sectionCount < 3) {
+      errors.push(`COURSE.md has ${sectionCount} sections — minimum 3 required`);
+    }
+  } catch {
+    errors.push('Could not read COURSE.md');
+  }
+  return { valid: errors.length === 0, errors };
+}
+
+/**
+ * Validate a skill source directory for publish.
+ * Checks: SKILL.md exists + COMPLETION.md exists with "Course Complete" verdict.
+ * @param {string} dir
+ * @returns {{ valid: boolean, errors: string[] }}
+ */
+export function validateSourceSkill(dir) {
+  const errors = [];
+  if (!existsSync(join(dir, 'SKILL.md'))) {
+    errors.push('SKILL.md not found (run professor:skill-export first)');
+  }
+  const compPath = join(dir, 'COMPLETION.md');
+  if (!existsSync(compPath)) {
+    errors.push('COMPLETION.md not found (run professor:capstone-review to completion first)');
+  } else {
+    try {
+      const comp = readFileSync(compPath, 'utf-8');
+      if (!comp.includes('verdict: Course Complete')) {
+        errors.push('COMPLETION.md verdict is not "Course Complete" — skill publish requires full completion');
+      }
+    } catch {
+      errors.push('Could not read COMPLETION.md');
+    }
+  }
+  return { valid: errors.length === 0, errors };
+}
+
+/**
+ * Validate a built meta.json object against required fields.
+ * @param {object} meta
+ * @param {'course'|'skill'} type
+ * @returns {{ valid: boolean, errors: string[] }}
+ */
+export function validateMetaJson(meta, type) {
+  const errors = [];
+  const required = ['name', 'title', 'description', 'author'];
+  for (const field of required) {
+    if (!meta[field] || (typeof meta[field] === 'string' && !meta[field].trim())) {
+      errors.push(`meta.json missing required field: ${field}`);
+    }
+  }
+  if (type === 'skill' && !meta.origin_course) {
+    errors.push('meta.json missing required field for skill: origin_course');
+  }
+  return { valid: errors.length === 0, errors };
+}
+
+// ─── Meta.json builders ────────────────────────────────────────────────────────
+
+/**
+ * Build a course meta.json object from source and overrides.
+ * @param {string} courseDir
+ * @param {{ name?: string, title?: string, description?: string, author?: string, level?: string, topics?: string[] }} overrides
+ * @returns {object}
+ */
+export function buildCourseMetaJson(courseDir, { name, title, description, author, level, topics } = {}) {
+  return {
+    name: name || '',
+    title: title || '',
+    description: description || '',
+    author: author || '',
+    level: level || '',
+    topics: topics || [],
+  };
+}
+
+/**
+ * Build a skill meta.json object from source and overrides.
+ * @param {string} skillDir
+ * @param {{ name?: string, title?: string, description?: string, author?: string, origin_course?: string, topics?: string[] }} overrides
+ * @returns {object}
+ */
+export function buildSkillMetaJson(skillDir, { name, title, description, author, origin_course, topics } = {}) {
+  return {
+    name: name || '',
+    title: title || '',
+    description: description || '',
+    author: author || '',
+    origin_course: origin_course || '',
+    topics: topics || [],
+  };
+}
+
+// ─── Staging dir builder ──────────────────────────────────────────────────────
+
+/**
+ * Copy published files to .publish-staging/<slug>/ for inspection or upload.
+ * @param {'course'|'skill'} type
+ * @param {string} slug
+ * @param {string} sourceDir
+ * @returns {string} staging directory path
+ */
+export function buildStagingDir(type, slug, sourceDir) {
+  const stagingDir = join(process.cwd(), '.publish-staging', slug);
+  mkdirSync(stagingDir, { recursive: true });
+  if (type === 'course') {
+    writeFileSync(join(stagingDir, 'COURSE.md'),
+      readFileSync(join(sourceDir, 'COURSE.md')));
+    writeFileSync(join(stagingDir, 'meta.json'),
+      JSON.stringify(buildCourseMetaJson(sourceDir, {}), null, 2));
+  } else {
+    writeFileSync(join(stagingDir, 'SKILL.md'),
+      readFileSync(join(sourceDir, 'SKILL.md')));
+    writeFileSync(join(stagingDir, 'meta.json'),
+      JSON.stringify(buildSkillMetaJson(sourceDir, {}), null, 2));
+  }
+  return stagingDir;
+}
+
+// ─── URL fallback generator ───────────────────────────────────────────────────
+
+/**
+ * Generate GitHub compare URL for browser fallback when gh CLI is unavailable.
+ * @param {'course'|'skill'} type
+ * @param {string} slug
+ * @returns {string}
+ */
+export function generateBrowserFallbackUrl(type, slug) {
+  return `https://github.com/professor-skills-hub/courses-skills-registry/compare/main...contribute/${type}/${slug}`;
+}
+
 /**
  * Install a course from the registry (always local).
  * @param {string} itemName

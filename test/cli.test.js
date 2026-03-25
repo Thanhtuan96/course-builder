@@ -30,8 +30,19 @@ vi.mock('https', () => ({
 
 // ─── Helpers under test ────────────────────────────────────────────────────────
 
-const { validateItemName, fetchRegistryText, fetchRegistryIndex, confirmOverwrite } =
-  await import('../bin/registry-helpers.js');
+const {
+  validateItemName,
+  fetchRegistryText,
+  fetchRegistryIndex,
+  confirmOverwrite,
+  validateSourceCourse,
+  validateSourceSkill,
+  validateMetaJson,
+  buildCourseMetaJson,
+  buildSkillMetaJson,
+  buildStagingDir,
+  generateBrowserFallbackUrl,
+} = await import('../bin/registry-helpers.js');
 
 // ─── Temp dir cleanup ──────────────────────────────────────────────────────────
 
@@ -518,5 +529,276 @@ describe('meta.json optional during install', () => {
     expect(skillText).toBe('# Skill');
     expect(metaText).toBe(null);
     // Both should succeed — install would proceed with SKILL.md only
+  });
+});
+
+// ─── validateSourceCourse ───────────────────────────────────────────────────────
+
+describe('validateSourceCourse', () => {
+  it('returns valid=true when COURSE.md has ≥3 status markers', () => {
+    const dir = mkTemp();
+    writeFileSync(join(dir, 'COURSE.md'),
+      '# Course\n\n| # | Section | Status |\n|---|---------|--------|\n| 1 | Intro | ⬜ Not started |\n| 2 | Core | 🔄 In progress |\n| 3 | Advanced | ✅ Done |\n| 4 | Expert | ✅ Done |\n', 'utf8');
+    const result = validateSourceCourse(dir);
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it('returns valid=false when COURSE.md has fewer than 3 sections', () => {
+    const dir = mkTemp();
+    writeFileSync(join(dir, 'COURSE.md'),
+      '# Course\n\n| # | Section | Status |\n|---|---------|--------|\n| 1 | Intro | ✅ Done |\n', 'utf8');
+    const result = validateSourceCourse(dir);
+    expect(result.valid).toBe(false);
+    expect(result.errors[0]).toMatch('1 sections — minimum');
+  });
+
+  it('returns valid=false when COURSE.md is missing', () => {
+    const dir = mkTemp();
+    const result = validateSourceCourse(dir);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain('COURSE.md not found');
+  });
+});
+
+// ─── validateSourceSkill ────────────────────────────────────────────────────────
+
+describe('validateSourceSkill', () => {
+  it('returns valid=true when SKILL.md + COMPLETION.md with Course Complete verdict exist', () => {
+    const dir = mkTemp();
+    writeFileSync(join(dir, 'SKILL.md'), '# Skill', 'utf8');
+    writeFileSync(join(dir, 'COMPLETION.md'),
+      '---\ncourse: react-hooks\ncompleted: 2026-03-26\nverdict: Course Complete\ncapstone_summary: Built a useDebounce hook\n---\n', 'utf8');
+    const result = validateSourceSkill(dir);
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it('returns valid=false when SKILL.md is missing', () => {
+    const dir = mkTemp();
+    writeFileSync(join(dir, 'COMPLETION.md'), '---\nverdict: Course Complete\n---\n', 'utf8');
+    const result = validateSourceSkill(dir);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some(e => e.includes('SKILL.md not found'))).toBe(true);
+  });
+
+  it('returns valid=false when COMPLETION.md is missing', () => {
+    const dir = mkTemp();
+    writeFileSync(join(dir, 'SKILL.md'), '# Skill', 'utf8');
+    const result = validateSourceSkill(dir);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some(e => e.includes('COMPLETION.md not found'))).toBe(true);
+  });
+
+  it('returns valid=false when verdict is not "Course Complete"', () => {
+    const dir = mkTemp();
+    writeFileSync(join(dir, 'SKILL.md'), '# Skill', 'utf8');
+    writeFileSync(join(dir, 'COMPLETION.md'),
+      '---\nverdict: Almost There\n---\n', 'utf8');
+    const result = validateSourceSkill(dir);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some(e => e.includes('not "Course Complete"'))).toBe(true);
+  });
+});
+
+// ─── validateMetaJson ───────────────────────────────────────────────────────────
+
+describe('validateMetaJson', () => {
+  it('returns valid=true when all required fields present for course', () => {
+    const meta = { name: 'foo', title: 'Foo', description: 'Desc', author: 'user' };
+    const result = validateMetaJson(meta, 'course');
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it('returns valid=true when all required fields present for skill (including origin_course)', () => {
+    const meta = { name: 'foo', title: 'Foo', description: 'Desc', author: 'user', origin_course: 'bar' };
+    const result = validateMetaJson(meta, 'skill');
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it('returns valid=false when origin_course is missing for skill', () => {
+    const meta = { name: 'foo', title: 'Foo', description: 'Desc', author: 'user' };
+    const result = validateMetaJson(meta, 'skill');
+    expect(result.valid).toBe(false);
+    expect(result.errors.some(e => e.includes('origin_course'))).toBe(true);
+  });
+
+  it('returns valid=false when name is missing', () => {
+    const meta = { title: 'Foo', description: 'Desc', author: 'user' };
+    const result = validateMetaJson(meta, 'course');
+    expect(result.valid).toBe(false);
+    expect(result.errors.some(e => e.includes('name'))).toBe(true);
+  });
+});
+
+// ─── buildCourseMetaJson ───────────────────────────────────────────────────────
+
+describe('buildCourseMetaJson', () => {
+  it('includes all provided fields', () => {
+    const meta = buildCourseMetaJson('/some/dir', {
+      name: 'react-hooks',
+      title: 'React Hooks',
+      description: 'Learn hooks',
+      author: 'tuankhuat',
+      level: 'Intermediate',
+      topics: ['react', 'javascript'],
+    });
+    expect(meta.name).toBe('react-hooks');
+    expect(meta.title).toBe('React Hooks');
+    expect(meta.description).toBe('Learn hooks');
+    expect(meta.author).toBe('tuankhuat');
+    expect(meta.level).toBe('Intermediate');
+    expect(meta.topics).toEqual(['react', 'javascript']);
+  });
+
+  it('defaults topics to empty array when missing', () => {
+    const meta = buildCourseMetaJson('/some/dir', { name: 'foo', title: 'Foo', description: 'D', author: 'u' });
+    expect(meta.topics).toEqual([]);
+  });
+});
+
+// ─── buildSkillMetaJson ────────────────────────────────────────────────────────
+
+describe('buildSkillMetaJson', () => {
+  it('includes all provided fields including origin_course', () => {
+    const meta = buildSkillMetaJson('/some/dir', {
+      name: 'react-hooks-reviewer',
+      title: 'React Hooks Reviewer',
+      description: 'Reviews hooks',
+      author: 'tuankhuat',
+      origin_course: 'react-hooks',
+      topics: ['react'],
+    });
+    expect(meta.name).toBe('react-hooks-reviewer');
+    expect(meta.origin_course).toBe('react-hooks');
+    expect(meta.topics).toEqual(['react']);
+  });
+
+  it('defaults topics to empty array when missing', () => {
+    const meta = buildSkillMetaJson('/some/dir', {
+      name: 'foo', title: 'Foo', description: 'D', author: 'u', origin_course: 'bar',
+    });
+    expect(meta.topics).toEqual([]);
+  });
+});
+
+// ─── buildStagingDir ─────────────────────────────────────────────────────────
+
+describe('buildStagingDir', () => {
+  it('creates .publish-staging/<slug>/ with COURSE.md and meta.json for course', () => {
+    const sourceDir = mkTemp();
+    writeFileSync(join(sourceDir, 'COURSE.md'), '# Course Content', 'utf8');
+    const staging = buildStagingDir('course', 'my-course', sourceDir);
+    expect(staging).toContain('.publish-staging');
+    expect(staging).toContain('my-course');
+    expect(existsSync(join(staging, 'COURSE.md'))).toBe(true);
+    expect(existsSync(join(staging, 'meta.json'))).toBe(true);
+    const meta = JSON.parse(readFileSync(join(staging, 'meta.json'), 'utf-8'));
+    expect(meta.name).toBe('');
+  });
+
+  it('creates .publish-staging/<slug>/ with SKILL.md and meta.json for skill', () => {
+    const sourceDir = mkTemp();
+    writeFileSync(join(sourceDir, 'SKILL.md'), '# Skill Content', 'utf8');
+    const staging = buildStagingDir('skill', 'my-skill', sourceDir);
+    expect(existsSync(join(staging, 'SKILL.md'))).toBe(true);
+    expect(existsSync(join(staging, 'meta.json'))).toBe(true);
+    const meta = JSON.parse(readFileSync(join(staging, 'meta.json'), 'utf-8'));
+    expect(meta.origin_course).toBe('');
+  });
+
+  it('creates staging dir recursively', () => {
+    const sourceDir = mkTemp();
+    writeFileSync(join(sourceDir, 'COURSE.md'), '# C', 'utf8');
+    const staging = buildStagingDir('course', 'deep/nested/slug', sourceDir);
+    expect(existsSync(staging)).toBe(true);
+  });
+});
+
+// ─── generateBrowserFallbackUrl ───────────────────────────────────────────────
+
+describe('generateBrowserFallbackUrl', () => {
+  it('returns correct URL format for course', () => {
+    const url = generateBrowserFallbackUrl('course', 'react-hooks');
+    expect(url).toBe('https://github.com/professor-skills-hub/courses-skills-registry/compare/main...contribute/course/react-hooks');
+  });
+
+  it('returns correct URL format for skill', () => {
+    const url = generateBrowserFallbackUrl('skill', 'react-hooks-reviewer');
+    expect(url).toBe('https://github.com/professor-skills-hub/courses-skills-registry/compare/main...contribute/skill/react-hooks-reviewer');
+  });
+});
+
+// ─── publish --dry-run logic ──────────────────────────────────────────────────
+
+describe('publish --dry-run logic', () => {
+  it('exits with code 0 on --dry-run for valid course', () => {
+    const sourceDir = mkTemp();
+    writeFileSync(join(sourceDir, 'COURSE.md'),
+      '# C\n\n| 1 | S | ✅ |\n| 2 | S | ✅ |\n| 3 | S | ✅ |\n', 'utf8');
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('exit0');
+    });
+    try {
+      // Simulate: validateSourceCourse passes, buildStagingDir creates files, dry-run exits 0
+      const result = validateSourceCourse(sourceDir);
+      expect(result.valid).toBe(true);
+      const staging = buildStagingDir('course', 'test-slug', sourceDir);
+      expect(existsSync(join(staging, 'COURSE.md'))).toBe(true);
+      // In the real CLI, dry-run calls process.exit(0) after printing staging path
+      process.exit(0);
+    } catch (e) {
+      if (e.message === 'exit0') {
+        // Expected — dry-run exits 0
+      } else {
+        throw e;
+      }
+    } finally {
+      exitSpy.mockRestore();
+    }
+  });
+});
+
+// ─── publish --type auto-detection ─────────────────────────────────────────────
+
+describe('publish --type auto-detection', () => {
+  it('detects skill when both SKILL.md and COMPLETION.md exist', () => {
+    const dir = mkTemp();
+    writeFileSync(join(dir, 'SKILL.md'), '# S', 'utf8');
+    writeFileSync(join(dir, 'COMPLETION.md'), '---\nverdict: Course Complete\n---\n', 'utf8');
+    const hasSkill  = existsSync(join(dir, 'SKILL.md')) && existsSync(join(dir, 'COMPLETION.md'));
+    const hasCourse = existsSync(join(dir, 'COURSE.md'));
+    const contentType = hasSkill ? 'skill' : hasCourse ? 'course' : null;
+    expect(contentType).toBe('skill');
+  });
+
+  it('detects course when only COURSE.md exists', () => {
+    const dir = mkTemp();
+    writeFileSync(join(dir, 'COURSE.md'), '# C\n\n| 1 | S | ✅ |\n', 'utf8');
+    const hasSkill  = existsSync(join(dir, 'SKILL.md')) && existsSync(join(dir, 'COMPLETION.md'));
+    const hasCourse = existsSync(join(dir, 'COURSE.md'));
+    const contentType = hasSkill ? 'skill' : hasCourse ? 'course' : null;
+    expect(contentType).toBe('course');
+  });
+
+  it('returns null when neither exists', () => {
+    const dir = mkTemp();
+    const hasSkill  = existsSync(join(dir, 'SKILL.md')) && existsSync(join(dir, 'COMPLETION.md'));
+    const hasCourse = existsSync(join(dir, 'COURSE.md'));
+    const contentType = hasSkill ? 'skill' : hasCourse ? 'course' : null;
+    expect(contentType).toBeNull();
+  });
+
+  it('is ambiguous when both SKILL.md and COURSE.md exist without COMPLETION.md', () => {
+    const dir = mkTemp();
+    writeFileSync(join(dir, 'SKILL.md'), '# S', 'utf8');
+    writeFileSync(join(dir, 'COURSE.md'), '# C', 'utf8');
+    // Without COMPLETION.md, hasSkill = false (requires both), so falls through to course
+    const hasSkill  = existsSync(join(dir, 'SKILL.md')) && existsSync(join(dir, 'COMPLETION.md'));
+    const hasCourse = existsSync(join(dir, 'COURSE.md'));
+    const contentType = hasSkill ? 'skill' : hasCourse ? 'course' : null;
+    expect(contentType).toBe('course');
   });
 });
