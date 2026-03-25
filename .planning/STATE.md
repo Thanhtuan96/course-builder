@@ -5,7 +5,7 @@ milestone_name: Phases
 current_phase: 21-research-and-polish-current-agent-plan-to-work-in-real-world
 current_plan: 04
 status: completed
-last_updated: "2026-03-25T12:19:15.488Z"
+last_updated: "2026-03-25T14:44:00.000Z"
 progress:
   total_phases: 26
   completed_phases: 17
@@ -119,3 +119,4 @@ See: .planning/PROJECT.md
 - 2026-03-25: Completed plan 21-01 — Professor.md cross-platform polish (removed routing:/actions:, replaced AskUserQuestion, added delegation block, trimmed to 353 lines)
 - 2026-03-25: Completed plan 21-02 — All 4 specialized agents (Coach, Spotter, Navigator, Researcher) polished with mode: subagent, model: inherit, and platform-agnostic delegation return language
 - 2026-03-25: Completed plan 21-03 — Synced agents/ to shared/ (navigator.md now present), added Agent Architecture table to SKILL.md documenting all 5 agents
+- 2026-03-25: Completed quick plan 1 — CLI skill registry lifecycle (update/installed/remove commands, JSON.parse safety, meta.json optional, overwrite protection, Vitest 31 tests). Helpers extracted to bin/registry-helpers.js to enable testing without shebang conflicts.
