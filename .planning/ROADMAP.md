@@ -15,37 +15,57 @@ v2.1 adds cloud deployment (Vercel), email + GitHub OAuth authentication, and an
 **Phase Numbering:**
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+- Phases 17.1+: Extensions beyond integer milestones
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [x] **Phase 1: Plugin Scaffold** - Establish plugin.json, directory layout, and README with setup instructions (completed 2026-03-05)
-- [x] **Phase 1b: CLI Auto-Setup** - Add npx-based auto-setup for any AI agent (completed 2026-03-06)
-- [x] **Phase 2: Professor Agent and Core Commands** - Package professor-skill-v3 as a Claude Code agent and wire all 12 course commands (completed 2026-03-06)
-- [x] **Phase 3: Notes Feature** - Add NOTES.md per-course file and the professor:note command (completed 2026-03-06)
-- [x] **Phase 4: PreCompact Hook** - Token warning and auto-save session state before context compression (completed 2026-03-06)
-- [x] **Phase 5: Export Feature** - Notion and Obsidian export via MCP with user destination choice (completed 2026-03-06)
-- [x] **Phase 6: Course Archive and Context Management** - Archive completed courses preserving learning context (completed 2026-03-07)
-- [x] **Phase 7: Git Worktree Courses** - Each technology learned = separate git worktree (completed 2026-03-07)
-- [x] **Phase 8: Auto-create Exercise Files** - Automatically create exercise files when professor:next is called (completed 2026-03-08)
-- [x] **Phase 9: Agent Support** - Add Cursor agent support (completed 2026-03-08)
-- [x] **Phase 10: Agent Specialization** - Improve and separate agents into specific fields (math, marketing, sales, coaching, bookkeeper, researcher) (completed 2026-03-11)
-- [x] **Phase 11: Research-Enhanced Hints** - Give hints with keyword to googling or research + useful conferences (completed 2026-03-11)
-- [x] **Phase 12: MCP Documentation** - Document mcp.json for tools needed (notion, obsidian) (verified in README.md)
-- [x] **Phase 13: Client Components** - React split-pane UI with LecturePanel, ChatPanel, command pills (v2.0)
-- [x] **Phase 14: Integration** - CLI web command, production build, static file serving (v2.0) (completed 2026-03-13)
-- [x] **Phase 15: Retention Layer** - SCHEDULE.md, professor:recall, professor:schedule, streak tracking, time tracking (v2.0) (completed 2026-03-14)
-- [x] **Phase 16: Sharing and Templates** - professor:template-export, professor:template-import, course sharing workflow (v2.0) (completed 2026-03-15)
-- [x] **Phase 17: Auto-generate Exercise Files** - Generate exercise files user can work on directly (exclude learning framework - only need instructions) (completed 2026-03-15)
-- [x] **Phase 17.1: Coach Agent** - Create Coach agent with self-assessment dialogue for professor:review, professor:done, professor:stuck (completed 2026-03-15)
-- [ ] **Phase 18: Cloud Deployment** - Deploy to Vercel with public URL, custom domain, and production env var management (v2.1)
-- [ ] **Phase 19: Authentication** - Email + password signup, GitHub OAuth login, persistent sessions (v2.1)
-- [ ] **Phase 20: CLI Install Command** - `npx course-professor install <course-name>` and `npx course-professor list` — fetches directly from professor-skills/registry on GitHub, no server required
+<details>
+<summary>✅ v1.1 MVP — Phases 1-12 (SHIPPED 2026-03-07)</summary>
+
+- [x] Phase 1: Plugin Scaffold
+- [x] Phase 1b: CLI Auto-Setup
+- [x] Phase 2: Professor Agent and Core Commands
+- [x] Phase 3: Notes Feature
+- [x] Phase 4: PreCompact Hook
+- [x] Phase 5: Export Feature
+- [x] Phase 6: Course Archive and Context Management
+
+</details>
+
+<details>
+<summary>✅ v2.0 — Phases 13-17, 17.1, 17.1.1, 17.1.1.1, 21 (SHIPPED 2026-03-25)</summary>
+
+- [x] Phase 13: Client Components (React split-pane UI)
+- [x] Phase 14: Integration (CLI web, production build)
+- [x] Phase 15: Retention Layer (spaced repetition, streaks)
+- [x] Phase 16: Sharing and Templates
+- [x] Phase 17: Auto-generate Exercise Files
+- [x] Phase 17.1: Coach Agent (self-assessment dialogue)
+- [x] Phase 17.1.1: Spotter Agent (mid-work check-ins)
+- [x] Phase 17.1.1.1: Navigator Agent (section bridges)
+- [x] Phase 17.1.1.1.1: Professor Orchestrator Refactor (routing table)
+- [x] Phase 21: Agent Cross-Platform Polish (Claude Code, Cursor, Gemini CLI, OpenCode)
+
+</details>
+
+<details>
+<summary>🚧 v2.1 — Phases 18-20 (Deferred)</summary>
+
+- [ ] Phase 18: Cloud Deployment (deferred)
+- [ ] Phase 19: Authentication (deferred)
+- [ ] Phase 20: CLI Install Command
+
+</details>
 
 ## Milestones
 
-**v1.1 (Complete):** Phases 1-12 ✓
-**v2.0 (Complete):** Phases 13-17 — Local Web UI, Retention Layer, Sharing & Templates, Auto-generate Exercise Files ✓
-**v2.1 (Active):** Phases 18-20 — Cloud Deployment (deferred), Authentication (deferred), CLI Registry Install
+**v1.1 (Complete):** Phases 1-12 — Plugin Foundation ✓
+**v2.0 (Complete):** Phases 13-17, 17.1, 17.1.1, 17.1.1.1, 21 — Local Web UI, Retention Layer, Sharing, Multi-Agent Architecture ✓
+**v2.1 (Deferred):** Phases 18-20 — Cloud Deployment, Authentication, CLI Registry Install (deferred focus on CLI/skills)
+
+## Next Up
+
+- [ ] **Phase 21 (Post-Milestone):** Research and polish agents for cross-platform compatibility — COMPLETED 2026-03-25
 
 ## Phase Details
 
