@@ -124,3 +124,11 @@ Write `LECTURE.md` for that section (overwrite any existing file). Update `COURS
    - This field is read by review/hint/stuck commands
 
 Present the section content in chat, then prompt the user to attempt the exercise on their own.
+
+**Spotter Reminder:**
+
+After presenting the lecture content, add this reminder:
+
+> "If you get stuck at any point while working through this exercise, run `professor:spotter` for a quick check-in — I'll help you figure out where you are without giving you the answer."
+
+This follows the spec: "Professor should remind learners of professor:spotter when delivering a new lecture."

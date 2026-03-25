@@ -12,6 +12,20 @@ description: "Get the next hint layer without revealing the answer"
    - Read exercises/01-intro.js
 4. If no "Active exercise" field, ask user which file to provide hints for (fallback)
 
+**Read LEARNING-LOG.md Attempt Log:**
+
+Before applying hint layers, check if LEARNING-LOG.md exists in the course directory:
+1. First check `learning/{slug}/LEARNING-LOG.md` (worktree courses)
+2. Fall back to `courses/{slug}/LEARNING-LOG.md` (legacy)
+3. If found, read the **## 📋 Attempt Log** section for the current section
+4. If attempt log has entries for this section:
+   - Acknowledge the learner's stated sticking point from the log
+   - Example: "I see you've been working on [sticking point]. Let's look at that."
+   - Incorporate this context into your hint delivery
+5. If no attempt log entries, proceed with standard hint layers
+
+The goal: hints are warmer when Spotter check-ins happened first.
+
 Now give the next hint layer for the current exercise.
 
 Infer the correct layer from the conversation history — count how many times `professor:hint` has been called this session for the current section. The layer logic and definitions are in the agent body (agents/professor.md).
