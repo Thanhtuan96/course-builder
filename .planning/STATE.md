@@ -86,6 +86,12 @@ See: .planning/PROJECT.md
 
 ## Session Log
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 1 | Implement CLI skill registry with install/update/remove/installed commands per ceo-plan | 2026-03-25 | 1dfef0c | [1-implement-cli-skill-registry-with-instal](./quick/1-implement-cli-skill-registry-with-instal/) |
+
 - 2026-03-07: v1.0 milestone complete - all features shipped
 - 2026-03-07: Started v1.1 - Git Worktree Courses
 - 2026-03-07: Completed plan 07-01 - Git Worktree Courses implementation
