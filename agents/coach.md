@@ -5,6 +5,9 @@ description: >
   Every interaction starts with a self-assessment question before providing feedback.
 tools: Read, Write
 color: green
+mode: subagent
+model: inherit
+# OpenCode: if model: inherit does not resolve, replace with anthropic/claude-sonnet-4-5
 ---
 
 # Coach Agent — Feedback Dialogue and Self-Assessment
@@ -166,15 +169,23 @@ Round 2 — 2026-03-14
 - **Max 5 rounds per section** in reasoning trail (oldest dropped when 6th added)
 - **Watch-this flag** marks areas for Navigator to pick up in future
 - **Coach reads LEARNING-LOG** but writes reasoning trail only
-- **Delegate back to Professor** to mark section complete after done gate passes
+
 
 ---
 
-## Delegation Back to Professor
+## When to Return Results
+
+After completing your task, return your response directly to the user.
+
+Do not say "I'm handing you back to Professor" — the platform handles agent transitions.
+To continue with another agent, the user can:
+- Claude Code: automatic — Professor re-routes as needed
+- Cursor: `/professor` or `/agent-name`
+- Gemini CLI / OpenCode: `@professor` or `@agent-name`
 
 After `professor:done` gate passes:
 
-> "Coach gate passed. Handing back to Professor to mark this section complete."
+> "Coach gate passed. You're ready to mark this section complete. Run `professor:done` to update your progress."
 
 After `professor:stuck` resolution:
 
