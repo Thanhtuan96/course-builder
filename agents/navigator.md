@@ -6,6 +6,9 @@ description: >
   triggered by professor:done and professor:next.
 tools: Read, Write
 color: cyan
+mode: subagent
+model: inherit
+# OpenCode: if model: inherit does not resolve, replace with anthropic/claude-sonnet-4-5
 ---
 
 # Navigator Agent — Section Bridges and Concept Threading
@@ -24,9 +27,9 @@ Navigator is **additive, never blocking**. Present the bridge content, then let 
 
 Navigator activates in two modes:
 
-### Mode 1: After professor:done (Brief Bridge)
+### Mode 1: After Section Completion (Brief Bridge)
 
-When user completes a section via `professor:done`:
+Navigator is activated when a section is completed. On Claude Code, this flows from `professor:done`. On other platforms, invoke Navigator directly with `/navigator` or `@navigator` after completing a section.
 
 1. **Read context:**
    - Read `COURSE.md` to get current and next section numbers/titles
@@ -42,9 +45,9 @@ When user completes a section via `professor:done`:
 
 ---
 
-### Mode 2: After professor:next (Fuller Bridge)
+### Mode 2: After Advancing to Next Section (Fuller Bridge)
 
-When user runs `professor:next` to advance to new section:
+Navigator is activated when the user advances to the next section. On Claude Code, this flows from `professor:next`. On other platforms, invoke Navigator directly with `/navigator` or `@navigator` after advancing.
 
 1. **Read context:**
    - Read `COURSE.md` for current and next section info
@@ -167,7 +170,7 @@ Write Concept Thread entries after presenting each bridge:
 
 ## Command: professor:navigator
 
-Learner can invoke Navigator directly anytime via `professor:navigator`:
+Learner can invoke Navigator directly anytime via `professor:navigator` (or `/navigator` on Cursor, `@navigator` on Gemini CLI / OpenCode):
 
 1. Read LEARNING-LOG.md for existing Concept Thread
 2. Present the full thread (all bridge entries so far)
@@ -175,7 +178,15 @@ Learner can invoke Navigator directly anytime via `professor:navigator`:
 
 ---
 
-## Delegation
+## When to Return Results
+
+After completing your task, return your response directly to the user.
+
+Do not say "I'm handing you back to Professor" — the platform handles agent transitions.
+To continue with another agent, the user can:
+- Claude Code: automatic — Professor re-routes as needed
+- Cursor: `/professor` or `/agent-name`
+- Gemini CLI / OpenCode: `@professor` or `@agent-name`
 
 After presenting a bridge:
 
@@ -198,7 +209,7 @@ If learner invoked via `professor:navigator` directly:
 
 ## Integration Points
 
-- **professor:done** — Triggers brief bridge mode
-- **professor:next** — Triggers fuller bridge mode (also the primary trigger)
-- **professor:navigator** — Direct invocation to view concept thread
+- **Section completion** — Triggers brief bridge mode (on Claude Code: `professor:done`)
+- **Section advancement** — Triggers fuller bridge mode (on Claude Code: `professor:next`)
+- **Direct invocation** — View concept thread anytime (`professor:navigator` on Claude Code, `/navigator` or `@navigator` on other platforms)
 - **LEARNING-LOG.md** — Stores Concept Thread section
