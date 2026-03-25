@@ -9,7 +9,8 @@
     },
     "scripts": {
         "build": "cd web/client && npm run build",
-        "start": "cd web && node server.js"
+        "start": "cd web && node server.js",
+        "test": "vitest"
     },
     "files": [
         "bin/",
@@ -40,5 +41,8 @@
         "node": ">=18.0.0"
     },
     "author": "ronnie-tk",
-    "license": "MIT"
+    "license": "MIT",
+    "devDependencies": {
+        "vitest": "^4.1.1"
+    }
 }
