@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Phases
-current_phase: Not started (roadmap defined, ready for planning)
-current_plan: —
-status: planning
-last_updated: "2026-03-15T16:37:21.297Z"
+milestone: v2.1
+milestone_name: Public Launch
+current_phase: 21-research-and-polish-current-agent-plan-to-work-in-real-world
+current_plan: 01
+status: in-progress
+last_updated: "2026-03-25T12:10:00.000Z"
 progress:
   total_phases: 26
   completed_phases: 17
   total_plans: 38
-  completed_plans: 36
+  completed_plans: 37
 ---
 
 # Session State
@@ -24,9 +24,9 @@ See: .planning/PROJECT.md
 ## Position
 
 **Milestone:** v2.1 Public Launch
-**Current phase:** Not started (roadmap defined, ready for planning)
-**Current plan:** —
-**Status:** Ready to plan
+**Current phase:** 21-research-and-polish-current-agent-plan-to-work-in-real-world
+**Current plan:** 01
+**Status:** In progress (Plan 01 complete, feature branch active)
 
 ## Accumulated Context
 
@@ -110,3 +110,4 @@ See: .planning/PROJECT.md
 - 2026-03-15: Registry repo (professor-skills/registry) complete externally — courses/+skills/ split, validate+build scripts, GitHub Actions
 - 2026-03-16: Completed plan 17.1.1.1.1-02 — Professor orchestrator refactor (stripped command behaviors, added routing table reference)
 - 2026-03-16: Completed plan 17.1.1.1.1-03 — Added 5 missing routing entries (quiz, template-export, template-import, worktrees, switch)
+- 2026-03-25: Completed plan 21-01 — Professor.md cross-platform polish (removed routing:/actions:, replaced AskUserQuestion, added delegation block, trimmed to 353 lines)

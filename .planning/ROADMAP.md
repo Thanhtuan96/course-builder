@@ -578,7 +578,7 @@ Plans:
 **Goal:** Polish all 5 agent files (Professor, Coach, Spotter, Navigator, Researcher) for cross-platform compatibility across Claude Code, Cursor, Gemini CLI, and OpenCode — removing Claude Code-specific patterns and adding self-contained fallback behavior where needed.
 **Requirements**: COMPAT-01, COMPAT-02, COMPAT-03, COMPAT-04, COMPAT-05, COMPAT-06, COMPAT-07
 **Depends on:** Phase 20
-**Plans:** 4 plans
+**Plans:** 1/4 plans executed
 
 Plans:
 - [ ] 21-01-PLAN.md — Refactor professor.md: remove routing:/actions: frontmatter, remove AskUserQuestion, trim body, add platform-conditional delegation blocks
