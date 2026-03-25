@@ -802,3 +802,96 @@ describe('publish --type auto-detection', () => {
     expect(contentType).toBe('course');
   });
 });
+
+// ─── slug sanitization ────────────────────────────────────────────────────────
+
+describe('slug sanitization', () => {
+  it('passes [a-z0-9-] slugs through unchanged', () => {
+    const safeSlug = 'react-hooks'.replace(/[^a-z0-9-]/gi, '-');
+    expect(safeSlug).toBe('react-hooks');
+  });
+
+  it('replaces special chars with hyphens', () => {
+    const safeSlug = 'foo"; rm -rf /'.replace(/[^a-z0-9-]/gi, '-');
+    expect(safeSlug).toBe('foo---rm--rf--');
+  });
+
+  it('replaces dots and spaces', () => {
+    const safeSlug = 'my course v1.0'.replace(/[^a-z0-9-]/gi, '-');
+    expect(safeSlug).toBe('my-course-v1-0');
+  });
+
+  it('replaces $ and quotes', () => {
+    const safeSlug = '$evil "injection"'.replace(/[^a-z0-9-]/gi, '-');
+    expect(safeSlug).toBe('-evil--injection-');
+  });
+});
+
+// ─── buildStagingDir with metadata ───────────────────────────────────────────
+
+describe('buildStagingDir with pre-built metadata', () => {
+  it('writes supplied meta object to meta.json for course', () => {
+    const sourceDir = mkTemp();
+    writeFileSync(join(sourceDir, 'COURSE.md'),
+      '# C\n\n| 1 | S | ✅ |\n| 2 | S | ✅ |\n| 3 | S | ✅ |\n', 'utf8');
+    const meta = { name: 'my-course', title: 'My Course', description: 'A great course', author: 'testuser', level: 'Beginner', topics: ['js'] };
+    const staging = buildStagingDir('course', 'my-course', sourceDir, meta);
+    const written = JSON.parse(readFileSync(join(staging, 'meta.json'), 'utf8'));
+    expect(written.author).toBe('testuser');
+    expect(written.title).toBe('My Course');
+    expect(written.level).toBe('Beginner');
+  });
+
+  it('writes supplied meta object to meta.json for skill', () => {
+    const sourceDir = mkTemp();
+    writeFileSync(join(sourceDir, 'SKILL.md'), '# S', 'utf8');
+    writeFileSync(join(sourceDir, 'COMPLETION.md'), '---\nverdict: Course Complete\n---\n', 'utf8');
+    const meta = { name: 'my-skill', title: 'My Skill', description: 'Does things', author: 'testuser', origin_course: 'my-course', topics: ['js'] };
+    const staging = buildStagingDir('skill', 'my-skill', sourceDir, meta);
+    const written = JSON.parse(readFileSync(join(staging, 'meta.json'), 'utf8'));
+    expect(written.author).toBe('testuser');
+    expect(written.origin_course).toBe('my-course');
+  });
+
+  it('falls back to empty meta when no meta argument passed', () => {
+    const sourceDir = mkTemp();
+    writeFileSync(join(sourceDir, 'COURSE.md'),
+      '# C\n\n| 1 | S | ✅ |\n| 2 | S | ✅ |\n| 3 | S | ✅ |\n', 'utf8');
+    const staging = buildStagingDir('course', 'fallback-test', sourceDir);
+    const written = JSON.parse(readFileSync(join(staging, 'meta.json'), 'utf8'));
+    expect(written.author).toBe('');
+  });
+});
+
+// ─── prUrl parsing (raw string from gh --jq .url) ────────────────────────────
+
+describe('prUrl raw string parsing', () => {
+  it('a raw https URL string is already the prUrl — no JSON.parse needed', () => {
+    const rawOutput = 'https://github.com/owner/repo/pull/42\n';
+    const prUrl = rawOutput.trim();
+    expect(prUrl).toBe('https://github.com/owner/repo/pull/42');
+    expect(prUrl.startsWith('https://')).toBe(true);
+  });
+
+  it('JSON.parse on a raw URL string throws SyntaxError (confirming old bug)', () => {
+    const rawOutput = 'https://github.com/owner/repo/pull/42';
+    expect(() => JSON.parse(rawOutput)).toThrow(SyntaxError);
+  });
+});
+
+// ─── duplicate PR stderr parsing ─────────────────────────────────────────────
+
+describe('duplicate PR stderr URL extraction', () => {
+  it('extracts existing PR URL from gh pr create stderr', () => {
+    const stderr = 'a pull request for branch "contribute/course/my-course" already exists:\nhttps://github.com/owner/courses-skills-registry/pull/7\n';
+    const match = stderr.match(/https:\/\/github\.com\/[^\s]+/);
+    expect(match).not.toBeNull();
+    expect(match[0]).toBe('https://github.com/owner/courses-skills-registry/pull/7');
+  });
+
+  it('returns null when stderr has no URL', () => {
+    const stderr = 'some other error message';
+    const match = stderr.match(/https:\/\/github\.com\/[^\s]+/);
+    expect(match).toBeNull();
+  });
+});

@@ -573,9 +573,12 @@ switch (command) {
 
   case 'publish': {
     const {
+      validateItemName,
       validateSourceCourse,
       validateSourceSkill,
       buildStagingDir,
+      buildCourseMetaJson,
+      buildSkillMetaJson,
       generateBrowserFallbackUrl,
       style,
     } = await import('./registry-helpers.js');
@@ -591,8 +594,21 @@ switch (command) {
     const pathArg  = pathIdx !== -1 ? args[pathIdx + 1] : null;
     const nameArg  = args.find((a) => a.startsWith('--name='))?.split('=')[1];
 
+    // Parse metadata flags (collected interactively in professor:publish, passed through to CLI)
+    const authorArg      = args.find((a) => a.startsWith('--author='))?.split('=')[1];
+    const titleArg       = args.find((a) => a.startsWith('--title='))?.split('=')[1];
+    const descArg        = args.find((a) => a.startsWith('--description='))?.split('=')[1];
+    const topicsArg      = args.find((a) => a.startsWith('--topics='))?.split('=')[1];
+    const levelArg       = args.find((a) => a.startsWith('--level='))?.split('=')[1];
+    const originCourseArg = args.find((a) => a.startsWith('--origin-course='))?.split('=')[1];
+
     const sourceDir = pathArg || process.cwd();
     const slug      = nameArg || basename(sourceDir);
+
+    // Guard: validate slug before use
+    validateItemName(slug);
+    // Sanitize slug to [a-z0-9-] for safe use in shell commands and branch names
+    const safeSlug = slug.replace(/[^a-z0-9-]/gi, '-');
 
     // Auto-detect type
     let contentType = typeArg;
@@ -621,8 +637,16 @@ switch (command) {
       process.exit(1);
     }
 
-    // Build staging dir
-    const stagingDir = buildStagingDir(contentType, slug, sourceDir);
+    // Build metadata from flags (collected interactively by professor:publish)
+    const metaOverrides = contentType === 'course'
+      ? { name: safeSlug, title: titleArg, description: descArg, author: authorArg, level: levelArg, topics: topicsArg?.split(',') }
+      : { name: safeSlug, title: titleArg, description: descArg, author: authorArg, origin_course: originCourseArg, topics: topicsArg?.split(',') };
+    const builtMeta = contentType === 'course'
+      ? buildCourseMetaJson(sourceDir, metaOverrides)
+      : buildSkillMetaJson(sourceDir, metaOverrides);
+
+    // Build staging dir with populated metadata
+    const stagingDir = buildStagingDir(contentType, safeSlug, sourceDir, builtMeta);
 
     if (isDryRun) {
       console.log(style('info', `Dry run — packaged files at: ${stagingDir}`));
@@ -640,21 +664,25 @@ switch (command) {
     })();
 
     if (!ghAvailable) {
-      const url = generateBrowserFallbackUrl(contentType, slug);
-      console.log(style('warning', 'gh CLI not found — using browser fallback.'));
-      console.log(`  Open this URL to create a PR manually:`);
-      console.log(chalk.blue(`  ${url}`));
-      console.log(style('info', `Your packaged files are at: ${stagingDir}`));
-      console.log(style('info', 'Upload them to the PR after opening the browser.'));
+      console.log(style('warning', 'gh CLI not found — manual submission required.'));
+      console.log(style('info', 'Steps to submit manually:'));
+      console.log(`  1. Fork: https://github.com/professor-skills-hub/courses-skills-registry`);
+      console.log(`  2. Create branch: contribute/${contentType}/${safeSlug}`);
+      console.log(`  3. Upload files from: ${stagingDir}`);
+      console.log(`  4. Open a PR to main`);
+      console.log(style('info', 'Install gh: https://cli.github.com'));
       process.exit(0);
     }
 
     // gh auth check
     try { execSync('gh auth status', { stdio: 'ignore' }); } catch {
-      const url = generateBrowserFallbackUrl(contentType, slug);
-      console.log(style('warning', 'gh not authenticated — using browser fallback.'));
-      console.log(chalk.blue(`  ${url}`));
-      console.log(style('info', `Your packaged files are at: ${stagingDir}`));
+      console.log(style('warning', 'gh not authenticated — manual submission required.'));
+      console.log(style('info', 'Steps to submit manually:'));
+      console.log(`  1. Fork: https://github.com/professor-skills-hub/courses-skills-registry`);
+      console.log(`  2. Create branch: contribute/${contentType}/${safeSlug}`);
+      console.log(`  3. Upload files from: ${stagingDir}`);
+      console.log(`  4. Open a PR to main`);
+      console.log(style('info', 'Run: gh auth login'));
       process.exit(0);
     }
 
@@ -666,25 +694,22 @@ switch (command) {
       process.exit(1);
     }
 
-    // Fork
+    // Fork (ignore non-zero — fork may already exist from a prior publish run)
     const forkSpinner = ora('Forking registry…').start();
     try {
       execSync('gh repo fork professor-skills-hub/courses-skills-registry --clone=false', { stdio: 'pipe' });
-      forkSpinner.succeed();
-    } catch (err) {
-      forkSpinner.fail();
-      console.error(style('error', `Fork failed: ${err.message}`));
-      process.exit(1);
+    } catch {
+      // Fork already exists or transient — continue; clone will fail if truly broken
     }
+    forkSpinner.succeed('Fork ready');
 
-    // Clone fork to temp dir
+    // Resolve fork URL via GitHub API (not local git remote — that points to the user's own repo)
     let forkUrl;
     try {
-      const remoteOut = execSync('git remote get-url origin', { encoding: 'utf-8', stdio: 'pipe' });
-      forkUrl = remoteOut.trim();
+      const login = execSync('gh api user --jq .login', { encoding: 'utf-8', stdio: 'pipe' }).trim();
+      forkUrl = `https://github.com/${login}/courses-skills-registry.git`;
     } catch {
-      forkSpinner.fail();
-      console.error(style('error', 'Could not get fork URL. Is your fork ready?'));
+      console.error(style('error', 'Could not resolve GitHub username. Run: gh auth login'));
       process.exit(1);
     }
 
@@ -702,7 +727,7 @@ switch (command) {
     }
 
     // Copy files to destination dir
-    const destDir = join(repoDir, contentType === 'course' ? 'courses' : 'skills', slug);
+    const destDir = join(repoDir, contentType === 'course' ? 'courses' : 'skills', safeSlug);
     mkdirSync(destDir, { recursive: true });
     for (const f of readdirSync(stagingDir)) {
       const src = join(stagingDir, f);
@@ -712,10 +737,10 @@ switch (command) {
     }
 
     // Branch, commit, push
-    const branch    = `contribute/${contentType}/${slug}`;
-    const commitMsg = `Add ${contentType}: ${slug}`;
+    const branch    = `contribute/${contentType}/${safeSlug}`;
+    const commitMsg = `Add ${contentType}: ${safeSlug}`;
     try {
-      execSync(`git checkout -b "${branch}"`,           { cwd: repoDir, stdio: 'pipe' });
+      execSync(`git checkout -b "${branch}"`,               { cwd: repoDir, stdio: 'pipe' });
       execSync(`git add . && git commit -m "${commitMsg}"`, { cwd: repoDir, stdio: 'pipe' });
       const pushFlags = isForce ? '-f' : '';
       execSync(`git push origin "${branch}" ${pushFlags}`.trim(), { cwd: repoDir, stdio: 'pipe' });
@@ -725,27 +750,44 @@ switch (command) {
       process.exit(1);
     }
 
-    // Create PR
+    // Create PR against the upstream registry (not the fork's own main)
     const prSpinner = ora('Creating PR…').start();
     let prUrl;
     try {
-      const prJson = execSync(
-        `gh pr create --json url --jq .url --title "${commitMsg}" --body "Published via course-professor publish."`,
+      const prOutput = execSync(
+        `gh pr create --json url --jq .url --repo professor-skills-hub/courses-skills-registry --title "${commitMsg}" --body "Published via course-professor publish."`,
         { cwd: repoDir, encoding: 'utf-8', stdio: 'pipe' }
       );
-      prUrl = JSON.parse(prJson.trim()).url;
+      prUrl = prOutput.trim();
+      if (!prUrl.startsWith('https://')) throw new Error(`Unexpected gh output: ${prUrl}`);
       prSpinner.succeed();
       console.log(style('success', `PR created: ${prUrl}`));
     } catch (err) {
-      prSpinner.fail();
-      console.error(style('error', `PR creation failed: ${err.message}`));
-      rmSync(tmpDir, { recursive: true, force: true });
-      process.exit(1);
+      // Check if a PR already exists for this branch (gh exits non-zero with existing URL in stderr)
+      const stderr = err.stderr || '';
+      const existingMatch = stderr.match(/https:\/\/github\.com\/[^\s]+/);
+      if (existingMatch) {
+        prSpinner.succeed('PR already open');
+        console.log(style('success', `Existing PR: ${existingMatch[0]}`));
+        prUrl = existingMatch[0];
+      } else if (err.message?.includes('Unexpected gh output')) {
+        // gh returned something unexpected — PR may still have been created
+        prSpinner.fail();
+        console.log(style('warning', `gh returned unexpected output: ${err.message}`));
+        console.log(style('info', 'PR may have been created — check: https://github.com/professor-skills-hub/courses-skills-registry/pulls'));
+        rmSync(tmpDir, { recursive: true, force: true });
+        process.exit(0);
+      } else {
+        prSpinner.fail();
+        console.error(style('error', `PR creation failed: ${err.message}`));
+        rmSync(tmpDir, { recursive: true, force: true });
+        process.exit(1);
+      }
     }
 
-    // Cleanup
-    rmSync(tmpDir,    { recursive: true, force: true });
-    rmSync(stagingDir, { recursive: true, force: true });
+    // Cleanup temp clone (staging dir kept intentionally — user can inspect submitted files)
+    rmSync(tmpDir, { recursive: true, force: true });
+    console.log(style('info', `Submitted files kept at: ${stagingDir}`));
     process.exit(0);
   }
 

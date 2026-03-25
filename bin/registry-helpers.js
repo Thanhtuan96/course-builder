@@ -322,21 +322,25 @@ export function buildSkillMetaJson(skillDir, { name, title, description, author,
  * @param {'course'|'skill'} type
  * @param {string} slug
  * @param {string} sourceDir
+ * @param {object} [meta] Pre-built meta object (from buildCourseMetaJson/buildSkillMetaJson).
+ *   If omitted, falls back to empty overrides (useful for testing).
  * @returns {string} staging directory path
  */
-export function buildStagingDir(type, slug, sourceDir) {
+export function buildStagingDir(type, slug, sourceDir, meta) {
   const stagingDir = join(process.cwd(), '.publish-staging', slug);
   mkdirSync(stagingDir, { recursive: true });
   if (type === 'course') {
     writeFileSync(join(stagingDir, 'COURSE.md'),
       readFileSync(join(sourceDir, 'COURSE.md')));
+    const courseMeta = meta || buildCourseMetaJson(sourceDir, {});
     writeFileSync(join(stagingDir, 'meta.json'),
-      JSON.stringify(buildCourseMetaJson(sourceDir, {}), null, 2));
+      JSON.stringify(courseMeta, null, 2));
   } else {
     writeFileSync(join(stagingDir, 'SKILL.md'),
       readFileSync(join(sourceDir, 'SKILL.md')));
+    const skillMeta = meta || buildSkillMetaJson(sourceDir, {});
     writeFileSync(join(stagingDir, 'meta.json'),
-      JSON.stringify(buildSkillMetaJson(sourceDir, {}), null, 2));
+      JSON.stringify(skillMeta, null, 2));
   }
   return stagingDir;
 }

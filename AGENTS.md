@@ -1,53 +1,58 @@
-# AGENTS.md - Developer Guide for Course Learning Plugin
+# AGENTS.md — Course Learning Plugin Developer Guide
 
 This file provides guidance for AI agents operating in this repository.
 
 ## Project Overview
 
-Course Learning Plugin ("Professor") is a Claude Code plugin that implements a Socratic learning assistant. It teaches by asking questions instead of giving answers. The plugin has no build step, no package manager, and no test runner—all components are Markdown files read directly by Claude Code.
+Course Learning Plugin ("Professor") is a Claude Code plugin that implements a Socratic learning assistant. It teaches by asking questions instead of giving answers. The plugin has no build step, no package manager, and minimal JavaScript—all components are Markdown files read directly by Claude Code.
+
+---
 
 ## Build, Lint, and Test Commands
 
-This project is primarily a Markdown-based plugin with minimal JavaScript:
-
 ```bash
-# No build step required - Markdown files are read directly by Claude Code
+# No build step — Markdown files are read directly by Claude Code
 
-# For the CLI tool (bin/cli.js):
+# Install dependencies (for CLI tool)
+npm install
+
+# Run all tests
+npm test
+
+# Run a single test file
+npx vitest run test/cli.test.js
+
+# Run tests in watch mode
+npx vitest
+
+# CLI tool (bin/cli.js)
 node bin/cli.js --help              # Show CLI help
 node bin/cli.js list                # List supported agents
 node bin/cli.js setup <agent>      # Setup for specific agent
 node bin/cli.js init                # Auto-detect and setup
 
-# No linting configured (project uses plain JavaScript with no linter)
-# No tests configured (Markdown-based plugin, no test runner)
-
-# If you add Node.js code that needs testing:
-# npm init -y                       # Initialize package.json for tests
-# npm install --save-dev jest       # Add Jest for testing
-# npx jest                          # Run all tests
-# npx jest --testPathPattern=xxx    # Run specific test file
+# Web UI
+npm run build                       # Build web client (requires web/client/)
+npm run start                       # Start web server
 ```
+
+---
 
 ## Code Style Guidelines
 
 ### General Principles
 
 - **No build step**: Keep all code simple and interpretable
-- **No external dependencies** in main plugin code except where necessary
-- **Cross-agent compatibility**: Code should work with Claude Code, OpenCode, Gemini CLI
+- **Cross-agent compatibility**: Code should work with Claude Code, OpenCode, Gemini CLI, Cursor
+- **Minimal dependencies**: Only add external deps when necessary (e.g., chalk, inquirer, ora)
 
-### JavaScript Conventions
+### Module System
 
-#### Module System
-
-- Use ES modules (`import`/`export`) for `.mjs` files or files with `"type": "module"` in package.json
-- Use CommonJS (`require`/`module.exports`) for files that may be loaded by older runtimes
-- `bin/cli.js` uses ES modules with `import` statements
-- `hooks/pre-compact.js` uses CommonJS for broader compatibility
+- Use ES modules (`import`/`export`) for `.js` files with `"type": "module"` in package.json
+- Use CommonJS (`require`/`module.exports`) only for hooks loaded by older runtimes (e.g., `hooks/pre-compact.js`)
 
 ```javascript
-// ES Modules (bin/cli.js)
+// ES Modules (bin/cli.js, bin/registry-helpers.js)
 import { existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 
@@ -56,148 +61,180 @@ const fs = require('fs');
 const path = require('path');
 ```
 
-#### File Naming
+### File Naming
 
-- Use kebab-case for file names: `pre-compact.js`, `cli.js`
-- Use PascalCase for class names (if applicable)
-- Use camelCase for function and variable names
+- **Files**: kebab-case (`pre-compact.js`, `registry-helpers.js`)
+- **Functions/variables**: camelCase (`validateItemName`, `fetchRegistryIndex`)
+- **Constants**: UPPER_SNAKE_CASE for truly immutable values
 
-#### Formatting
+### Formatting
 
-- Use 2 spaces for indentation
+- 2 spaces for indentation
 - Maximum line length: 100 characters
 - Use semicolons consistently
-- Add spaces around operators: `const x = y + z` not `const x=y+z`
+- Spaces around operators: `const x = y + z`
 
-#### Error Handling
+### JSDoc Comments
+
+Use JSDoc for all exported functions to improve readability and IDE support:
 
 ```javascript
-// Always wrap file system operations in try-catch
-function readCourseFile(filePath) {
-  try {
-    const content = fs.readFileSync(filePath, 'utf-8');
-    return content;
-  } catch (err) {
-    console.warn(`Warning: Could not read ${filePath}: ${err.message}`);
-    return null;
-  }
-}
-
-// Use appropriate exit codes
-process.exit(1);  // Error
-process.exit(0); // Success
+/**
+ * Fetch raw text from the registry.
+ * @param {string} url
+ * @param {{ optional?: boolean }} opts
+ * @returns {Promise<string|null>}
+ */
+export async function fetchRegistryText(url, { optional = false } = {}) { ... }
 ```
 
-#### Path Handling
+### Error Handling
+
+- Always wrap file system operations in try-catch
+- Use `process.exit(1)` for errors, `process.exit(0)` for success
+- Provide informative error messages with `console.error(style('error', '...'))`
 
 ```javascript
-// Always use path.join() for cross-platform compatibility
-import { join } from 'path';
-const configPath = join(process.cwd(), '.config', 'settings.json');
+try {
+  const content = fs.readFileSync(filePath, 'utf-8');
+  return content;
+} catch (err) {
+  console.error(`Warning: Could not read ${filePath}: ${err.message}`);
+  return null;
+}
+```
 
-// Use __dirname for relative paths in ES modules
+### Path Handling
+
+- Always use `path.join()` for cross-platform compatibility
+- Use `fileURLToPath(import.meta.url)` + `dirname` for `__dirname` in ES modules
+
+```javascript
 import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const configPath = join(process.cwd(), '.config', 'settings.json');
 ```
 
-### Markdown Conventions (Commands and Agents)
+---
 
-#### File Structure
+## Markdown Conventions (Commands and Agents)
+
+### File Structure
 
 - One Markdown file per command in `commands/professor/`
 - Agent definitions in `agents/` directory
-- Use frontmatter for metadata
-
-```markdown
----
-description: Brief command description
----
-
-# Command Name
-
-## Behavior
-
-Detailed behavior description...
-
-## Examples
-
-- `professor:command` - What it does
-```
-
-#### Content Style
-
-- Use Socratic method: ask questions, don't give answers
-- Be encouraging and supportive in tone
-- Include practical examples
-- Keep sections focused and concise
+- Use YAML frontmatter for metadata
 
 ### Naming Conventions
 
-- **Commands**: `professor:<action>` format (e.g., `professor:new-topic`)
-- **Agents**: Descriptive lowercase with hyphens (e.g., `researcher`)
-- **Course directories**: kebab-case slugs (e.g., `courses/javascript-fundamentals/`)
-- **Files in courses**: UPPER_SNAKE_CASE for constants (COURSE.md, LECTURE.md)
+| Type | Format | Example |
+|------|--------|---------|
+| Commands | `professor:<action>` | `professor:new-topic` |
+| Agents | lowercase with hyphens | `researcher`, `professor` |
+| Course dirs | kebab-case slugs | `courses/javascript-fundamentals/` |
+| Course files | UPPER_SNAKE_CASE | `COURSE.md`, `LECTURE.md` |
 
-### Git Workflow
+---
 
-```bash
-# Commit messages should be descriptive
-git commit -m "feat: add researcher agent delegation"
+## Testing Guidelines
 
-# Use conventional commits:
-# feat:     New feature
-# fix:      Bug fix
-# docs:     Documentation changes
-# chore:    Maintenance tasks
-# refactor: Code restructuring
+### Test Structure (Vitest)
+
+- Place tests in `test/*.test.js`
+- Use Vitest with Node environment
+- Mock external dependencies (inquirer, ora, https)
+
+```javascript
+// Mock example
+vi.mock('inquirer', () => ({
+  default: { prompt: vi.fn() },
+}));
 ```
 
-### Plugin.json Structure
+### Test Patterns
 
-When modifying `plugin.json`, always register new components:
+- Use `beforeEach`/`afterEach` for setup/teardown
+- Mock `process.exit` to prevent test termination
+- Use temp directories for file system tests
+- Test both success and error paths
+
+---
+
+## Git Workflow
+
+```bash
+# Conventional commits
+git commit -m "feat: add researcher agent delegation"
+git commit -m "fix: handle missing registry gracefully"
+git commit -m "docs: update command reference"
+
+# Commit types: feat, fix, docs, chore, refactor
+```
+
+---
+
+## Plugin Structure (plugin.json)
+
+When adding new components, register them in `plugin.json`:
 
 ```json
 {
-  "agents": [
-    { "name": "professor", "file": "agents/professor.md" }
-  ],
-  "commands": [
-    { "name": "professor:new-topic", "file": "commands/professor/new-topic.md" }
-  ],
-  "hooks": [
-    { "name": "pre-compact", "file": "hooks/pre-compact.js" }
-  ]
+  "agents": [{ "name": "professor", "file": "agents/professor.md" }],
+  "commands": [{ "name": "professor:new-topic", "file": "commands/professor/new-topic.md" }],
+  "hooks": [{ "event": "PreCompact", "file": "hooks/pre-compact.js" }]
 }
 ```
 
-### Core Behavior Rules (Never Violate)
+---
 
-1. **Never write working code** for the user — not in review, hint, discuss, or anywhere
-2. **Never complete exercises** on the user's behalf under any circumstances
-3. **During capstone phase**: no hints, no `professor:stuck`, no code nudges
-4. **Always read `COURSE.md` first** at conversation start to restore context
-5. **Always update `COURSE.md` immediately** when section status changes
-6. **LECTURE.md is disposable** — overwritten by each `professor:next`
-7. **CAPSTONE.md is immutable** — never edit after creation
+## GSD Workflow (Optional)
 
-### Adding New Features
+This project supports the get-shit-done workflow for larger features. Use GSD when:
 
-1. Create command file in `commands/professor/<command-name>.md`
-2. Register in `plugin.json` under `commands[]`
-3. Update CLAUDE.md with new command documentation
-4. Add CLI support if needed in `bin/cli.js`
+- User explicitly asks for GSD or uses a `gsd-*` command
+- A feature requires multiple phases of work
 
-### Directory Structure
+Key commands:
+- `/gsd-new-project` — Create a new project roadmap
+- `/gsd-plan-phase` — Plan the next phase
+- `/gsd-execute` — Execute planned tasks
+
+Do NOT apply GSD workflows unless the user explicitly asks for them.
+
+---
+
+## Directory Structure
 
 ```
 course-learning-plugin/
-├── agents/                  # Agent definitions (Markdown)
+├── bin/                    # CLI entry point and helpers
+│   ├── cli.js              # Main CLI (ES modules)
+│   └── registry-helpers.js # Registry functions (ES modules, testable)
 ├── commands/professor/     # Command definitions (Markdown)
-├── hooks/                  # Hook scripts (JavaScript)
-├── bin/cli.js              # CLI entry point
+├── agents/                 # Agent definitions (Markdown)
+├── hooks/                 # Hook scripts (CommonJS for compatibility)
+│   └── pre-compact.js      # Pre-compact hook
 ├── templates/              # Per-agent templates
 ├── shared/                 # Shared files for all agents
-├── courses/                # User course files (created at runtime)
-├── .planning/              # GSD planning docs
+├── test/                   # Test files
+│   └── cli.test.js         # CLI tests (Vitest)
+├── web/                    # Web UI (optional)
+├── courses/                # User course files (runtime)
+├── .claude/                # GSD workflows and agents
+├── .agents/                # gstack skills
 └── plugin.json             # Plugin manifest
 ```
+
+---
+
+## Core Behavior Rules (Professor Skill)
+
+These rules are for the Professor teaching agent and must never be violated:
+
+1. **Never write working code** for the user — not in review, hint, discuss, or anywhere
+2. **Never complete exercises** on the user's behalf
+3. **During capstone phase**: no hints, no `profesor:stuck`, no code nudges
+4. **Always read `COURSE.md` first** at conversation start to restore context
+5. **Always update `COURSE.md`** immediately when section status changes
+6. **LECTURE.md is disposable** — overwritten by each `profesor:next`
+7. **CAPSTONE.md is immutable** — never edit after creation
