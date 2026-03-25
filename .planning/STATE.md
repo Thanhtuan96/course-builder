@@ -5,7 +5,7 @@ milestone_name: Phases
 current_phase: 21-research-and-polish-current-agent-plan-to-work-in-real-world
 current_plan: 04
 status: completed
-last_updated: "2026-03-25T14:44:00.000Z"
+last_updated: "2026-03-25T16:17:48.627Z"
 progress:
   total_phases: 26
   completed_phases: 17
@@ -91,6 +91,7 @@ See: .planning/PROJECT.md
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 1 | Implement CLI skill registry with install/update/remove/installed commands per ceo-plan | 2026-03-25 | 1dfef0c | [1-implement-cli-skill-registry-with-instal](./quick/1-implement-cli-skill-registry-with-instal/) |
+| 2 | Build all 5 publish flow steps: capstone-review patch, skill-export, course-professor publish CLI, professor:publish UX, plugin.json registration | 2026-03-26 | 587d87b | [2-build-all-5-publish-flow-steps-capstone-](./quick/2-build-all-5-publish-flow-steps-capstone-/) |
 
 - 2026-03-07: v1.0 milestone complete - all features shipped
 - 2026-03-07: Started v1.1 - Git Worktree Courses
@@ -126,3 +127,4 @@ See: .planning/PROJECT.md
 - 2026-03-25: Completed plan 21-02 — All 4 specialized agents (Coach, Spotter, Navigator, Researcher) polished with mode: subagent, model: inherit, and platform-agnostic delegation return language
 - 2026-03-25: Completed plan 21-03 — Synced agents/ to shared/ (navigator.md now present), added Agent Architecture table to SKILL.md documenting all 5 agents
 - 2026-03-25: Completed quick plan 1 — CLI skill registry lifecycle (update/installed/remove commands, JSON.parse safety, meta.json optional, overwrite protection, Vitest 31 tests). Helpers extracted to bin/registry-helpers.js to enable testing without shebang conflicts.
+- 2026-03-26: Completed quick plan 2 — Publish flow (capstone-review COMPLETION.md write, professor:skill-export SKILL.md generation, course-professor publish CLI with gh fork/clone/push/PR, professor:publish UX wrapper, plugin.json registration, 56 Vitest tests passing)
