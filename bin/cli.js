@@ -16,7 +16,8 @@ const REGISTRY_INDEX_URL =
   'https://raw.githubusercontent.com/professor-skills-hub/courses-skills-registry/main/index.json';
 const RAW_COURSES_BASE =
   'https://raw.githubusercontent.com/professor-skills-hub/courses-skills-registry/main/courses';
-const REGISTRY_INSTALL_BASE = join(os.homedir(), '.claude', 'plugins', 'professor', 'skills');
+const RAW_SKILLS_BASE =
+  'https://raw.githubusercontent.com/professor-skills-hub/courses-skills-registry/main/skills';
 
 async function fetchRegistryText(url) {
   const { get } = await import('https');
@@ -109,7 +110,8 @@ COMMANDS
   ${chalk.bold('list')}                 List supported agents
   ${chalk.bold('courses')}              List all courses in the registry
   ${chalk.bold('search')} <keyword>     Search registry courses by keyword
-  ${chalk.bold('install')} <name>       Install a course from the registry
+  ${chalk.bold('install')} <name>          Install a course locally (→ learning/{name}/)
+  ${chalk.bold('install')} --skill <name>  Install a skill locally (→ .claude/skills/{name}/)
   ${chalk.bold('web')} [port]           Start local web UI (default port: 3000)
   ${chalk.bold('web')} --production     Start web UI in production mode (requires build)
   ${chalk.bold('help')}                 Show this help message
@@ -122,9 +124,11 @@ EXAMPLES
   npx course-professor init                    # Auto-detect and setup
   npx course-professor setup claude            # Setup for Claude Code (prompts for scope)
   npx course-professor setup claude --global   # Install globally
-  npx course-professor courses                 # Browse community courses
-  npx course-professor search react            # Search for React courses
-  npx course-professor install react-hooks     # Install a course
+  npx course-professor courses                        # Browse community courses
+  npx course-professor search react                   # Search for React courses
+  npx course-professor install react-hooks            # Install course → learning/react-hooks/
+  npx course-professor install --skill react-hooks-reviewer           # Install skill (prompts scope)
+  npx course-professor install --skill react-hooks-reviewer --global  # Install skill globally
   npx course-professor web                     # Start web UI on port 3000
 
 SUPPORTED AGENTS
@@ -462,12 +466,15 @@ switch (command) {
   }
 
   case 'install': {
-    const courseName = args.slice(1).find((a) => !a.startsWith('--'));
-    if (!courseName) {
-      console.error(style('error', 'Usage: course-professor install <course-name>'));
-      console.error('       course-professor courses    — list all available courses');
+    const isSkill = args.includes('--skill');
+    const itemName = args.slice(1).find((a) => !a.startsWith('--'));
+    if (!itemName) {
+      console.error(style('error', 'Usage: course-professor install <name>'));
+      console.error('       course-professor install --skill <name>   — install a skill instead');
+      console.error('       course-professor courses                  — list available courses');
       process.exit(1);
     }
+
     const spinner = ora('Fetching registry…').start();
     let index;
     try {
@@ -476,31 +483,91 @@ switch (command) {
       spinner.fail(`Registry fetch failed: ${err.message}`);
       process.exit(1);
     }
-    const course = (index.courses || []).find((c) => c.name === courseName);
-    if (!course) {
-      spinner.fail(`Course "${courseName}" not found.`);
-      const names = (index.courses || []).map((c) => c.name);
-      if (names.length) console.error(`Available: ${names.join(', ')}`);
-      process.exit(1);
-    }
-    spinner.text = `Installing ${course.title}…`;
-    const destDir = join(REGISTRY_INSTALL_BASE, courseName);
-    mkdirSync(destDir, { recursive: true });
-    for (const file of ['COURSE.md', 'meta.json']) {
-      spinner.text = `Downloading ${file}…`;
-      try {
-        const text = await fetchRegistryText(`${RAW_COURSES_BASE}/${courseName}/${file}`);
-        writeFileSync(join(destDir, file), text, 'utf8');
-      } catch (err) {
-        spinner.fail(`Failed to download ${file}: ${err.message}`);
+
+    if (isSkill) {
+      // Install a skill — scope: local (.claude/skills/) or global (~/.claude/skills/)
+      const skill = (index.skills || []).find((s) => s.name === itemName);
+      if (!skill) {
+        spinner.fail(`Skill "${itemName}" not found.`);
+        const names = (index.skills || []).map((s) => s.name);
+        console.error(names.length ? `Available skills: ${names.join(', ')}` : 'No skills published yet.');
         process.exit(1);
       }
+      spinner.stop();
+
+      // Resolve scope
+      let scope;
+      if (isGlobal) {
+        scope = 'global';
+      } else if (isLocal) {
+        scope = 'local';
+      } else if (!process.stdin.isTTY) {
+        console.error(style('error', 'Non-interactive mode. Use --local or --global.'));
+        process.exit(1);
+      } else {
+        const globalPath = join(os.homedir(), '.claude', 'skills', itemName);
+        const { chosen } = await inquirer.prompt([{
+          type: 'list',
+          name: 'chosen',
+          message: `Install scope for skill "${itemName}":`,
+          choices: [
+            { name: `Local — .claude/skills/${itemName}/ (this project only)`, value: 'local' },
+            { name: `Global — ${globalPath} (all projects)`, value: 'global' },
+          ],
+          default: 'local',
+        }]);
+        scope = chosen;
+      }
+
+      const destDir = scope === 'global'
+        ? join(os.homedir(), '.claude', 'skills', itemName)
+        : join(process.cwd(), '.claude', 'skills', itemName);
+      mkdirSync(destDir, { recursive: true });
+
+      const spinner2 = ora(`Installing ${skill.title}…`).start();
+      for (const file of ['SKILL.md', 'meta.json']) {
+        spinner2.text = `Downloading ${file}…`;
+        try {
+          const text = await fetchRegistryText(`${RAW_SKILLS_BASE}/${itemName}/${file}`);
+          writeFileSync(join(destDir, file), text, 'utf8');
+        } catch (err) {
+          spinner2.fail(`Failed to download ${file}: ${err.message}`);
+          process.exit(1);
+        }
+      }
+      spinner2.succeed(`Installed skill ${chalk.bold(skill.title)} (${scope})`);
+      console.log('');
+      console.log(style('info', `Skill installed at ${destDir}`));
+      console.log(style('info', 'It will be available to Claude Code in this project automatically.'));
+      console.log('');
+    } else {
+      // Install a course → learning/{name}/ in the current repo
+      const course = (index.courses || []).find((c) => c.name === itemName);
+      if (!course) {
+        spinner.fail(`Course "${itemName}" not found.`);
+        const names = (index.courses || []).map((c) => c.name);
+        if (names.length) console.error(`Available courses: ${names.join(', ')}`);
+        process.exit(1);
+      }
+      const destDir = join(process.cwd(), 'learning', itemName);
+      mkdirSync(destDir, { recursive: true });
+      for (const file of ['COURSE.md', 'meta.json']) {
+        spinner.text = `Downloading ${file}…`;
+        try {
+          const text = await fetchRegistryText(`${RAW_COURSES_BASE}/${itemName}/${file}`);
+          writeFileSync(join(destDir, file), text, 'utf8');
+        } catch (err) {
+          spinner.fail(`Failed to download ${file}: ${err.message}`);
+          process.exit(1);
+        }
+      }
+      spinner.succeed(`Installed ${chalk.bold(course.title)} (${course.sections} sections, ${course.level})`);
+      console.log('');
+      console.log(style('info', 'Course downloaded to:'), chalk.dim(`learning/${itemName}/COURSE.md`));
+      console.log(style('info', 'To start learning, run in Claude Code:'));
+      console.log(`   professor:new-topic`);
+      console.log('');
     }
-    spinner.succeed(`Installed ${chalk.bold(course.title)} (${course.sections} sections, ${course.level})`);
-    console.log('');
-    console.log(style('info', 'To start learning, run in Claude Code:'));
-    console.log(`   professor:template-import ${destDir}/COURSE.md`);
-    console.log('');
     break;
   }
 

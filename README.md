@@ -14,7 +14,7 @@ This is intentional by design — not a limitation. When you type `professor:stu
 
 ## Requirements
 
-- **Claude Code** — this plugin is designed for Claude Code only (v1.0). Multi-platform support is not in scope.
+- **AI agent** — Claude Code, Gemini CLI, OpenCode, or Cursor.
 - **Node.js** — required for hook scripts (Node.js 18 or newer recommended).
 - **Notion or Obsidian** — only needed if you want to use the `professor:export` command. See setup sections below.
 
@@ -28,7 +28,7 @@ This is intentional by design — not a limitation. When you type `professor:stu
 npx course-professor init
 ```
 
-This will auto and set up the plugin-detect your agent. Or specify manually:
+Auto-detects your agent and sets up the plugin. Or specify manually:
 
 ```bash
 npx course-professor setup claude   # Claude Code
@@ -180,8 +180,32 @@ The web UI reads and writes the same `courses/` files as the CLI — switch betw
 
 ---
 
+## Community Courses & Skills
+
+Browse and install community-contributed courses from the registry:
+
+```bash
+npx course-professor courses                  # list all available courses
+npx course-professor search react             # search by keyword
+npx course-professor install react-hooks      # install → learning/react-hooks/
+```
+
+After installing, run `professor:new-topic` in Claude Code — Professor detects the downloaded course automatically.
+
+Install community skills (earned by learners who completed a course + capstone):
+
+```bash
+npx course-professor install --skill <name>          # prompts local or global
+npx course-professor install --skill <name> --local  # this project only (.claude/skills/)
+npx course-professor install --skill <name> --global # all projects (~/.claude/skills/)
+```
+
+Registry: [professor-skills-hub/courses-skills-registry](https://github.com/professor-skills-hub/courses-skills-registry)
+
+---
+
 ## Scope and Limitations
 
-- **Claude Code only.** This plugin targets Claude Code v1.0. Support for other AI platforms, Claude.ai, or multi-agent frameworks is deferred — not in scope for this release.
+- **Multi-platform.** Supports Claude Code, Gemini CLI, OpenCode, and Cursor.
 - **The professor will never complete your exercises for you.** That is the whole point. If you ask the professor to write the code for you, it will redirect you with a question. This is not a bug.
 - **Notion and Obsidian MCP are optional.** The core learning workflow works without any external services. Export requires the relevant MCP server to be running in your project environment.
