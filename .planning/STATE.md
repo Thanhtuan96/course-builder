@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Phases
-current_phase: Not started (roadmap defined, ready for planning)
-current_plan: —
-status: planning
-last_updated: "2026-03-15T16:37:21.297Z"
+current_phase: 21-research-and-polish-current-agent-plan-to-work-in-real-world
+current_plan: 04
+status: completed
+last_updated: "2026-03-25T12:19:15.488Z"
 progress:
   total_phases: 26
   completed_phases: 17
   total_plans: 38
-  completed_plans: 36
+  completed_plans: 39
 ---
 
 # Session State
@@ -24,9 +24,9 @@ See: .planning/PROJECT.md
 ## Position
 
 **Milestone:** v2.1 Public Launch
-**Current phase:** Not started (roadmap defined, ready for planning)
-**Current plan:** —
-**Status:** Ready to plan
+**Current phase:** 21-research-and-polish-current-agent-plan-to-work-in-real-world
+**Current plan:** 04
+**Status:** v2.1 milestone complete
 
 ## Accumulated Context
 
@@ -55,6 +55,12 @@ See: .planning/PROJECT.md
 - **Contribution:** courses/ open to anyone via PR. skills/ earned — must complete course + capstone first.
 - **No server:** CLI fetches `index.json` from GitHub raw URL, downloads files directly. GitHub Actions rebuild index on merge.
 - **Phase 21 (Vercel server) removed** — was irrelevant once web platform deferred.
+
+### Phase 21 Decisions
+- All 4 specialized agents (Coach, Spotter, Navigator, Researcher) use mode: subagent + model: inherit in frontmatter for OpenCode compatibility
+- Delegation return language replaced with platform-agnostic block referencing Claude Code (automatic), Cursor (/agent-name), Gemini CLI / OpenCode (@agent-name)
+- Spotter agent includes inline fallback for when Coach is unavailable
+- Navigator activation triggers reframed without command name dependencies for cross-platform compatibility
 
 ### Phase 15 Decisions
 - Time tracking uses ISO 8601 timestamps with minute-precision duration calculation
@@ -110,3 +116,6 @@ See: .planning/PROJECT.md
 - 2026-03-15: Registry repo (professor-skills/registry) complete externally — courses/+skills/ split, validate+build scripts, GitHub Actions
 - 2026-03-16: Completed plan 17.1.1.1.1-02 — Professor orchestrator refactor (stripped command behaviors, added routing table reference)
 - 2026-03-16: Completed plan 17.1.1.1.1-03 — Added 5 missing routing entries (quiz, template-export, template-import, worktrees, switch)
+- 2026-03-25: Completed plan 21-01 — Professor.md cross-platform polish (removed routing:/actions:, replaced AskUserQuestion, added delegation block, trimmed to 353 lines)
+- 2026-03-25: Completed plan 21-02 — All 4 specialized agents (Coach, Spotter, Navigator, Researcher) polished with mode: subagent, model: inherit, and platform-agnostic delegation return language
+- 2026-03-25: Completed plan 21-03 — Synced agents/ to shared/ (navigator.md now present), added Agent Architecture table to SKILL.md documenting all 5 agents

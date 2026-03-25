@@ -3,12 +3,41 @@
 import { existsSync, mkdirSync, symlinkSync, readFileSync, writeFileSync, readdirSync, cpSync, statSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import os from 'os';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 import ora from 'ora';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SUPPORTED_AGENTS = ['claude', 'gemini', 'opencode', 'cursor'];
+
+// Registry constants
+const REGISTRY_INDEX_URL =
+  'https://raw.githubusercontent.com/professor-skills-hub/courses-skills-registry/main/index.json';
+const RAW_COURSES_BASE =
+  'https://raw.githubusercontent.com/professor-skills-hub/courses-skills-registry/main/courses';
+const REGISTRY_INSTALL_BASE = join(os.homedir(), '.claude', 'plugins', 'professor', 'skills');
+
+async function fetchRegistryText(url) {
+  const { get } = await import('https');
+  return new Promise((resolve, reject) => {
+    get(url, (res) => {
+      if (res.statusCode !== 200) {
+        reject(new Error(`HTTP ${res.statusCode} fetching ${url}`));
+        res.resume();
+        return;
+      }
+      let data = '';
+      res.on('data', (chunk) => (data += chunk));
+      res.on('end', () => resolve(data));
+    }).on('error', reject);
+  });
+}
+
+async function fetchRegistryIndex() {
+  const text = await fetchRegistryText(REGISTRY_INDEX_URL);
+  return JSON.parse(text);
+}
 
 // Theme: consistent symbols + colors (chalk respects NO_COLOR / FORCE_COLOR)
 const THEME = {
@@ -75,12 +104,15 @@ Description:
   agent (Claude Code, Gemini, OpenCode, Cursor) or start the web UI.
 
 COMMANDS
-  ${chalk.bold('setup')} [agent]     Set up Professor for a specific agent
-  ${chalk.bold('init')}              Auto-detect and set up
-  ${chalk.bold('list')}              List supported agents
-  ${chalk.bold('web')} [port]        Start local web UI (default port: 3000)
-  ${chalk.bold('web')} --production  Start web UI in production mode (requires build)
-  ${chalk.bold('help')}              Show this help message
+  ${chalk.bold('setup')} [agent]        Set up Professor for a specific agent
+  ${chalk.bold('init')}                 Auto-detect and set up
+  ${chalk.bold('list')}                 List supported agents
+  ${chalk.bold('courses')}              List all courses in the registry
+  ${chalk.bold('search')} <keyword>     Search registry courses by keyword
+  ${chalk.bold('install')} <name>       Install a course from the registry
+  ${chalk.bold('web')} [port]           Start local web UI (default port: 3000)
+  ${chalk.bold('web')} --production     Start web UI in production mode (requires build)
+  ${chalk.bold('help')}                 Show this help message
 
 FLAGS
   --global          Install globally (user-wide, e.g. ~/.claude/plugins/professor/)
@@ -90,11 +122,10 @@ EXAMPLES
   npx course-professor init                    # Auto-detect and setup
   npx course-professor setup claude            # Setup for Claude Code (prompts for scope)
   npx course-professor setup claude --global   # Install globally
-  npx course-professor setup opencode          # Setup for OpenCode
-  npx course-professor setup gemini           # Setup for Gemini CLI
-  npx course-professor web                    # Start web UI on port 3000
-  npx course-professor web 4000                # Start on port 4000
-  npx course-professor web --production       # Start in production mode
+  npx course-professor courses                 # Browse community courses
+  npx course-professor search react            # Search for React courses
+  npx course-professor install react-hooks     # Install a course
+  npx course-professor web                     # Start web UI on port 3000
 
 SUPPORTED AGENTS
   ${SUPPORTED_AGENTS.join(', ')}
@@ -379,6 +410,100 @@ switch (command) {
     break;
   }
     
+  case 'courses': {
+    const spinner = ora('Fetching registry…').start();
+    try {
+      const index = await fetchRegistryIndex();
+      spinner.stop();
+      const courses = index.courses || [];
+      if (courses.length === 0) { console.log('No courses found in registry.'); break; }
+      const nw = Math.max(4, ...courses.map((c) => c.name.length));
+      const tw = Math.max(5, ...courses.map((c) => c.title.length));
+      const lw = Math.max(5, ...courses.map((c) => (c.level || '').length));
+      const header = `${'Name'.padEnd(nw)}  ${'Title'.padEnd(tw)}  ${'Level'.padEnd(lw)}  Sections`;
+      console.log('\n' + chalk.bold(header));
+      console.log(chalk.dim('─'.repeat(header.length)));
+      for (const c of courses) {
+        console.log(`${c.name.padEnd(nw)}  ${c.title.padEnd(tw)}  ${(c.level || '').padEnd(lw)}  ${c.sections}`);
+      }
+      console.log('');
+    } catch (err) {
+      spinner.fail(`Registry fetch failed: ${err.message}`);
+    }
+    break;
+  }
+
+  case 'search': {
+    const keyword = args.slice(1).find((a) => !a.startsWith('--'));
+    if (!keyword) { console.error(style('error', 'Usage: course-professor search <keyword>')); process.exit(1); }
+    const spinner = ora('Searching registry…').start();
+    try {
+      const index = await fetchRegistryIndex();
+      spinner.stop();
+      const q = keyword.toLowerCase();
+      const matches = (index.courses || []).filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          (c.title || '').toLowerCase().includes(q) ||
+          (c.description || '').toLowerCase().includes(q) ||
+          (c.topics || []).some((t) => t.toLowerCase().includes(q))
+      );
+      if (matches.length === 0) { console.log(`No courses found matching "${keyword}".`); break; }
+      for (const c of matches) {
+        console.log(`\n${chalk.bold(c.name)}  ${chalk.dim(`(${c.level}, ${c.sections} sections)`)}`);
+        console.log(`  ${c.title}`);
+        console.log(`  ${chalk.dim(c.description)}`);
+      }
+      console.log('');
+    } catch (err) {
+      spinner.fail(`Registry fetch failed: ${err.message}`);
+    }
+    break;
+  }
+
+  case 'install': {
+    const courseName = args.slice(1).find((a) => !a.startsWith('--'));
+    if (!courseName) {
+      console.error(style('error', 'Usage: course-professor install <course-name>'));
+      console.error('       course-professor courses    — list all available courses');
+      process.exit(1);
+    }
+    const spinner = ora('Fetching registry…').start();
+    let index;
+    try {
+      index = await fetchRegistryIndex();
+    } catch (err) {
+      spinner.fail(`Registry fetch failed: ${err.message}`);
+      process.exit(1);
+    }
+    const course = (index.courses || []).find((c) => c.name === courseName);
+    if (!course) {
+      spinner.fail(`Course "${courseName}" not found.`);
+      const names = (index.courses || []).map((c) => c.name);
+      if (names.length) console.error(`Available: ${names.join(', ')}`);
+      process.exit(1);
+    }
+    spinner.text = `Installing ${course.title}…`;
+    const destDir = join(REGISTRY_INSTALL_BASE, courseName);
+    mkdirSync(destDir, { recursive: true });
+    for (const file of ['COURSE.md', 'meta.json']) {
+      spinner.text = `Downloading ${file}…`;
+      try {
+        const text = await fetchRegistryText(`${RAW_COURSES_BASE}/${courseName}/${file}`);
+        writeFileSync(join(destDir, file), text, 'utf8');
+      } catch (err) {
+        spinner.fail(`Failed to download ${file}: ${err.message}`);
+        process.exit(1);
+      }
+    }
+    spinner.succeed(`Installed ${chalk.bold(course.title)} (${course.sections} sections, ${course.level})`);
+    console.log('');
+    console.log(style('info', 'To start learning, run in Claude Code:'));
+    console.log(`   professor:template-import ${destDir}/COURSE.md`);
+    console.log('');
+    break;
+  }
+
   case 'list':
     listAgents();
     break;

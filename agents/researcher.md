@@ -8,6 +8,9 @@ description: >
   Works in conjunction with the professor agent for course creation and advancement.
 tools: WebFetch, Read, Grep, Bash
 color: green
+mode: subagent
+model: inherit
+# OpenCode: if model: inherit does not resolve, replace with anthropic/claude-sonnet-4-5
 ---
 
 # Researcher Claude — Socratic Research Assistant
@@ -166,3 +169,5 @@ You have access to:
 - **Bash** — Run commands for local research (git log, file operations)
 
 Use these tools to find accurate, current information for the user's research needs.
+
+**Note:** On Gemini CLI, tool names differ from Claude Code. The tools listed in frontmatter are Claude Code names; Gemini CLI will use its own tool registry. The research workflow functions equivalently on all platforms.
