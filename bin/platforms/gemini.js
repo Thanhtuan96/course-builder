@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { substituteTokens } from './_shared.js';
+import { substituteTokens, generateCommandFiles } from './_shared.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PLUGIN_DIR = join(__dirname, '..', '..');
@@ -18,20 +18,11 @@ export function detect() {
 /** Install professor for Gemini CLI. scope = 'global' → ~/, 'local' → cwd/ */
 export async function install(scope = 'local') {
   const base = scope === 'global' ? (process.env.HOME || '') : process.cwd();
-  // 1. Create .gemini/ and write settings.json
+  // 1. Create .gemini/ directory
   const geminiDir = join(base, '.gemini');
   if (!existsSync(geminiDir)) {
     mkdirSync(geminiDir, { recursive: true });
     console.log('✓ Created .gemini/ directory');
-  }
-
-  const settingsSrc = join(PLUGIN_DIR, 'templates', 'gemini', 'settings.json');
-  const settingsDest = join(geminiDir, 'settings.json');
-  if (!existsSync(settingsDest) && existsSync(settingsSrc)) {
-    writeFileSync(settingsDest, readFileSync(settingsSrc, 'utf-8'));
-    console.log('  + .gemini/settings.json');
-  } else if (existsSync(settingsDest)) {
-    console.log('  ↔ .gemini/settings.json (already exists)');
   }
 
   // 2. Compile GEMINI.md from preamble + shared/SKILL.md, with ask_user substitution
@@ -43,7 +34,8 @@ export async function install(scope = 'local') {
     `<!-- professor:start -->\n${preamble}\n${skill}\n<!-- professor:end -->`;
   const adapted = substituteTokens(professorBlock, 'gemini');
 
-  const geminiMdPath = join(base, 'GEMINI.md');
+  // Global: GEMINI.md lives inside ~/.gemini/; local: GEMINI.md lives at cwd/ (Gemini CLI walks upward)
+  const geminiMdPath = scope === 'global' ? join(geminiDir, 'GEMINI.md') : join(base, 'GEMINI.md');
   if (existsSync(geminiMdPath)) {
     const existing = readFileSync(geminiMdPath, 'utf-8');
     if (existing.includes('<!-- professor:start -->')) {
@@ -56,6 +48,12 @@ export async function install(scope = 'local') {
     writeFileSync(geminiMdPath, adapted);
     console.log('  + GEMINI.md');
   }
+
+  // 3. Generate .toml command files for Gemini CLI
+  const commandsDir = scope === 'global'
+    ? join(geminiDir, 'commands', 'professor')
+    : join(base, '.gemini', 'commands', 'professor');
+  generateCommandFiles(commandsDir, 'gemini');
 
   console.log(`
 ✅ Setup complete for Gemini CLI!
