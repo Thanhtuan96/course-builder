@@ -1,4 +1,5 @@
 .DS_Store
+.worktrees/
 # Internal planning documents
 reports/
 RAILROAD_ARCHITECTURE.md
