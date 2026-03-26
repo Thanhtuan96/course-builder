@@ -1,6 +1,6 @@
 {
   "name": "course-learning-plugin",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "A Socratic learning plugin for Claude Code. The professor agent guides learners through courses using the Socratic method — asking questions rather than giving answers.",
   "agents": [
     {
