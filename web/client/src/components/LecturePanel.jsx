@@ -10,7 +10,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import MDEditor from '@uiw/react-md-editor';
 import { fetchCourseFile, fetchExercises, fetchExercise, saveExercise } from '../api/client.js';
-import './LecturePanel.css';
+import { Button } from './ui/button.jsx';
 
 const CODE_COMPONENTS = {
   code({ node, inline, className, children, ...props }) {
@@ -178,9 +178,9 @@ export default function LecturePanel({ courseSlug, content: initialContent, onLe
 
   if (!courseSlug) {
     return (
-      <div className="lecture-panel-empty">
-        <div className="lecture-panel-empty-content">
-          <span className="lecture-panel-icon">📖</span>
+      <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-slate-400">
+        <div className="flex flex-col items-center gap-2">
+          <span className="text-5xl">📖</span>
           <p>Select a course to see the current lecture.</p>
         </div>
       </div>
@@ -188,80 +188,114 @@ export default function LecturePanel({ courseSlug, content: initialContent, onLe
   }
 
   return (
-    <div className="lecture-panel-wrapper">
-      <div className="lecture-panel-tabs">
-        <button
-          className={`lecture-tab-btn${activeTab === 'lecture' ? ' active' : ''}`}
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="flex shrink-0 gap-2 border-b border-slate-800 bg-slate-900/70 px-3 pt-2 md:px-4">
+        <Button
+          variant="ghost"
+          className={`h-9 rounded-b-none border-b-2 px-3 ${
+            activeTab === 'lecture'
+              ? 'border-indigo-400 text-indigo-300'
+              : 'border-transparent text-slate-400'
+          }`}
           onClick={() => setActiveTab('lecture')}
         >
           📝 Lecture
-        </button>
-        <button
-          className={`lecture-tab-btn${activeTab === 'syllabus' ? ' active' : ''}`}
+        </Button>
+        <Button
+          variant="ghost"
+          className={`h-9 rounded-b-none border-b-2 px-3 ${
+            activeTab === 'syllabus'
+              ? 'border-indigo-400 text-indigo-300'
+              : 'border-transparent text-slate-400'
+          }`}
           onClick={() => setActiveTab('syllabus')}
         >
           📋 Syllabus
-        </button>
-        <button
-          className={`lecture-tab-btn${activeTab === 'exercises' ? ' active' : ''}`}
+        </Button>
+        <Button
+          variant="ghost"
+          className={`h-9 rounded-b-none border-b-2 px-3 ${
+            activeTab === 'exercises'
+              ? 'border-indigo-400 text-indigo-300'
+              : 'border-transparent text-slate-400'
+          }`}
           onClick={() => setActiveTab('exercises')}
         >
           💪 Exercises
-          {activeExercise && <span className="active-badge">●</span>}
-        </button>
+          {activeExercise && <span className="ml-1 text-[10px] text-emerald-500">●</span>}
+        </Button>
       </div>
 
       {loading ? (
-        <div className="lecture-panel-loading">
-          <div className="lecture-panel-loading-spinner" />
+        <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-slate-400">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-indigo-400" />
           <p>Loading...</p>
         </div>
       ) : error ? (
-        <div className="lecture-panel-error">
+        <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-slate-400">
           <p>{error}</p>
-          <button onClick={() => loadFile(activeTab)}>Retry</button>
+          <Button onClick={() => loadFile(activeTab)}>Retry</Button>
         </div>
       ) : activeTab === 'exercises' ? (
-        <div className="exercises-panel">
+        <div className="flex min-h-0 h-full overflow-hidden">
           {exercises.length === 0 ? (
-            <div className="lecture-panel-empty">
-              <div className="lecture-panel-empty-content">
-                <span className="lecture-panel-icon">💪</span>
+            <div className="flex h-full flex-1 flex-col items-center justify-center gap-3 px-6 text-center text-slate-400">
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-5xl">💪</span>
                 <p>No exercises yet.</p>
-                <p className="lecture-panel-hint">
-                  Type <code>professor:next</code> in chat to create exercises.
+                <p className="text-sm">
+                  Type <code className="rounded bg-slate-800 px-1.5 py-0.5 text-slate-200">professor:next</code> in chat to
+                  create exercises.
                 </p>
               </div>
             </div>
           ) : (
             <>
-              <div className="exercises-sidebar">
-                <div className="exercises-list">
-                  <h4>Exercises</h4>
+              <div className="hidden w-48 shrink-0 border-r border-slate-800 bg-slate-900/40 md:block">
+                <div className="p-3">
+                  <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Exercises
+                  </h4>
                   {exercises.map((ex) => (
-                    <button
+                    <Button
                       key={ex.filename}
-                      className={`exercise-item${selectedExercise === ex.filename ? ' active' : ''}${activeExercise === ex.filename ? ' current' : ''}`}
+                      variant={selectedExercise === ex.filename ? 'secondary' : 'ghost'}
+                      className="mb-1 h-auto w-full justify-start px-2 py-2 text-left text-xs"
                       onClick={() => handleExerciseSelect(ex.filename)}
                     >
                       {ex.filename.replace('.md', '')}
-                      {activeExercise === ex.filename && <span className="active-indicator">●</span>}
-                    </button>
+                      {activeExercise === ex.filename && (
+                        <span className="ml-1 text-[10px] text-emerald-500">●</span>
+                      )}
+                    </Button>
                   ))}
                 </div>
               </div>
-              <div className="exercise-content">
-                <div className="exercise-header">
-                  <h4>{selectedExercise}</h4>
-                  <button 
-                    className="save-btn" 
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900/40 px-3 py-2 md:px-4">
+                  <h4 className="text-sm font-medium">{selectedExercise}</h4>
+                  <Button
+                    size="sm"
                     onClick={handleExerciseSave}
                     disabled={saving}
                   >
                     {saving ? 'Saving...' : '💾 Save'}
-                  </button>
+                  </Button>
                 </div>
-                <div className="exercise-editor-wrapper" data-color-mode="dark">
+                <div className="border-b border-slate-800 bg-slate-900/40 p-2 md:hidden">
+                  <select
+                    value={selectedExercise || ''}
+                    onChange={(e) => handleExerciseSelect(e.target.value)}
+                    className="h-9 w-full rounded-md border border-slate-700 bg-slate-950 px-2 text-sm text-slate-100"
+                  >
+                    {exercises.map((ex) => (
+                      <option key={ex.filename} value={ex.filename}>
+                        {ex.filename.replace('.md', '')}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="min-h-0 flex-1 overflow-hidden" data-color-mode="dark">
                   <MDEditor
                     value={exerciseContent}
                     onChange={setExerciseContent}
@@ -275,29 +309,31 @@ export default function LecturePanel({ courseSlug, content: initialContent, onLe
           )}
         </div>
       ) : !content ? (
-        <div className="lecture-panel-empty">
-          <div className="lecture-panel-empty-content">
-            <span className="lecture-panel-icon">✨</span>
+        <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-slate-400">
+          <div className="flex flex-col items-center gap-2">
+            <span className="text-5xl">✨</span>
             {activeTab === 'lecture' ? (
               <>
                 <p>No lecture loaded yet.</p>
-                <p className="lecture-panel-hint">
-                  Type <code>professor:next</code> in chat to start your first section.
+                <p className="text-sm">
+                  Type <code className="rounded bg-slate-800 px-1.5 py-0.5 text-slate-200">professor:next</code> in chat to
+                  start your first section.
                 </p>
               </>
             ) : (
               <>
                 <p>No syllabus found.</p>
-                <p className="lecture-panel-hint">
-                  Type <code>professor:new-topic</code> in chat to create a course.
+                <p className="text-sm">
+                  Type <code className="rounded bg-slate-800 px-1.5 py-0.5 text-slate-200">professor:new-topic</code> in chat
+                  to create a course.
                 </p>
               </>
             )}
           </div>
         </div>
       ) : (
-        <div className="lecture-panel">
-          <div className="lecture-panel-content">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 md:px-6">
+          <div className="max-w-none text-sm leading-7 text-slate-200 [&_a]:text-indigo-300 [&_a:hover]:underline [&_blockquote]:my-4 [&_blockquote]:border-l-2 [&_blockquote]:border-indigo-400 [&_blockquote]:pl-4 [&_blockquote]:italic [&_code]:rounded [&_code]:bg-slate-800 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-xs [&_h1]:mt-6 [&_h1]:text-2xl [&_h1]:font-semibold [&_h2]:mt-5 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:text-lg [&_h3]:font-medium [&_hr]:my-6 [&_hr]:border-slate-700 [&_img]:my-3 [&_img]:max-w-full [&_img]:rounded-md [&_li]:my-1 [&_ol]:my-3 [&_ol]:pl-6 [&_p]:my-3 [&_pre]:my-4 [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:border [&_pre]:border-slate-700 [&_pre]:bg-slate-900 [&_pre]:p-4 [&_table]:my-4 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-slate-700 [&_td]:p-2 [&_th]:border [&_th]:border-slate-700 [&_th]:bg-slate-800 [&_th]:p-2 [&_th]:text-left [&_ul]:my-3 [&_ul]:pl-6">
             <ReactMarkdown remarkPlugins={[remarkGfm]} components={CODE_COMPONENTS}>
               {content}
             </ReactMarkdown>

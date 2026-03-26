@@ -1,8 +1,7 @@
 /**
  * CommandPills.jsx - Context-aware command buttons
  */
-
-import './CommandPills.css';
+import { Button } from './ui/button.jsx';
 
 /**
  * Command pills mapped to learning phases
@@ -32,17 +31,19 @@ export default function CommandPills({ phase = 'idle', onCommandClick, disabled 
   }
 
   return (
-    <div className="command-pills">
+    <div className="flex flex-wrap gap-2 border-t border-slate-800 bg-slate-900 px-3 py-2 md:px-4">
       {commands.map((cmd) => (
-        <button
+        <Button
           key={cmd}
-          className="command-pill"
+          variant="outline"
+          size="sm"
+          className="h-7 rounded-full px-3 font-mono text-xs"
           onClick={() => handleClick(cmd)}
           disabled={disabled}
           title={`Send ${cmd} command`}
         >
           {cmd}
-        </button>
+        </Button>
       ))}
     </div>
   );

@@ -117,6 +117,7 @@ switch (command) {
   case 'web': {
     const { execSync } = await import('child_process');
     const webDir = join(__dirname, '..', 'web');
+    const cloudOnly = args.includes('--cloud');
 
     if (!existsSync(webDir)) {
       console.error(style('error', 'Web UI not found. Ensure the package is fully installed.'));
@@ -207,8 +208,20 @@ switch (command) {
       return null;
     }
 
+    function hasLocalProvider() {
+      for (const cmd of ['claude', 'ollama', 'cursor-agent', 'opencode']) {
+        try {
+          execSync(`which ${cmd}`, { stdio: 'ignore' });
+          return true;
+        } catch {}
+      }
+      return false;
+    }
+
     let found = await findApiKey();
-    if (!found) {
+    const localProviderAvailable = hasLocalProvider();
+    const shouldPromptForApiKey = cloudOnly || !localProviderAvailable;
+    if (!found && shouldPromptForApiKey) {
       if (!process.stdin.isTTY) {
         console.log(style('info', 'No API key. Chat disabled.\n'));
       } else {
@@ -244,6 +257,8 @@ switch (command) {
     if (apiKey) {
       console.log(style('success', `API key loaded (${found.source}).\n`));
       process.env.ANTHROPIC_API_KEY = apiKey;
+    } else if (localProviderAvailable) {
+      console.log(style('info', 'No API key found. Local providers will be used when available.\n'));
     }
 
     let port = '3000';
@@ -869,6 +884,7 @@ FLAGS
   --local           Target local scope (current project, .claude/skills/)
   --force           Bypass overwrite/removal confirmation prompts
   --all             Apply to all items (update --all)
+  --cloud           For \`web\`, prefer cloud API flow and API key prompt
 
 EXAMPLES
   npx course-professor init                    # Auto-detect and setup

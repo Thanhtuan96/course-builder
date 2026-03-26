@@ -483,10 +483,493 @@ function claudeCLIAvailable() {
 const USE_CLI = claudeCLIAvailable();
 console.log(USE_CLI ? '✅ claude CLI found — using OAuth (no API key needed)' : '⚠️  claude CLI not found — falling back to API key');
 
+function commandExists(command) {
+  try {
+    execSync(`which ${command}`, { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function listOllamaModels() {
+  try {
+    const output = execSync('ollama list', {
+      encoding: 'utf-8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      timeout: 3000
+    });
+
+    const lines = output
+      .split('\n')
+      .map(line => line.trim())
+      .filter(Boolean);
+    if (lines.length <= 1) return [];
+
+    return lines
+      .slice(1)
+      .map(line => line.split(/\s+/)[0])
+      .filter(Boolean)
+      .filter(name => name !== 'NAME');
+  } catch {
+    return [];
+  }
+}
+
+function stripAnsi(text) {
+  return text.replace(/\u001b\[[0-9;]*m/g, '').replace(/\u001b\[[0-9;]*[A-Za-z]/g, '');
+}
+
+function listCursorModels() {
+  try {
+    const output = execSync('cursor-agent models', {
+      encoding: 'utf-8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      timeout: 6000
+    });
+    return stripAnsi(output)
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => /^[a-z0-9._-]+\s+-\s+/i.test(line))
+      .map(line => line.split(/\s+-\s+/)[0])
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function listOpencodeModels() {
+  try {
+    const output = execSync('opencode models', {
+      encoding: 'utf-8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      timeout: 6000
+    });
+    return output
+      .split('\n')
+      .map(line => line.trim())
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function getAgentCapabilities() {
+  const ollamaInstalled = commandExists('ollama');
+  const ollamaModels = ollamaInstalled ? listOllamaModels() : [];
+  const cursorInstalled = commandExists('cursor-agent');
+  const opencodeInstalled = commandExists('opencode');
+  const cursorModels = cursorInstalled ? listCursorModels() : [];
+  const opencodeModels = opencodeInstalled ? listOpencodeModels() : [];
+
+  return {
+    claude: {
+      installed: commandExists('claude'),
+      supportsStreaming: true,
+      supportsResume: true,
+      supportsModelSelection: false
+    },
+    cursor: {
+      installed: cursorInstalled,
+      supportsStreaming: true,
+      supportsResume: true,
+      supportsModelSelection: true,
+      models: cursorModels
+    },
+    opencode: {
+      installed: opencodeInstalled,
+      supportsStreaming: true,
+      supportsResume: true,
+      supportsModelSelection: true,
+      models: opencodeModels
+    },
+    ollama: {
+      installed: ollamaInstalled,
+      daemonReady: ollamaModels.length > 0,
+      supportsStreaming: true,
+      supportsResume: false,
+      supportsModelSelection: true,
+      models: ollamaModels
+    },
+    cloud: {
+      available: !!(process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY || process.env.OPENAI_API_KEY),
+      supportsStreaming: true,
+      supportsResume: false,
+      supportsModelSelection: true
+    }
+  };
+}
+
+function resolveProvider(requestedProvider, capabilities) {
+  if (requestedProvider && requestedProvider !== 'auto') {
+    if (requestedProvider === 'cloud') {
+      return capabilities.cloud.available ? 'cloud' : 'none';
+    }
+    if (!capabilities[requestedProvider]?.installed) {
+      return 'none';
+    }
+    return requestedProvider;
+  }
+  const priority = ['claude', 'cursor', 'opencode', 'ollama', 'cloud'];
+  for (const provider of priority) {
+    if (provider === 'cloud' && capabilities.cloud.available) return provider;
+    if (provider !== 'cloud' && capabilities[provider]?.installed) return provider;
+  }
+  return 'none';
+}
+
+function sendSSEError(res, code, message, details = {}) {
+  res.write(`data: ${JSON.stringify({ error: message, errorCode: code, ...details })}\n\n`);
+  res.end();
+}
+
+function normalizeOllamaMessages(messages) {
+  return messages
+    .filter(m => m.content && m.content.trim())
+    .map(m => ({
+      role: m.role === 'user' ? 'user' : 'assistant',
+      content: m.content
+    }));
+}
+
+async function streamViaOllama(res, messages, courseSlug, model) {
+  const selectedModel = model || process.env.OLLAMA_MODEL || 'qwen2.5-coder:latest';
+  const ollamaMessages = normalizeOllamaMessages(messages);
+  ollamaMessages.unshift({ role: 'system', content: PROFESSOR_SYSTEM_PROMPT });
+
+  let fullText = '';
+  try {
+    const response = await fetch('http://127.0.0.1:11434/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: selectedModel,
+        messages: ollamaMessages,
+        stream: true
+      })
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      if (response.status === 404 || text.includes('model')) {
+        sendSSEError(res, 'model_not_found', `Ollama model "${selectedModel}" not found.`, {
+          fix: `Run: ollama pull ${selectedModel}`
+        });
+        return;
+      }
+      sendSSEError(res, 'ollama_request_failed', `Ollama error ${response.status}: ${text.slice(0, 200)}`);
+      return;
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    res.write(`data: ${JSON.stringify({ provider: 'ollama', model: selectedModel })}\n\n`);
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const parsed = JSON.parse(line);
+          const token = parsed.message?.content || '';
+          if (token) {
+            fullText += token;
+            res.write(`data: ${JSON.stringify({ content: token })}\n\n`);
+          }
+        } catch {
+          // Ignore malformed stream line
+        }
+      }
+    }
+
+    const saved = saveFilesFromResponse(fullText, courseSlug);
+    if (saved.length > 0) {
+      const bySlug = {};
+      for (const { slug, file } of saved) {
+        if (!bySlug[slug]) bySlug[slug] = [];
+        bySlug[slug].push(file);
+      }
+      for (const [slug, files] of Object.entries(bySlug)) {
+        res.write(`data: ${JSON.stringify({ filesUpdated: files, courseSlug: slug })}\n\n`);
+      }
+    }
+    res.write('data: [DONE]\n\n');
+    res.end();
+  } catch (err) {
+    sendSSEError(res, 'ollama_not_running', 'Ollama is not reachable on localhost:11434.', {
+      fix: 'Start Ollama with: ollama serve',
+      details: err.message
+    });
+  }
+}
+
+function saveResponseFilesAndComplete(res, text, courseSlug, metadata = {}) {
+  const saved = saveFilesFromResponse(text, courseSlug);
+  if (saved.length > 0) {
+    const bySlug = {};
+    for (const { slug, file } of saved) {
+      if (!bySlug[slug]) bySlug[slug] = [];
+      bySlug[slug].push(file);
+    }
+    for (const [slug, files] of Object.entries(bySlug)) {
+      res.write(`data: ${JSON.stringify({ filesUpdated: files, courseSlug: slug })}\n\n`);
+    }
+  }
+  if (metadata.sessionId) {
+    res.write(`data: ${JSON.stringify({ sessionId: metadata.sessionId })}\n\n`);
+  }
+  res.write('data: [DONE]\n\n');
+  res.end();
+}
+
+function streamViaCursor(res, messages, courseSlug, sessionId, model) {
+  const lastUser = [...messages].reverse().find(m => m.role === 'user');
+  if (!lastUser) {
+    sendSSEError(res, 'missing_message', 'No user message provided.');
+    return;
+  }
+
+  const args = [
+    '--print',
+    '--output-format', 'stream-json',
+    '--stream-partial-output',
+    '--trust'
+  ];
+  if (sessionId) {
+    args.push('--resume', sessionId);
+  }
+  if (model) {
+    args.push('--model', model);
+  }
+  args.push(lastUser.content);
+
+  const proc = spawn('cursor-agent', args, { cwd: __dirname, stdio: ['ignore', 'pipe', 'pipe'] });
+  let buffer = '';
+  let fullText = '';
+  let lastAssistant = '';
+  let newSessionId = null;
+
+  proc.stdout.on('data', chunk => {
+    buffer += chunk.toString();
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (!line) continue;
+      try {
+        const d = JSON.parse(line);
+        if (d.type === 'system' && d.subtype === 'init' && d.session_id) {
+          newSessionId = d.session_id;
+        } else if (d.type === 'stream_event') {
+          const token = d.event?.delta?.text || '';
+          if (token) {
+            fullText += token;
+            res.write(`data: ${JSON.stringify({ content: token })}\n\n`);
+          }
+        } else if (d.type === 'assistant') {
+          const assistantText = (d.message?.content || [])
+            .filter(part => part.type === 'text')
+            .map(part => part.text)
+            .join('');
+          if (assistantText && assistantText.startsWith(lastAssistant)) {
+            const delta = assistantText.slice(lastAssistant.length);
+            if (delta) {
+              fullText += delta;
+              res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
+            }
+          } else if (assistantText && !fullText) {
+            fullText += assistantText;
+            res.write(`data: ${JSON.stringify({ content: assistantText })}\n\n`);
+          }
+          lastAssistant = assistantText || lastAssistant;
+        } else if (d.type === 'result' && d.result && !fullText) {
+          fullText += d.result;
+          res.write(`data: ${JSON.stringify({ content: d.result })}\n\n`);
+        }
+      } catch {
+        // skip malformed lines
+      }
+    }
+  });
+
+  proc.stderr.on('data', chunk => {
+    const text = chunk.toString();
+    if (/api\s*key|login|auth/i.test(text)) {
+      sendSSEError(res, 'auth_required', 'Cursor Agent requires local login/authentication.', {
+        fix: 'Run: cursor-agent login'
+      });
+    }
+  });
+
+  proc.on('error', (err) => {
+    sendSSEError(res, 'cursor_exec_failed', `Cursor Agent failed to start: ${err.message}`);
+  });
+
+  proc.on('close', (code) => {
+    if (res.writableEnded) return;
+    if (code !== 0 && !fullText) {
+      sendSSEError(res, 'cursor_failed', `Cursor Agent exited with code ${code}.`);
+      return;
+    }
+    saveResponseFilesAndComplete(res, fullText, courseSlug, { sessionId: newSessionId });
+  });
+}
+
+function streamViaOpenCode(res, messages, courseSlug, sessionId, model) {
+  const lastUser = [...messages].reverse().find(m => m.role === 'user');
+  if (!lastUser) {
+    sendSSEError(res, 'missing_message', 'No user message provided.');
+    return;
+  }
+
+  const args = ['run', '--format', 'json'];
+  if (sessionId) {
+    args.push('--session', sessionId);
+  } else {
+    args.push('--continue');
+  }
+  if (model) {
+    args.push('--model', model);
+  }
+  args.push(lastUser.content);
+
+  const proc = spawn('opencode', args, { cwd: __dirname, stdio: ['ignore', 'pipe', 'pipe'] });
+  let buffer = '';
+  let fullText = '';
+  let newSessionId = null;
+
+  const flushLine = (line) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+    try {
+      const event = JSON.parse(trimmed);
+      const textCandidates = [
+        event.delta?.text,
+        event.message?.content,
+        event.content,
+        event.text,
+        event.result
+      ].filter(Boolean);
+      for (const item of textCandidates) {
+        const text = typeof item === 'string' ? item : '';
+        if (text) {
+          fullText += text;
+          res.write(`data: ${JSON.stringify({ content: text })}\n\n`);
+          break;
+        }
+      }
+      const sid = event.sessionID || event.sessionId || event.session_id;
+      if (sid) newSessionId = sid;
+    } catch {
+      // If output isn't json event, stream as plain text fallback.
+      fullText += trimmed + '\n';
+      res.write(`data: ${JSON.stringify({ content: `${trimmed}\n` })}\n\n`);
+    }
+  };
+
+  proc.stdout.on('data', chunk => {
+    buffer += chunk.toString();
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+    for (const line of lines) {
+      flushLine(line);
+    }
+  });
+
+  proc.stderr.on('data', chunk => {
+    const text = chunk.toString();
+    if (/provider|credential|auth|login/i.test(text)) {
+      sendSSEError(res, 'auth_required', 'OpenCode requires provider credentials/login.', {
+        fix: 'Run: opencode providers'
+      });
+    }
+  });
+
+  proc.on('error', (err) => {
+    sendSSEError(res, 'opencode_exec_failed', `OpenCode failed to start: ${err.message}`);
+  });
+
+  proc.on('close', (code) => {
+    if (res.writableEnded) return;
+    if (buffer.trim()) flushLine(buffer);
+    if (code !== 0 && !fullText) {
+      sendSSEError(res, 'opencode_failed', `OpenCode exited with code ${code}.`);
+      return;
+    }
+    saveResponseFilesAndComplete(res, fullText, courseSlug, { sessionId: newSessionId });
+  });
+}
+
+app.get('/api/agents/capabilities', (req, res) => {
+  res.json({ capabilities: getAgentCapabilities() });
+});
+
+app.get('/api/agents/models', (req, res) => {
+  const provider = (req.query.provider || 'auto').toString();
+  const capabilities = getAgentCapabilities();
+  const resolved = resolveProvider(provider, capabilities);
+
+  if (resolved === 'ollama') {
+    res.json({
+      provider: resolved,
+      supportsModelSelection: true,
+      allowCustomModel: true,
+      models: capabilities.ollama.models
+    });
+    return;
+  }
+
+  if (resolved === 'cursor') {
+    res.json({
+      provider: resolved,
+      supportsModelSelection: true,
+      allowCustomModel: true,
+      models: capabilities.cursor.models || []
+    });
+    return;
+  }
+
+  if (resolved === 'opencode') {
+    res.json({
+      provider: resolved,
+      supportsModelSelection: true,
+      allowCustomModel: true,
+      models: capabilities.opencode.models || []
+    });
+    return;
+  }
+
+  if (resolved === 'cloud') {
+    const models = process.env.OPENAI_API_KEY
+      ? ['gpt-4o', 'gpt-4.1-mini']
+      : ['claude-sonnet-4-6'];
+    res.json({
+      provider: resolved,
+      supportsModelSelection: true,
+      allowCustomModel: false,
+      models
+    });
+    return;
+  }
+
+  res.json({
+    provider: resolved,
+    supportsModelSelection: false,
+    allowCustomModel: false,
+    models: []
+  });
+});
+
 // POST /api/chat - Stream Claude responses via SSE
 app.post('/api/chat', (req, res) => {
   console.log('📨 POST /api/chat received, messages:', req.body?.messages?.length, 'USE_CLI:', USE_CLI);
-  const { messages, courseSlug, sessionId } = req.body;
+  const { messages, courseSlug, sessionId, provider = 'auto', model } = req.body;
 
   // Set SSE headers
   res.setHeader('Content-Type', 'text/event-stream');
@@ -494,8 +977,34 @@ app.post('/api/chat', (req, res) => {
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
 
-  if (USE_CLI) {
+  const capabilities = getAgentCapabilities();
+  const selectedProvider = resolveProvider(provider, capabilities);
+  if (selectedProvider === 'none') {
+    sendSSEError(res, 'no_provider_available', 'No local provider or cloud API is available.');
+    return;
+  }
+  res.write(`data: ${JSON.stringify({ provider: selectedProvider })}\n\n`);
+
+  if (selectedProvider === 'claude') {
     streamViaCLI(res, messages, courseSlug, sessionId);
+    return;
+  }
+  if (selectedProvider === 'ollama') {
+    if (!capabilities.ollama.installed) {
+      sendSSEError(res, 'ollama_not_installed', 'Ollama CLI not found.', { fix: 'Install Ollama from https://ollama.com/' });
+      return;
+    }
+    streamViaOllama(res, messages, courseSlug, model);
+    return;
+  }
+
+  if (selectedProvider === 'cursor') {
+    streamViaCursor(res, messages, courseSlug, sessionId, model);
+    return;
+  }
+
+  if (selectedProvider === 'opencode') {
+    streamViaOpenCode(res, messages, courseSlug, sessionId, model);
     return;
   }
 
