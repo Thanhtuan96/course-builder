@@ -49,7 +49,8 @@
     { "name": "professor:spotter",        "file": "commands/professor/spotter.md" },
     { "name": "professor:navigator",   "file": "commands/professor/navigator.md" },
     { "name": "professor:publish",       "file": "commands/professor/publish.md" },
-    { "name": "professor:skill-export",  "file": "commands/professor/skill-export.md" }
+    { "name": "professor:skill-export",  "file": "commands/professor/skill-export.md" },
+    { "name": "professor:onboard",        "file": "commands/professor/onboard.md" }
   ],
   "hooks": [
     {
