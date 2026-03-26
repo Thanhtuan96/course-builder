@@ -9,7 +9,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export const TOOL_SUBSTITUTIONS = {
   claude:   { AskUserQuestion: 'AskUserQuestion' },  // no-op
   gemini:   { AskUserQuestion: 'ask_user' },
-  opencode: { AskUserQuestion: null },
+  opencode: { AskUserQuestion: 'question' },
   cursor:   { AskUserQuestion: null },
 };
 
@@ -20,9 +20,9 @@ export const TOOL_SUBSTITUTIONS = {
  *   1. Backtick-wrapped:  `AskUserQuestion`
  *   2. Bare:              AskUserQuestion
  *
- * For null values (cursor, opencode), replaces with "ask the user directly in chat"
+ * For null values (cursor), replaces with "ask the user directly in chat"
  * so instructions remain readable without referencing a non-existent tool.
- * For string values (gemini), replaces with the platform tool name (preserving backticks).
+ * For string values (gemini → ask_user, opencode → question), replaces with the platform tool name (preserving backticks).
  */
 export function substituteTokens(content, platform) {
   const map = TOOL_SUBSTITUTIONS[platform];

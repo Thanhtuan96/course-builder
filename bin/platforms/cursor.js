@@ -27,7 +27,7 @@ export async function install(scope = 'local') {
     const frontmatterPath = join(PLUGIN_DIR, 'templates', 'cursor', 'professor.mdc');
     const frontmatter = existsSync(frontmatterPath)
       ? readFileSync(frontmatterPath, 'utf-8')
-      : '---\ndescription: Socratic learning assistant - professor mode\nglobs: ""\nalwaysApply: false\n---\n';
+      : '---\ndescription: Socratic learning assistant - professor mode\nalwaysApply: true\n---\n';
     const rawSkill = readFileSync(join(PLUGIN_DIR, 'shared', 'SKILL.md'), 'utf-8');
     // Strip YAML frontmatter from SKILL.md so the .mdc file has only one frontmatter block
     const skill = rawSkill.startsWith('---')
