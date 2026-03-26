@@ -64,4 +64,40 @@ Use these category templates when live research via the researcher agent is unav
 
 ---
 
+## Decision Exercises (Non-Coding)
+
+*Search keywords for decision-making and architecture research:*
+
+### Decision Frameworks
+
+- "decision matrix template"
+- "pros and cons decision framework"
+- "weighted decision criteria method"
+- "[topic] architecture decision framework"
+- "trade-off analysis [topic]"
+
+### Architecture & System Design
+
+- "[topic] architecture best practices"
+- "system design [topic]"
+- "microservices vs monolith [topic]"
+- "[framework] vs [alternative] comparison"
+- "[technology] scalability considerations"
+
+### Troubleshooting & Diagnosis
+
+- "[error symptom] diagnosis approach"
+- "[technology] troubleshooting guide"
+- "debugging [technology] common issues"
+- "[system] failure mode analysis"
+
+### Case Studies
+
+- "[company] [topic] architecture"
+- "[technology] real-world use case"
+- "[framework] production examples"
+- "when to use [technology] vs [alternative]"
+
+---
+
 *This file is used as a fallback when live research is unavailable. The hint and stuck commands first attempt to delegate to the researcher agent for tailored keywords.*
