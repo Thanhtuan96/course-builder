@@ -43,8 +43,8 @@ async function promptScope(platform) {
   }
   const globalPath = {
     claude:   '~/.claude/plugins/professor/',
-    gemini:   '~/GEMINI.md',
-    opencode: '~/.opencode/professor.md',
+    gemini:   '~/.gemini/GEMINI.md',
+    opencode: '~/.config/opencode/',
     cursor:   '~/.cursor/rules/professor.mdc',
   }[platform] || '~/';
 
