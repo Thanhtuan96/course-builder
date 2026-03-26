@@ -14,13 +14,13 @@ export function detect() {
   );
 }
 
-/** Install professor plugin. scope = 'global' → ~/.claude/plugins/professor/, 'local' → cwd/.claude/ */
+/** Install professor plugin. scope = 'global' → ~/.claude/plugins/professor/, 'local' → cwd/.claude/plugins/professor/ */
 export async function install(scope = 'local') {
   const targetDir = scope === 'global'
     ? join(process.env.HOME || '', '.claude', 'plugins', 'professor')
-    : join(process.cwd(), '.claude');
+    : join(process.cwd(), '.claude', 'plugins', 'professor');
 
-  const dirLabel = scope === 'global' ? '~/.claude/plugins/professor/' : '.claude/';
+  const dirLabel = scope === 'global' ? '~/.claude/plugins/professor/' : '.claude/plugins/professor/';
   if (!existsSync(targetDir)) {
     mkdirSync(targetDir, { recursive: true });
     console.log(`✓ Created ${dirLabel} directory`);

@@ -1,18 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(ls)",
-      "Bash(mkdir)",
-      "Bash(cd)",
-      "Bash(pwd)",
+      "Bash(git worktree:*)",
+      "Bash(git checkout:*)",
+      "Bash(git branch:*)",
       "Read",
       "Write",
       "Glob",
       "Grep",
-      "WebFetch"
+      "WebSearch"
     ],
-    "deny": [
-      "Bash(rm -rf *)"
-    ]
+    "deny": []
   }
 }
