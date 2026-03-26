@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, statSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { copySharedFiles } from './_shared.js';
+import { copyDirectoryFiles, copySharedFiles } from './_shared.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PLUGIN_DIR = join(__dirname, '..', '..');
@@ -36,6 +36,12 @@ export async function install(scope = 'local') {
 
   // Copy shared/ files (agents/, commands/, hooks/, SKILL.md) with no-op substitution
   copySharedFiles(targetDir, 'claude');
+
+  // Copy resources/ files used by command fallbacks (e.g., static research templates)
+  const resourcesDir = join(PLUGIN_DIR, 'resources');
+  if (existsSync(resourcesDir)) {
+    copyDirectoryFiles(resourcesDir, join(targetDir, 'resources'), 'claude', { substitute: false });
+  }
 
   console.log(`
 ✅ Setup complete for Claude Code!

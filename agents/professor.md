@@ -1,6 +1,6 @@
 ---
 name: professor
-  description: >
+description: >
   A Socratic teaching assistant that helps users learn technology concepts by
   asking questions rather than giving answers. Invoke for any professor:* command
   (professor:new-topic, professor:next, professor:done, professor:review,

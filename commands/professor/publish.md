@@ -18,7 +18,7 @@ Check both worktree and legacy structures:
 
 ## Step 2: Multi-Course Disambiguation
 
-If multiple course directories exist in `learning/` (e.g., `learning/react-hooks/` and `learning/sql-auditor/`), ask the user which one to publish:
+If multiple course directories exist in `learning/` (e.g., `learning/react-hooks/` and `learning/sql-auditor/`), ask the user which one to publish using AskUserQuestion:
 > "You have multiple courses. Which would you like to publish?"
 List all `learning/` directories that contain `COURSE.md`.
 
@@ -48,10 +48,10 @@ Extract:
 - **description**: from SKILL.md frontmatter `description` (skills) or COURSE.md
 - **level**: from COURSE.md frontmatter (Beginner / Intermediate / Advanced / Expert)
 
-Ask the user for any missing required fields:
-- **GitHub username**: AskUserQuestion — "What is your GitHub username?"
-- **description**: AskUserQuestion — "Give a 1-2 sentence description of this [course/skill]."
-- **topics**: AskUserQuestion — "What topics does this cover?" (comma-separated list)
+Ask the user for any missing required fields using AskUserQuestion:
+- **GitHub username**: "What is your GitHub username?"
+- **description**: "Give a 1-2 sentence description of this [course/skill]."
+- **topics**: "What topics does this cover?" (comma-separated list)
 
 If level is missing from frontmatter, ask: "What difficulty level?" (Beginner / Intermediate / Advanced / Expert)
 

@@ -46,20 +46,28 @@ export function substituteTokens(content, platform) {
  */
 export function copySharedFiles(targetDir, platform) {
   const sharedDir = join(__dirname, '..', '..', 'shared');
-  _copyRecursive(sharedDir, targetDir, platform);
+  _copyRecursive(sharedDir, targetDir, platform, true);
 }
 
-function _copyRecursive(src, dest, platform) {
+/**
+ * Recursively copy any directory into targetDir.
+ * By default, applies token substitution to .md/.js files.
+ */
+export function copyDirectoryFiles(sourceDir, targetDir, platform, { substitute = true } = {}) {
+  _copyRecursive(sourceDir, targetDir, platform, substitute);
+}
+
+function _copyRecursive(src, dest, platform, substitute) {
   if (!existsSync(src)) return;
   const stat = statSync(src);
   if (stat.isDirectory()) {
     if (!existsSync(dest)) mkdirSync(dest, { recursive: true });
     for (const file of readdirSync(src)) {
-      _copyRecursive(join(src, file), join(dest, file), platform);
+      _copyRecursive(join(src, file), join(dest, file), platform, substitute);
     }
   } else if (!existsSync(dest)) {
     let content = readFileSync(src, 'utf-8');
-    if (src.endsWith('.md') || src.endsWith('.js')) {
+    if (substitute && (src.endsWith('.md') || src.endsWith('.js'))) {
       content = substituteTokens(content, platform);
     }
     writeFileSync(dest, content);

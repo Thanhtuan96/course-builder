@@ -43,7 +43,7 @@ cd web/client && npm run dev          # Vite dev server
 ```
 plugin.json                  <- Plugin manifest (Claude Code auto-discovery)
 agents/                      <- 5 agent definitions (Markdown)
-commands/professor/          <- 23 command definitions (Markdown, one per professor:* command)
+commands/professor/          <- 25 command definitions (Markdown, one per professor:* command)
 hooks/pre-compact.js         <- PreCompact hook (CommonJS) — saves course state before compression
 shared/                      <- Platform-neutral canonical files (tool names as placeholders)
 templates/                   <- Per-platform setup templates (claude/, gemini/, cursor/, opencode/)
@@ -146,6 +146,8 @@ These apply to the professor agent and all commands — never violate them:
 | `professor:template-import` | Imports a course from a template |
 | `professor:spotter` | Delegates to the spotter agent |
 | `professor:navigator` | Delegates to the navigator agent |
+| `professor:skill-export` | Encodes completed capstone into a reusable `SKILL.md`; requires `COMPLETION.md` with `Course Complete` verdict |
+| `professor:publish` | Publishes a course template or earned skill to the community registry via GitHub PR (`npx course-professor publish`) |
 
 ## PreCompact Hook
 
