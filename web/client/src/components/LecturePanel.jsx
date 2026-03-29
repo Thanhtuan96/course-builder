@@ -8,9 +8,9 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import MDEditor from '@uiw/react-md-editor';
 import { fetchCourseFile, fetchExercises, fetchExercise, saveExercise } from '../api/client.js';
 import { Button } from './ui/button.jsx';
+import ExerciseEditor from './ExerciseEditor.jsx';
 
 const CODE_COMPONENTS = {
   code({ node, inline, className, children, ...props }) {
@@ -295,13 +295,10 @@ export default function LecturePanel({ courseSlug, content: initialContent, onLe
                     ))}
                   </select>
                 </div>
-                <div className="min-h-0 flex-1 overflow-hidden" data-color-mode="dark">
-                  <MDEditor
+                <div className="min-h-0 flex-1 overflow-hidden">
+                  <ExerciseEditor
                     value={exerciseContent}
                     onChange={setExerciseContent}
-                    preview="live"
-                    height="100%"
-                    style={{ backgroundColor: '#0f1117' }}
                   />
                 </div>
               </div>

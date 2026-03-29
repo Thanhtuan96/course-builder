@@ -74,9 +74,12 @@ export default function App() {
   // Handle course selection
   function handleCourseSelect(course) {
     setSelectedCourse(course);
-    setCurrentPhase('idle');
-    setChatMessages([]);
+    setCurrentPhase(course ? 'lecture' : 'idle');
   }
+
+  useEffect(() => {
+    setCurrentPhase(selectedCourse ? 'lecture' : 'idle');
+  }, [selectedCourse]);
 
   // Handle tab change for mobile
   function handleTabChange(tab) {

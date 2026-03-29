@@ -18,6 +18,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
  * @param {Function} props.onSendMessage - Callback when message is sent (optional, for external handling)
  */
 export default function ChatPanel({ courseSlug, currentPhase = 'idle', onSendMessage }) {
+  const getWelcomeMessage = useCallback(
+    (hasCourse) =>
+      hasCourse
+        ? 'Course loaded. You can continue with `professor:next`, `professor:review`, or `professor:discuss`.'
+        : 'Welcome to Professor! Select a course and type `professor:new-topic` to start your first course.',
+    []
+  );
+
   const [provider, setProvider] = useState(() => localStorage.getItem('professor.provider') || 'auto');
   const [model, setModel] = useState(() => localStorage.getItem('professor.model') || '');
   const [capabilities, setCapabilities] = useState(null);
@@ -28,20 +36,40 @@ export default function ChatPanel({ courseSlug, currentPhase = 'idle', onSendMes
   const [messages, setMessages] = useState(() => [
     {
       role: 'assistant',
-      content: courseSlug
-        ? 'Course loaded. How can I help you learn today?'
-        : 'Welcome to Professor! Select a course and type `professor:new-topic` to start your first course.',
+      content: getWelcomeMessage(!!courseSlug),
     },
   ]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [phase, setPhase] = useState(currentPhase);
   const messagesEndRef = useRef(null);
+  const lastCommandRef = useRef('');
 
   // Update phase when prop changes
   useEffect(() => {
     setPhase(currentPhase);
   }, [currentPhase]);
+
+  // Keep chat UX aligned with selected course:
+  // - no course => idle/new-topic
+  // - selected course => lecture/review commands
+  useEffect(() => {
+    setPhase(courseSlug ? 'lecture' : 'idle');
+    setSessionId(null);
+
+    setMessages((prev) => {
+      const hasOnlyBootstrapMessage =
+        prev.length === 1 &&
+        prev[0]?.role === 'assistant' &&
+        (prev[0]?.content?.includes('Welcome to Professor!') ||
+          prev[0]?.content?.includes('Course loaded.'));
+
+      if (hasOnlyBootstrapMessage) {
+        return [{ role: 'assistant', content: getWelcomeMessage(!!courseSlug) }];
+      }
+      return prev;
+    });
+  }, [courseSlug, getWelcomeMessage]);
 
   useEffect(() => {
     localStorage.setItem('professor.provider', provider);
@@ -104,14 +132,14 @@ export default function ChatPanel({ courseSlug, currentPhase = 'idle', onSendMes
     },
     onComplete: () => {
       setIsStreaming(false);
-      // If professor:next was called, trigger lecture refresh
-      const lastUserMsg = messages[messages.length - 1];
-      if (lastUserMsg?.content?.includes('professor:next')) {
+      // Use the explicit last command text instead of message array timing.
+      const lastCommand = (lastCommandRef.current || '').toLowerCase();
+      if (lastCommand.includes('professor:next')) {
         window.dispatchEvent(new CustomEvent('refresh-lecture'));
         setPhase('lecture');
-      } else if (lastUserMsg?.content?.includes('professor:review')) {
+      } else if (lastCommand.includes('professor:review')) {
         setPhase('review');
-      } else if (lastUserMsg?.content?.includes('professor:done')) {
+      } else if (lastCommand.includes('professor:done')) {
         setPhase('lecture');
       }
     },
@@ -153,6 +181,7 @@ export default function ChatPanel({ courseSlug, currentPhase = 'idle', onSendMes
 
   const sendMessage = useCallback(async (text) => {
     if (!text.trim() || isStreaming) return;
+    lastCommandRef.current = text.trim();
 
     const userMessage = { role: 'user', content: text };
     const updatedMessages = [...messages, userMessage];
@@ -326,7 +355,7 @@ export default function ChatPanel({ courseSlug, currentPhase = 'idle', onSendMes
                 : 'self-start rounded-bl-sm border border-slate-700 bg-slate-900 text-slate-200'
             }`}
           >
-            <div className="break-words [&_p]:my-1.5 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_pre]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:bg-slate-950 [&_pre]:p-3 [&_code]:rounded [&_code]:bg-slate-950 [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-xs [&_strong]:font-semibold">
+            <div className="wrap-break-word [&_p]:my-1.5 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_pre]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:bg-slate-950 [&_pre]:p-3 [&_code]:rounded [&_code]:bg-slate-950 [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-xs [&_strong]:font-semibold">
               {renderContent(msg.content)}
             </div>
           </div>

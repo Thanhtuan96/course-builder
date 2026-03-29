@@ -63,3 +63,50 @@
 **Effort:** M (human: ~2h) → S (CC+gstack: ~10min)
 **Priority:** P3 — no urgency while safeSlug is in place.
 **Depends on:** Nothing — standalone refactor.
+
+---
+
+## Archive previous LECTURE.md before `profesor:next` overwrites it
+
+**What:** Before the server writes a new `LECTURE.md` during `profesor:next`, rename/move the previous content to an archive location (e.g. `courses/{slug}/lectures/LECTURE-01-section-name.md`). Keep the last 3–5 archives; delete older ones automatically.
+
+**Why:** The skill states `LECTURE.md is disposable — overwritten by each profesor:next`, but this means completed lecture content is silently lost. Learners often want to revisit earlier sections for review. Archive gives them that without complicating the core syllabus tracker.
+
+**Pros:** Zero friction — transparent to the user experience. No behavior change for the happy path. Enables `profesor:review` or a new `profesor:review-section` to pull up past lecture content. Simple to implement in `saveFilesFromResponse()` in `server.js`.
+
+**Cons:** Adds a filesystem operation before each write. Archive files add clutter to course dirs — mitigated by capping at N versions.
+
+**Context:** Discovered during web investigation (2026-03-27). The overwrite is explicit in the skill and the server — no backup step exists.
+
+**Effort:** S (human: ~15min)
+**Priority:** P3 — useful quality-of-life, not blocking
+**Depends on:** Nothing — standalone change in `web/server.js`
+
+---
+
+## NOTES.md — Per-course learner insights and session summaries
+
+**What:** After each `profesor:done`, generate or update `courses/{slug}/NOTES.md` to capture:
+- **Session recap**: what was covered in the session (topic, key concepts)
+- **User strengths**: demonstrated strong understanding of X, explained Y well
+- **Growth areas**: struggled with Z, needs review of concept W
+- **Suggested next focus**: based on review history, what to double down on
+- **Struggle log**: patterns across sessions (e.g., "keeps mixing up closures and callbacks")
+
+The `NOTES.md` acts as the Professor's "gradebook" — giving both learner and AI a persistent view of the learning trajectory beyond the raw syllabus checklist.
+
+**Why:** `COURSE.md` tracks what was done, not how well or what patterns emerged. A learner who finishes all sections but consistently struggled with async patterns has a gap that `profesor:done` alone doesn't surface. NOTES.md closes that gap.
+
+**Pros:** Enables smarter `profesor:review` calls — the AI can reference past struggles. Helps learners self-reflect. Creates a natural "learner profile" over time. Low implementation surface — append to NOTES.md after each `profesor:done` response.
+
+**Cons:** Requires `profesor:done` to generate insight text, which adds latency. Risk of generic/boilerplate analysis if not prompted carefully. Needs a structured format to avoid becoming a messy journal.
+
+**Context:** Not yet designed — plan phase needed to define:
+- Who writes NOTES.md: the AI (auto-generate) or the learner (self-reflect)?
+- Format: freeform Markdown, or structured fields (strengths[], gaps[], nextFocus[])?
+- Trigger: only on `profesor:done`, or also on `profesor:review` cycles?
+- Should NOTES.md be visible in the web UI's LecturePanel?
+
+**Effort:** M — requires plan phase first
+**Priority:** P2 — meaningful learning value, but needs design before implementation
+**Depends on:** Plan phase — do not start implementation until NOTES.md format is designed
