@@ -78,7 +78,10 @@ function _copyRecursive(src, dest, platform, substitute) {
  * Adapt agent file frontmatter for a target platform.
  *
  * Claude Code uses: tools (comma string), model: inherit, color: name
- * OpenCode requires: tools as YAML list, color as hex (or absent), model as real ID (or absent)
+ * OpenCode requires:
+ *   tools → object/record { ToolName: true, ... }  (schema: additionalProperties: boolean)
+ *   color → dropped (Claude color names/hex are not reliably compatible)
+ *   model: inherit → dropped
  *
  * Returns the adapted content string.
  */
@@ -91,33 +94,21 @@ export function adaptAgentFrontmatter(content, platform) {
   const endIdx = lines.indexOf('---', 1);
   if (endIdx === -1) return content;
 
-  const COLOR_MAP = { blue: '#3B82F6', green: '#22C55E', red: '#EF4444', yellow: '#EAB308', purple: '#A855F7', orange: '#F97316', pink: '#EC4899', gray: '#6B7280', grey: '#6B7280' };
-
   const adapted = [];
   for (let i = 1; i < endIdx; i++) {
     const line = lines[i];
 
-    // tools: Read, Write, Bash → tools:\n  - Read\n  - Write ...
+    // tools: Read, Write, Bash → tools record: { Read: true, Write: true, ... }
     const toolsMatch = line.match(/^tools:\s*(.+)/);
     if (toolsMatch) {
       const toolList = toolsMatch[1].split(',').map(t => t.trim()).filter(Boolean);
       adapted.push('tools:');
-      for (const t of toolList) adapted.push(`  - ${t}`);
+      for (const t of toolList) adapted.push(`  ${t}: true`);
       continue;
     }
 
-    // color: blue → color: #3B82F6 (or drop unknown names)
-    const colorMatch = line.match(/^color:\s*(.+)/);
-    if (colorMatch) {
-      const val = colorMatch[1].trim();
-      if (/^#[0-9A-Fa-f]{3,8}$/.test(val)) {
-        adapted.push(line); // already valid hex
-      } else if (COLOR_MAP[val.toLowerCase()]) {
-        adapted.push(`color: ${COLOR_MAP[val.toLowerCase()]}`);
-      }
-      // unknown color names: drop the line
-      continue;
-    }
+    // color — drop entirely (OpenCode only accepts 6-digit hex or specific enum values)
+    if (/^color:\s*/.test(line)) continue;
 
     // model: inherit → drop (OpenCode needs a real model ID or omit)
     if (/^model:\s*inherit\s*$/.test(line)) continue;
