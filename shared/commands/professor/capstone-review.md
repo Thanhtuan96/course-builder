@@ -7,7 +7,11 @@ Review the user's completed capstone project. This command is only available aft
 
 **Steps:**
 
-1. Check if a `courses/` directory exists in the current working directory.
+1. **Find active course directory** — check both the new worktree structure and legacy:
+   - If already in `learning/{slug}/` or `courses/{slug}/` directory, use that.
+   - Otherwise, check for `COURSE.md` in `learning/` subdirectory.
+   - If not found there, check `courses/` subdirectory (legacy).
+   - If still not found, check for `COURSE.md` in the current working directory.
    - If no active course is found, respond:
      > "No active course found. Run `/professor:new-topic` to start a course first."
    - Stop here if no course exists.
@@ -48,6 +52,16 @@ Review the user's completed capstone project. This command is only available aft
    - 🏆 **Course Complete** — they demonstrated solid understanding across all course objectives.
      Update `COURSE.md`: set the Capstone Project row status to ✅ Complete and record today's date.
      Add an entry to the Progress Log: `| [date] | Capstone | Review complete | Course Complete verdict |`
+     **Also write `learning/{slug}/COMPLETION.md`** (or `courses/{slug}/` fallback — same directory as COURSE.md):
+     ```yaml
+     ---
+     course: {slug}
+     completed: {YYYY-MM-DD}
+     verdict: Course Complete
+     capstone_summary: {first 200 characters of your capstone_summary from the review}
+     ---
+     ```
+     Extract `capstone_summary` from the first 200 characters of what the user described building.
      Say:
      > "🎓 Course Complete! You built this yourself and it shows. Congratulations — you've earned this."
 

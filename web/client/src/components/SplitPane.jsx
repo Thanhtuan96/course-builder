@@ -2,8 +2,6 @@
  * SplitPane.jsx - 50/50 split layout with divider
  */
 
-import './SplitPane.css';
-
 /**
  * SplitPane component - 50/50 split layout with mobile support
  * @param {Object} props
@@ -23,17 +21,19 @@ export default function SplitPane({
   const showChat = activeTab === 'both' || mobileTab === 'chat';
 
   return (
-    <div className="split-pane">
+    <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden md:flex-row">
       {showLecture && (
-        <div className="split-pane-lecture">
+        <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden md:w-1/2">
           {lecturePanel}
         </div>
       )}
       
-      {activeTab === 'both' && <div className="split-pane-divider" />}
+      {activeTab === 'both' && showLecture && showChat && (
+        <div className="hidden w-px shrink-0 bg-border md:block" />
+      )}
       
       {showChat && (
-        <div className="split-pane-chat">
+        <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden md:w-1/2">
           {chatPanel}
         </div>
       )}

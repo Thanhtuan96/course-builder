@@ -1,4 +1,5 @@
 ---
+name: professor:navigator
 description: View section bridges and concept thread, or generate new bridges between completed sections
 ---
 

@@ -1,0 +1,24 @@
+{
+  "name": "course-learning-plugin",
+  "owner": {
+    "name": "ronnie-tk"
+  },
+  "metadata": {
+    "description": "A Socratic learning plugin for Claude Code. Teaches by asking questions, not giving answers.",
+    "version": "1.2.0"
+  },
+  "plugins": [
+    {
+      "name": "course-learning-plugin",
+      "source": "./",
+      "description": "Professor — a Socratic learning assistant with 25 commands, 5 agents, spaced repetition, and git worktree-based courses.",
+      "version": "1.2.0",
+      "author": { "name": "ronnie-tk" },
+      "repository": "https://github.com/Thanhtuan96/course-builder",
+      "license": "MIT",
+      "keywords": ["learning", "education", "socratic", "courses", "claude"],
+      "category": "productivity",
+      "strict": false
+    }
+  ]
+}

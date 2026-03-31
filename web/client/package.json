@@ -12,16 +12,27 @@
   "dependencies": {
     "@bytemd/plugin-gfm": "^1.22.0",
     "@bytemd/vue": "^1.22.0",
-    "@uiw/react-md-editor": "^4.0.11",
+    "@radix-ui/react-select": "^2.2.6",
+    "@tiptap/markdown": "^3.20.5",
+    "@tiptap/react": "^3.20.5",
+    "@tiptap/starter-kit": "^3.20.5",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "dompurify": "^3.0.0",
+    "lucide-react": "^1.7.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.0.0",
     "react-syntax-highlighter": "^16.0.0",
-    "remark-gfm": "^4.0.0"
+    "remark-gfm": "^4.0.0",
+    "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.2",
     "@vitejs/plugin-react": "^4.0.0",
+    "autoprefixer": "^10.4.27",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^4.2.2",
     "vite": "^7.0.0",
     "vitest": "^3.0.0"
   }

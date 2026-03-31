@@ -1,7 +1,19 @@
 #!/usr/bin/env node
 
-import { existsSync, mkdirSync, symlinkSync, readFileSync, writeFileSync, readdirSync, cpSync, statSync } from 'fs';
-import { join, dirname } from 'path';
+// Registry helpers (extracted for testability)
+import {
+  fetchRegistryText,
+  fetchRegistryIndex,
+  style,
+  validateItemName,
+  resolveScope,
+  confirmOverwrite,
+  installSkill,
+  installCourse,
+} from './registry-helpers.js';
+
+import { existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync, statSync, mkdtempSync } from 'fs';
+import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
 import chalk from 'chalk';
@@ -11,59 +23,806 @@ import ora from 'ora';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SUPPORTED_AGENTS = ['claude', 'gemini', 'opencode', 'cursor'];
 
-// Registry constants
-const REGISTRY_INDEX_URL =
-  'https://raw.githubusercontent.com/professor-skills-hub/courses-skills-registry/main/index.json';
-const RAW_COURSES_BASE =
-  'https://raw.githubusercontent.com/professor-skills-hub/courses-skills-registry/main/courses';
-const REGISTRY_INSTALL_BASE = join(os.homedir(), '.claude', 'plugins', 'professor', 'skills');
-
-async function fetchRegistryText(url) {
-  const { get } = await import('https');
-  return new Promise((resolve, reject) => {
-    get(url, (res) => {
-      if (res.statusCode !== 200) {
-        reject(new Error(`HTTP ${res.statusCode} fetching ${url}`));
-        res.resume();
-        return;
-      }
-      let data = '';
-      res.on('data', (chunk) => (data += chunk));
-      res.on('end', () => resolve(data));
-    }).on('error', reject);
-  });
-}
-
-async function fetchRegistryIndex() {
-  const text = await fetchRegistryText(REGISTRY_INDEX_URL);
-  return JSON.parse(text);
-}
-
-// Theme: consistent symbols + colors (chalk respects NO_COLOR / FORCE_COLOR)
-const THEME = {
-  success: '✅',
-  warning: '⚠️',
-  error: '❌',
-  info: '→',
-};
-const STYLE = {
-  success: (s) => chalk.green(THEME.success + ' ' + s),
-  warning: (s) => chalk.yellow(THEME.warning + ' ' + s),
-  error: (s) => chalk.red(THEME.error + ' ' + s),
-  info: (s) => chalk.dim(THEME.info + ' ' + s),
-};
-function style(type, text) {
-  return STYLE[type](text);
-}
+// ─── Agent / setup helpers ────────────────────────────────────────────────────
 
 async function detectAgent() {
   const detected = [];
   for (const name of SUPPORTED_AGENTS) {
-    const { detect } = await import(`./platforms/${name}.js`);
-    if (detect()) detected.push(name);
+    try {
+      const { detect } = await import(`./platforms/${name}.js`);
+      if (detect()) detected.push(name);
+    } catch {}
   }
   return detected;
 }
+
+async function promptScope(platform) {
+  if (!process.stdin.isTTY) {
+    console.error(style('error', 'Non-interactive mode. Run with --local or --global.'));
+    process.exit(1);
+  }
+  const globalPath = {
+    claude:   '~/.claude/plugins/professor/',
+    gemini:   '~/.gemini/GEMINI.md',
+    opencode: '~/.config/opencode/',
+    cursor:   '~/.cursor/rules/professor.mdc',
+  }[platform] || '~/';
+
+  const { scope } = await inquirer.prompt([{
+    type: 'list',
+    name: 'scope',
+    message: `Install scope for ${platform}:`,
+    choices: [
+      { name: `Global — ${globalPath} (available in all projects)`, value: 'global' },
+      { name: 'Local — current project only', value: 'local' },
+    ],
+    default: 'local',
+  }]);
+  return scope;
+}
+
+async function setupAgent(agent) {
+  const agentLower = agent.toLowerCase();
+  if (!SUPPORTED_AGENTS.includes(agentLower)) {
+    console.error(style('error', `Unsupported agent: ${agent}. Supported: ${SUPPORTED_AGENTS.join(', ')}. Run 'course-professor list' for details.`));
+    process.exit(1);
+  }
+  const scope = isGlobal ? 'global' : isLocal ? 'local' : await promptScope(agentLower);
+  const { install } = await import(`./platforms/${agentLower}.js`);
+  await install(scope);
+}
+
+async function promptAgentSelection(agents) {
+  if (!process.stdin.isTTY) {
+    console.error(style('error', 'Non-interactive mode. Run with: course-professor setup <agent> --local or --global'));
+    process.exit(1);
+  }
+  const { agent } = await inquirer.prompt([{
+    type: 'list',
+    name: 'agent',
+    message: 'Which agent would you like to set up?',
+    choices: agents.map((a) => ({ name: a, value: a })),
+  }]);
+  return agent;
+}
+
+async function init() {
+  const detected = await detectAgent();
+  if (detected.length === 0) {
+    console.log(style('info', 'No agent detected automatically.\n'));
+    const choice = await promptAgentSelection(SUPPORTED_AGENTS);
+    await setupAgent(choice);
+    return;
+  }
+  if (detected.length === 1) {
+    console.log(style('info', `Detected: ${detected[0]}\n`));
+    await setupAgent(detected[0]);
+    return;
+  }
+  console.log(style('info', `Multiple agents detected: ${detected.join(', ')}\n`));
+  const choice = await promptAgentSelection(detected);
+  await setupAgent(choice);
+}
+
+// ─── CLI entry point ──────────────────────────────────────────────────────────
+
+const args = process.argv.slice(2);
+const isGlobal = args.includes('--global');
+const isLocal  = args.includes('--local');
+const isForce  = args.includes('--force');
+const command  = args[0] || 'help';
+
+switch (command) {
+
+  case 'web': {
+    const { execSync } = await import('child_process');
+    const webDir = join(__dirname, '..', 'web');
+    const cloudOnly = args.includes('--cloud');
+
+    if (!existsSync(webDir)) {
+      console.error(style('error', 'Web UI not found. Ensure the package is fully installed.'));
+      process.exit(1);
+    }
+
+    const isProduction = args.includes('--production');
+    if (isProduction) process.env.NODE_ENV = 'production';
+
+    if (isProduction) {
+      const distPath = join(webDir, 'client', 'dist');
+      if (!existsSync(distPath)) {
+        console.error(style('warning', 'Production build not found.'));
+        console.error('   From repo root: npm run build');
+        console.error('   Then: npx course-professor web --production');
+        process.exit(1);
+      }
+    }
+
+    if (!existsSync(join(webDir, 'node_modules'))) {
+      const spinner = ora('Installing web dependencies…').start();
+      try {
+        execSync('npm install', { cwd: webDir, stdio: 'pipe' });
+        spinner.succeed('Web dependencies installed.');
+      } catch {
+        spinner.fail('Web dependencies failed.');
+        console.error(style('error', `Check your network and try: cd ${webDir} && npm install`));
+        process.exit(1);
+      }
+    }
+
+    const clientDir = join(webDir, 'client');
+    if (!isProduction && existsSync(clientDir) && !existsSync(join(clientDir, 'node_modules'))) {
+      const spinner = ora('Installing client dependencies…').start();
+      try {
+        execSync('npm install', { cwd: clientDir, stdio: 'pipe' });
+        spinner.succeed('Client dependencies installed.');
+      } catch {
+        spinner.fail('Client dependencies failed.');
+        console.error(style('error', `Check your network and try: cd ${clientDir} && npm install`));
+        process.exit(1);
+      }
+    }
+
+    async function findApiKey() {
+      if (process.env.ANTHROPIC_API_KEY) return { key: process.env.ANTHROPIC_API_KEY, source: 'env' };
+      if (process.env.CLAUDE_API_KEY)    return { key: process.env.CLAUDE_API_KEY,    source: 'env' };
+      if (process.env.OPENAI_API_KEY)    return { key: process.env.OPENAI_API_KEY,    source: 'env' };
+
+      const envFile = join(process.cwd(), '.env');
+      if (existsSync(envFile)) {
+        try {
+          const lines = readFileSync(envFile, 'utf-8').split('\n');
+          for (const line of lines) {
+            const m = line.match(/^(ANTHROPIC_API_KEY|CLAUDE_API_KEY|OPENAI_API_KEY)\s*=\s*(.+)$/);
+            if (m) return { key: m[2].trim().replace(/^["']|["']$/g, ''), source: '.env' };
+          }
+        } catch {}
+      }
+
+      if (process.platform === 'darwin') {
+        try {
+          const { execSync: _exec } = await import('child_process');
+          for (const svc of ['anthropic-api-key', 'Anthropic API Key', 'ANTHROPIC_API_KEY']) {
+            try {
+              const raw = _exec(`security find-generic-password -s "${svc}" -w`, {
+                encoding: 'utf-8', timeout: 2000, stdio: ['ignore', 'pipe', 'ignore'],
+              }).trim();
+              if (raw?.startsWith('sk-ant-api')) return { key: raw, source: `keychain:${svc}` };
+            } catch {}
+          }
+        } catch {}
+      }
+
+      const home = process.env.HOME || '';
+      for (const p of [
+        join(home, '.claude', 'settings.json'),
+        join(home, '.anthropic', 'config.json'),
+      ]) {
+        if (existsSync(p)) {
+          try {
+            const s = JSON.parse(readFileSync(p, 'utf-8'));
+            const k = s.ANTHROPIC_API_KEY || s.apiKey || s.api_key;
+            if (k) return { key: k, source: p };
+          } catch {}
+        }
+      }
+      return null;
+    }
+
+    function hasLocalProvider() {
+      for (const cmd of ['claude', 'ollama', 'cursor-agent', 'opencode']) {
+        try {
+          execSync(`which ${cmd}`, { stdio: 'ignore' });
+          return true;
+        } catch {}
+      }
+      return false;
+    }
+
+    let found = await findApiKey();
+    const localProviderAvailable = hasLocalProvider();
+    const shouldPromptForApiKey = cloudOnly || !localProviderAvailable;
+    if (!found && shouldPromptForApiKey) {
+      if (!process.stdin.isTTY) {
+        console.log(style('info', 'No API key. Chat disabled.\n'));
+      } else {
+        console.log('');
+        console.log(style('info', 'No Anthropic API key detected.'));
+        console.log('   Get one at: https://console.anthropic.com/settings/keys');
+        console.log('   (Key will be saved to .env if you paste one; otherwise chat will be disabled.)');
+        console.log('');
+        const { apiKeyInput } = await inquirer.prompt([{
+          type: 'input',
+          name: 'apiKeyInput',
+          message: 'Paste your API key (or press Enter to skip):',
+        }]);
+        const trimmed = (apiKeyInput || '').trim();
+        if (trimmed && trimmed.startsWith('sk-')) {
+          const envPath = join(process.cwd(), '.env');
+          const line = `ANTHROPIC_API_KEY=${trimmed}\n`;
+          try {
+            const existing = existsSync(envPath) ? readFileSync(envPath, 'utf-8') : '';
+            if (!existing.includes('ANTHROPIC_API_KEY')) {
+              writeFileSync(envPath, existing + line);
+              console.log(`   ${style('success', "Saved to .env — won't ask again.")}\n`);
+            }
+          } catch {}
+          found = { key: trimmed, source: '.env (just saved)' };
+        } else {
+          console.log('   Skipping. Chat disabled.\n');
+        }
+      }
+    }
+
+    const apiKey = found?.key;
+    if (apiKey) {
+      console.log(style('success', `API key loaded (${found.source}).\n`));
+      process.env.ANTHROPIC_API_KEY = apiKey;
+    } else if (localProviderAvailable) {
+      console.log(style('info', 'No API key found. Local providers will be used when available.\n'));
+    }
+
+    let port = '3000';
+    if (!isProduction) port = args[1] || process.env.PORT || '3000';
+    else if (args[1] && args[1] !== '--production') port = args[1];
+    process.env.PORT = port;
+
+    let defaultCourses = './courses';
+    if (existsSync('./courses')) {
+      if (readdirSync('./courses').length === 0) defaultCourses = './learning';
+    } else if (existsSync('./learning')) {
+      defaultCourses = './learning';
+    }
+    process.env.COURSES_DIR = process.env.COURSES_DIR || defaultCourses;
+
+    const mode = isProduction ? 'production' : 'development';
+    console.log('');
+    console.log(style('info', 'Starting Professor Web UI…'));
+    console.log(`   Mode: ${mode} | Port: ${port} | Courses: ${process.env.COURSES_DIR}`);
+    console.log('');
+    await import(join(webDir, 'server.js'));
+    break;
+  }
+
+  case 'init':
+  case 'setup': {
+    printBanner();
+    console.log('');
+    const agentArg = args.slice(1).find((a) => !a.startsWith('--'));
+    if (agentArg) {
+      await setupAgent(agentArg);
+    } else {
+      await init();
+    }
+    break;
+  }
+
+  case 'courses': {
+    const spinner = ora('Fetching registry…').start();
+    try {
+      const index = await fetchRegistryIndex();
+      spinner.stop();
+      const courses = index.courses || [];
+      if (courses.length === 0) { console.log('No courses found in registry.'); break; }
+      const nw = Math.max(4, ...courses.map((c) => c.name.length));
+      const tw = Math.max(5, ...courses.map((c) => c.title.length));
+      const lw = Math.max(5, ...courses.map((c) => (c.level || '').length));
+      const header = `${'Name'.padEnd(nw)}  ${'Title'.padEnd(tw)}  ${'Level'.padEnd(lw)}  Sections`;
+      console.log('\n' + chalk.bold(header));
+      console.log(chalk.dim('─'.repeat(header.length)));
+      for (const c of courses) {
+        console.log(`${c.name.padEnd(nw)}  ${c.title.padEnd(tw)}  ${(c.level || '').padEnd(lw)}  ${c.sections}`);
+      }
+      console.log('');
+    } catch {
+      spinner.fail('Registry fetch failed.');
+    }
+    break;
+  }
+
+  case 'search': {
+    const keyword = args.slice(1).find((a) => !a.startsWith('--'));
+    if (!keyword) {
+      console.error(style('error', 'Usage: course-professor search <keyword>'));
+      process.exit(1);
+    }
+    const spinner = ora('Searching registry…').start();
+    try {
+      const index = await fetchRegistryIndex();
+      spinner.stop();
+      const q = keyword.toLowerCase();
+      const matches = (index.courses || []).filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          (c.title || '').toLowerCase().includes(q) ||
+          (c.description || '').toLowerCase().includes(q) ||
+          (c.topics || []).some((t) => t.toLowerCase().includes(q))
+      );
+      if (matches.length === 0) { console.log(`No courses found matching "${keyword}".`); break; }
+      for (const c of matches) {
+        console.log(`\n${chalk.bold(c.name)}  ${chalk.dim(`(${c.level}, ${c.sections} sections)`)}`);
+        console.log(`  ${c.title}`);
+        console.log(`  ${chalk.dim(c.description)}`);
+      }
+      console.log('');
+    } catch {
+      spinner.fail('Registry fetch failed.');
+    }
+    break;
+  }
+
+  case 'install': {
+    const isSkill = args.includes('--skill');
+    const itemName = args.slice(1).find((a) => !a.startsWith('--'));
+    if (!itemName) {
+      console.error(style('error', 'Usage: course-professor install <name>'));
+      console.error('       course-professor install --skill <name>   — install a skill instead');
+      console.error('       course-professor courses                  — list available courses');
+      process.exit(1);
+    }
+    validateItemName(itemName);
+
+    const index = await fetchRegistryIndex();
+    if (isSkill) {
+      const scope = await resolveScope(itemName, 'skill', { isGlobal, isLocal });
+      await installSkill(itemName, scope, { force: isForce, index });
+    } else {
+      await installCourse(itemName, { force: isForce, index });
+    }
+    break;
+  }
+
+  // ── TASK 2: new commands ─────────────────────────────────────────────────
+
+  case 'update': {
+    const isUpdateAll = args.includes('--all');
+    const itemName = !isUpdateAll ? args.slice(1).find((a) => !a.startsWith('--')) : null;
+
+    if (isUpdateAll) {
+      // Update all installed skills
+      const spinner = ora('Fetching registry…').start();
+      let index;
+      try {
+        index = await fetchRegistryIndex();
+      } catch {
+        spinner.fail('Registry fetch failed.');
+        process.exit(1);
+      }
+      spinner.stop();
+
+      const localDir  = join(process.cwd(), '.claude', 'skills');
+      const globalDir = join(os.homedir(), '.claude', 'skills');
+      const scopes = isGlobal ? [['global', globalDir]] :
+                     isLocal  ? [['local',  localDir]]  :
+                               [['local', localDir], ['global', globalDir]];
+
+      const results = { updated: 0, skipped: 0, failed: 0 };
+      for (const [scope, dir] of scopes) {
+        if (!existsSync(dir)) continue;
+        let entries;
+        try { entries = readdirSync(dir); } catch { continue; }
+        for (const name of entries) {
+          const skillDir = join(dir, name);
+          if (!statSync(skillDir).isDirectory()) continue;
+          if (!existsSync(join(skillDir, 'SKILL.md'))) continue;
+          try {
+            const skill = (index.skills || []).find((s) => s.name === name);
+            if (!skill) {
+              console.log(style('warning', `Skipped ${name}: not found in registry.`));
+              results.skipped++;
+              continue;
+            }
+            await installSkill(name, scope, { force: true, index });
+            results.updated++;
+          } catch (err) {
+            console.log(style('warning', `Failed ${name}: ${err.message}`));
+            results.failed++;
+          }
+        }
+      }
+      console.log(style('info', `Updated: ${results.updated} | Skipped: ${results.skipped} | Failed: ${results.failed}`));
+      if (results.updated === 0) {
+        console.error(style('error', 'No skills updated — all were manually installed or registry unavailable.'));
+        process.exit(1);
+      }
+    } else {
+      // Update a single skill
+      if (!itemName) {
+        console.error(style('error', 'Usage: course-professor update <skill-name>'));
+        process.exit(1);
+      }
+      validateItemName(itemName);
+      const scope = await resolveScope(itemName, 'skill', { isGlobal, isLocal });
+
+      const destDir = scope === 'global'
+        ? join(os.homedir(), '.claude', 'skills', itemName)
+        : join(process.cwd(), '.claude', 'skills', itemName);
+
+      if (!existsSync(join(destDir, 'SKILL.md'))) {
+        console.error(style('error', `Skill "${itemName}" not installed. Run: course-professor install --skill ${itemName}`));
+        process.exit(1);
+      }
+
+      const spinner = ora('Fetching registry…').start();
+      let index;
+      try {
+        index = await fetchRegistryIndex();
+      } catch {
+        spinner.fail('Registry fetch failed.');
+        process.exit(1);
+      }
+      spinner.stop();
+
+      await installSkill(itemName, scope, { force: true, index });
+    }
+    break;
+  }
+
+  case 'installed': {
+    const localDir  = join(process.cwd(), '.claude', 'skills');
+    const globalDir = join(os.homedir(), '.claude', 'skills');
+
+    /** @type {{ name: string; title: string; version: string; scope: string; path: string }[]} */
+    const rows = [];
+
+    for (const [scope, dir] of [['local', localDir], ['global', globalDir]]) {
+      if (!existsSync(dir)) continue;
+      let entries;
+      try { entries = readdirSync(dir); } catch { continue; }
+      for (const name of entries) {
+        const skillDir = join(dir, name);
+        if (!statSync(skillDir).isDirectory()) continue;
+        if (!existsSync(join(skillDir, 'SKILL.md'))) continue;
+        let title = name, version = '—';
+        const metaPath = join(skillDir, 'meta.json');
+        if (existsSync(metaPath)) {
+          try {
+            const meta = JSON.parse(readFileSync(metaPath, 'utf-8'));
+            title   = meta.title   || name;
+            version = meta.version || '—';
+          } catch {}
+        }
+        rows.push({ name, title, version, scope, path: skillDir });
+      }
+    }
+
+    if (rows.length === 0) {
+      console.log(style('info', 'No skills installed. Run: course-professor search'));
+      break;
+    }
+
+    const nw = Math.max(4, ...rows.map((r) => r.name.length));
+    const tw = Math.max(5, ...rows.map((r) => r.title.length));
+    const vw = Math.max(7, ...rows.map((r) => r.version.length));
+    const sw = Math.max(7, ...rows.map((r) => r.scope.length));
+
+    const header = `${'Name'.padEnd(nw)}  ${'Title'.padEnd(tw)}  ${'Ver'.padEnd(vw)}  ${'Scope'.padEnd(sw)}  Path`;
+    console.log('\n' + chalk.bold(header));
+    console.log(chalk.dim('─'.repeat(header.length + 30)));
+    for (const r of rows) {
+      console.log(
+        `${r.name.padEnd(nw)}  ${r.title.padEnd(tw)}  ${r.version.padEnd(vw)}  ${r.scope.padEnd(sw)}  ${r.path}`
+      );
+    }
+    console.log('');
+    break;
+  }
+
+  case 'remove': {
+    const itemName = args.slice(1).find((a) => !a.startsWith('--'));
+    if (!itemName) {
+      console.error(style('error', 'Usage: course-professor remove <skill-name> [--local|--global] [--force]'));
+      process.exit(1);
+    }
+    validateItemName(itemName);
+
+    const localDir  = join(process.cwd(), '.claude', 'skills', itemName);
+    const globalDir = join(os.homedir(), '.claude', 'skills', itemName);
+    const localExists  = existsSync(join(localDir,  'SKILL.md'));
+    const globalExists = existsSync(join(globalDir, 'SKILL.md'));
+
+    if (!localExists && !globalExists) {
+      console.error(style('error', `Skill "${itemName}" not found.`));
+      process.exit(1);
+    }
+
+    // Resolve scope
+    let removeScopes = [];
+    if (isGlobal) {
+      removeScopes = ['global'];
+    } else if (isLocal) {
+      removeScopes = ['local'];
+    } else if (localExists && globalExists) {
+      // Both — must choose
+      if (!process.stdin.isTTY) {
+        console.error(style('error', 'Skill found in both scopes. Use --local, --global, or --force --local/--global.'));
+        process.exit(1);
+      }
+      const { choice } = await inquirer.prompt([{
+        type: 'list',
+        name: 'choice',
+        message: `Skill "${itemName}" is installed in both scopes. Which to remove?`,
+        choices: [
+          { name: `Local (${localDir})`,  value: 'local' },
+          { name: `Global (${globalDir})`, value: 'global' },
+          { name: 'Both',                 value: 'both' },
+        ],
+      }]);
+      removeScopes = choice === 'both' ? ['local', 'global'] : [choice];
+    } else {
+      removeScopes = [localExists ? 'local' : 'global'];
+    }
+
+    // --force without scope when in both = error
+    if (isForce && !isGlobal && !isLocal && localExists && globalExists) {
+      // Already handled above — but double-check
+      if (removeScopes.length > 1 && !removeScopes.includes('local') && !removeScopes.includes('global')) {
+        console.error(style('error', 'Skill found in both scopes. Use --local, --global, or --force --local/--global.'));
+        process.exit(1);
+      }
+    }
+
+    // Confirm (unless --force)
+    if (!isForce) {
+      const scopeLabels = removeScopes.map((s) =>
+        s === 'local' ? localDir : globalDir
+      ).join(' and ');
+      const { confirmed } = await inquirer.prompt([{
+        type: 'confirm',
+        name: 'confirmed',
+        message: `Remove skill "${itemName}" from ${scopeLabels}? (y/N)`,
+        default: false,
+      }]);
+      if (!confirmed) {
+        console.log('Aborted.');
+        process.exit(0);
+      }
+    }
+
+    for (const scope of removeScopes) {
+      const dir = scope === 'local' ? localDir : globalDir;
+      rmSync(dir, { recursive: true, force: true });
+      console.log(style('success', `Removed ${itemName} from ${dir}`));
+    }
+    break;
+  }
+
+  case 'publish': {
+    const {
+      validateItemName,
+      validateSourceCourse,
+      validateSourceSkill,
+      buildStagingDir,
+      buildCourseMetaJson,
+      buildSkillMetaJson,
+      generateBrowserFallbackUrl,
+      style,
+    } = await import('./registry-helpers.js');
+
+    const { execSync } = await import('child_process');
+
+    // Parse args
+    const isDryRun = args.includes('--dry-run');
+    const isForce  = args.includes('--force');
+    const typeIdx  = args.indexOf('--type');
+    const typeArg  = typeIdx !== -1 ? args[typeIdx + 1] : null;
+    const pathIdx  = args.indexOf('--path');
+    const pathArg  = pathIdx !== -1 ? args[pathIdx + 1] : null;
+    const nameArg  = args.find((a) => a.startsWith('--name='))?.split('=')[1];
+
+    // Parse metadata flags (collected interactively in professor:publish, passed through to CLI)
+    const authorArg      = args.find((a) => a.startsWith('--author='))?.split('=')[1];
+    const titleArg       = args.find((a) => a.startsWith('--title='))?.split('=')[1];
+    const descArg        = args.find((a) => a.startsWith('--description='))?.split('=')[1];
+    const topicsArg      = args.find((a) => a.startsWith('--topics='))?.split('=')[1];
+    const levelArg       = args.find((a) => a.startsWith('--level='))?.split('=')[1];
+    const originCourseArg = args.find((a) => a.startsWith('--origin-course='))?.split('=')[1];
+
+    const sourceDir = pathArg || process.cwd();
+    const slug      = nameArg || basename(sourceDir);
+
+    // Guard: validate slug before use
+    validateItemName(slug);
+    // Sanitize slug to [a-z0-9-] for safe use in shell commands and branch names
+    const safeSlug = slug.replace(/[^a-z0-9-]/gi, '-');
+
+    // Auto-detect type
+    let contentType = typeArg;
+    if (!contentType) {
+      const hasSkill  = existsSync(join(sourceDir, 'SKILL.md')) && existsSync(join(sourceDir, 'COMPLETION.md'));
+      const hasCourse = existsSync(join(sourceDir, 'COURSE.md'));
+      if (hasSkill && hasCourse) {
+        console.error(style('error', 'Both course and skill detected. Use --type course|skill to specify.'));
+        process.exit(1);
+      }
+      contentType = hasSkill ? 'skill' : hasCourse ? 'course' : null;
+      if (!contentType) {
+        console.error(style('error', 'No COURSE.md or SKILL.md found. Run from a course directory.'));
+        process.exit(1);
+      }
+    }
+    if (contentType !== 'course' && contentType !== 'skill') {
+      console.error(style('error', '--type must be "course" or "skill".'));
+      process.exit(1);
+    }
+
+    // Validate source
+    const validator = contentType === 'course' ? validateSourceCourse(sourceDir) : validateSourceSkill(sourceDir);
+    if (!validator.valid) {
+      for (const err of validator.errors) console.error(style('error', err));
+      process.exit(1);
+    }
+
+    // Build metadata from flags (collected interactively by professor:publish)
+    const metaOverrides = contentType === 'course'
+      ? { name: safeSlug, title: titleArg, description: descArg, author: authorArg, level: levelArg, topics: topicsArg?.split(',') }
+      : { name: safeSlug, title: titleArg, description: descArg, author: authorArg, origin_course: originCourseArg, topics: topicsArg?.split(',') };
+    const builtMeta = contentType === 'course'
+      ? buildCourseMetaJson(sourceDir, metaOverrides)
+      : buildSkillMetaJson(sourceDir, metaOverrides);
+
+    // Build staging dir with populated metadata
+    const stagingDir = buildStagingDir(contentType, safeSlug, sourceDir, builtMeta);
+
+    if (isDryRun) {
+      console.log(style('info', `Dry run — packaged files at: ${stagingDir}`));
+      console.log(style('info', 'Contents:'));
+      for (const f of readdirSync(stagingDir)) console.log(`  - ${f}`);
+      process.exit(0);
+    }
+
+    // gh availability check
+    const ghAvailable = (() => {
+      try {
+        execSync('gh --version', { stdio: 'ignore' });
+        return true;
+      } catch { return false; }
+    })();
+
+    if (!ghAvailable) {
+      console.log(style('warning', 'gh CLI not found — manual submission required.'));
+      console.log(style('info', 'Steps to submit manually:'));
+      console.log(`  1. Fork: https://github.com/professor-skills-hub/courses-skills-registry`);
+      console.log(`  2. Create branch: contribute/${contentType}/${safeSlug}`);
+      console.log(`  3. Upload files from: ${stagingDir}`);
+      console.log(`  4. Open a PR to main`);
+      console.log(style('info', 'Install gh: https://cli.github.com'));
+      process.exit(0);
+    }
+
+    // gh auth check
+    try { execSync('gh auth status', { stdio: 'ignore' }); } catch {
+      console.log(style('warning', 'gh not authenticated — manual submission required.'));
+      console.log(style('info', 'Steps to submit manually:'));
+      console.log(`  1. Fork: https://github.com/professor-skills-hub/courses-skills-registry`);
+      console.log(`  2. Create branch: contribute/${contentType}/${safeSlug}`);
+      console.log(`  3. Upload files from: ${stagingDir}`);
+      console.log(`  4. Open a PR to main`);
+      console.log(style('info', 'Run: gh auth login'));
+      process.exit(0);
+    }
+
+    // Setup git credentials (Eng Decision 2 — use gh auth setup-git, not token URL injection)
+    try {
+      execSync('gh auth setup-git', { stdio: 'pipe' });
+    } catch {
+      console.error(style('error', 'gh auth setup-git failed. Run gh auth login first.'));
+      process.exit(1);
+    }
+
+    // Fork (ignore non-zero — fork may already exist from a prior publish run)
+    const forkSpinner = ora('Forking registry…').start();
+    try {
+      execSync('gh repo fork professor-skills-hub/courses-skills-registry --clone=false', { stdio: 'pipe' });
+    } catch {
+      // Fork already exists or transient — continue; clone will fail if truly broken
+    }
+    forkSpinner.succeed('Fork ready');
+
+    // Resolve fork URL via GitHub API (not local git remote — that points to the user's own repo)
+    let forkUrl;
+    try {
+      const login = execSync('gh api user --jq .login', { encoding: 'utf-8', stdio: 'pipe' }).trim();
+      forkUrl = `https://github.com/${login}/courses-skills-registry.git`;
+    } catch {
+      console.error(style('error', 'Could not resolve GitHub username. Run: gh auth login'));
+      process.exit(1);
+    }
+
+    const tmpDir    = mkdtempSync(join(os.tmpdir(), 'professor-publish-'));
+    const repoDir   = join(tmpDir, 'repo');
+    const cloneSpinner = ora('Cloning fork…').start();
+    try {
+      execSync(`git clone --depth=1 "${forkUrl}" "${repoDir}"`, { stdio: 'pipe' });
+      cloneSpinner.succeed();
+    } catch (err) {
+      cloneSpinner.fail();
+      console.error(style('error', `Clone failed: ${err.message}`));
+      rmSync(tmpDir, { recursive: true, force: true });
+      process.exit(1);
+    }
+
+    // Copy files to destination dir
+    const destDir = join(repoDir, contentType === 'course' ? 'courses' : 'skills', safeSlug);
+    mkdirSync(destDir, { recursive: true });
+    for (const f of readdirSync(stagingDir)) {
+      const src = join(stagingDir, f);
+      if (statSync(src).isFile()) {
+        writeFileSync(join(destDir, f), readFileSync(src));
+      }
+    }
+
+    // Branch, commit, push
+    const branch    = `contribute/${contentType}/${safeSlug}`;
+    const commitMsg = `Add ${contentType}: ${safeSlug}`;
+    try {
+      execSync(`git checkout -b "${branch}"`,               { cwd: repoDir, stdio: 'pipe' });
+      execSync(`git add . && git commit -m "${commitMsg}"`, { cwd: repoDir, stdio: 'pipe' });
+      const pushFlags = isForce ? '-f' : '';
+      execSync(`git push origin "${branch}" ${pushFlags}`.trim(), { cwd: repoDir, stdio: 'pipe' });
+    } catch (err) {
+      console.error(style('error', `Git push failed: ${err.message}`));
+      rmSync(tmpDir, { recursive: true, force: true });
+      process.exit(1);
+    }
+
+    // Create PR against the upstream registry (not the fork's own main)
+    const prSpinner = ora('Creating PR…').start();
+    let prUrl;
+    try {
+      const prOutput = execSync(
+        `gh pr create --json url --jq .url --repo professor-skills-hub/courses-skills-registry --title "${commitMsg}" --body "Published via course-professor publish."`,
+        { cwd: repoDir, encoding: 'utf-8', stdio: 'pipe' }
+      );
+      prUrl = prOutput.trim();
+      if (!prUrl.startsWith('https://')) throw new Error(`Unexpected gh output: ${prUrl}`);
+      prSpinner.succeed();
+      console.log(style('success', `PR created: ${prUrl}`));
+    } catch (err) {
+      // Check if a PR already exists for this branch (gh exits non-zero with existing URL in stderr)
+      const stderr = err.stderr || '';
+      const existingMatch = stderr.match(/https:\/\/github\.com\/[^\s]+/);
+      if (existingMatch) {
+        prSpinner.succeed('PR already open');
+        console.log(style('success', `Existing PR: ${existingMatch[0]}`));
+        prUrl = existingMatch[0];
+      } else if (err.message?.includes('Unexpected gh output')) {
+        // gh returned something unexpected — PR may still have been created
+        prSpinner.fail();
+        console.log(style('warning', `gh returned unexpected output: ${err.message}`));
+        console.log(style('info', 'PR may have been created — check: https://github.com/professor-skills-hub/courses-skills-registry/pulls'));
+        rmSync(tmpDir, { recursive: true, force: true });
+        process.exit(0);
+      } else {
+        prSpinner.fail();
+        console.error(style('error', `PR creation failed: ${err.message}`));
+        rmSync(tmpDir, { recursive: true, force: true });
+        process.exit(1);
+      }
+    }
+
+    // Cleanup temp clone (staging dir kept intentionally — user can inspect submitted files)
+    rmSync(tmpDir, { recursive: true, force: true });
+    console.log(style('info', `Submitted files kept at: ${stagingDir}`));
+    process.exit(0);
+  }
+
+  case 'list':
+    console.log('\nSupported agents:\n');
+    SUPPORTED_AGENTS.forEach((agent, i) => {
+      console.log(`  ${i + 1}. ${agent}`);
+    });
+    console.log('\nUse course-professor setup <agent> to install.\n');
+    break;
+
+  case 'help':
+  default:
+    printBanner();
+    console.log('');
+    printUsage();
+    break;
+}
+
+// ─── UI helpers (used by switch cases above) ─────────────────────────────────
 
 function printBanner() {
   const c = chalk.cyan;
@@ -87,8 +846,8 @@ function printBanner() {
      \\:::\\/:::/    /           \\::::::/    /           \\:::\\/:::/    /
       \\::::::/    /             \\::::/____/             \\::::::/    /
        \\::::/    /               |::|    |               \\::::/    /
-        \\::/    /                |::|____|                \\::/____/
-         \\/____/                  ~~                       ~~`;
+        \\::/____/                |::|____|                \\::/____/
+         ~~                       ~~                       ~~`;
   const line = chalk.dim('─'.repeat(52));
   console.log(
     '\n' + line + '\n' + c(art.trimEnd()) + '\n\n' + chalk.cyan.dim('  ◆  skill quest builder  ◆') + '\n' + line + '\n'
@@ -109,409 +868,42 @@ COMMANDS
   ${chalk.bold('list')}                 List supported agents
   ${chalk.bold('courses')}              List all courses in the registry
   ${chalk.bold('search')} <keyword>     Search registry courses by keyword
-  ${chalk.bold('install')} <name>       Install a course from the registry
+  ${chalk.bold('install')} <name>          Install a course locally (→ learning/{name}/)
+  ${chalk.bold('install')} --skill <name>  Install a skill locally (→ .claude/skills/{name}/)
+  ${chalk.bold('update')} <skill-name>     Update an installed skill to the latest version
+  ${chalk.bold('update')} --all             Update all installed skills
+  ${chalk.bold('installed')}                List all installed skills
+  ${chalk.bold('remove')} <skill-name>     Remove an installed skill
   ${chalk.bold('web')} [port]           Start local web UI (default port: 3000)
+  ${chalk.bold('publish')} [options]     Publish a course or skill to the community registry
   ${chalk.bold('web')} --production     Start web UI in production mode (requires build)
   ${chalk.bold('help')}                 Show this help message
 
 FLAGS
-  --global          Install globally (user-wide, e.g. ~/.claude/plugins/professor/)
-  --local           Install locally in the current project (default)
+  --global          Target global scope (user-wide, e.g. ~/.claude/skills/)
+  --local           Target local scope (current project, .claude/skills/)
+  --force           Bypass overwrite/removal confirmation prompts
+  --all             Apply to all items (update --all)
+  --cloud           For \`web\`, prefer cloud API flow and API key prompt
 
 EXAMPLES
   npx course-professor init                    # Auto-detect and setup
   npx course-professor setup claude            # Setup for Claude Code (prompts for scope)
   npx course-professor setup claude --global   # Install globally
-  npx course-professor courses                 # Browse community courses
-  npx course-professor search react            # Search for React courses
-  npx course-professor install react-hooks     # Install a course
+  npx course-professor courses                        # Browse community courses
+  npx course-professor search react                   # Search for React courses
+  npx course-professor install react-hooks            # Install course → learning/react-hooks/
+  npx course-professor install --skill react-hooks-reviewer           # Install skill (prompts scope)
+  npx course-professor install --skill react-hooks-reviewer --global  # Install skill globally
+  npx course-professor update react-hooks-reviewer     # Update a skill
+  npx course-professor update --all                    # Update all installed skills
+  npx course-professor installed                        # List installed skills
+  npx course-professor remove react-hooks-reviewer     # Remove a skill
+  npx course-professor publish --dry-run                 # Preview packaged files (no GitHub)
+  npx course-professor publish --type skill --name foo   # Publish a skill
   npx course-professor web                     # Start web UI on port 3000
 
 SUPPORTED AGENTS
   ${SUPPORTED_AGENTS.join(', ')}
   `.trim());
-}
-
-function listAgents() {
-  console.log('\nSupported agents:\n');
-  SUPPORTED_AGENTS.forEach((agent, i) => {
-    console.log(`  ${i + 1}. ${agent}`);
-  });
-  console.log('\nUse course-professor setup <agent> to install.\n');
-}
-
-async function promptScope(platform) {
-  if (!process.stdin.isTTY) {
-    console.error(style('error', 'Non-interactive mode. Run with --local or --global.'));
-    process.exit(1);
-  }
-  const globalPath = {
-    claude:   '~/.claude/plugins/professor/',
-    gemini:   '~/GEMINI.md',
-    opencode: '~/.opencode/professor.md',
-    cursor:   '~/.cursor/rules/professor.mdc',
-  }[platform] || '~/';
-
-  const { scope } = await inquirer.prompt([
-    {
-      type: 'list',
-      name: 'scope',
-      message: `Install scope for ${platform}:`,
-      choices: [
-        { name: `Global — ${globalPath} (available in all projects)`, value: 'global' },
-        { name: 'Local — current project only', value: 'local' },
-      ],
-      default: 'local',
-    },
-  ]);
-  return scope;
-}
-
-async function setupAgent(agent) {
-  const agentLower = agent.toLowerCase();
-  if (!SUPPORTED_AGENTS.includes(agentLower)) {
-    console.error(style('error', `Unsupported agent: ${agent}. Supported: ${SUPPORTED_AGENTS.join(', ')}. Run 'course-professor list' for details.`));
-    process.exit(1);
-  }
-  const scope = isGlobal ? 'global' : isLocal ? 'local' : await promptScope(agentLower);
-  const { install } = await import(`./platforms/${agentLower}.js`);
-  await install(scope);
-}
-
-async function promptAgentSelection(agents) {
-  if (!process.stdin.isTTY) {
-    console.error(style('error', "Non-interactive mode. Run with: course-professor setup <agent> --local or --global"));
-    process.exit(1);
-  }
-  const { agent } = await inquirer.prompt([
-    {
-      type: 'list',
-      name: 'agent',
-      message: 'Which agent would you like to set up?',
-      choices: agents.map((a) => ({ name: a, value: a })),
-    },
-  ]);
-  return agent;
-}
-
-async function init() {
-  const detected = await detectAgent();
-
-  if (detected.length === 0) {
-    console.log(style('info', 'No agent detected automatically.\n'));
-    const choice = await promptAgentSelection(SUPPORTED_AGENTS);
-    await setupAgent(choice);
-    return;
-  }
-
-  if (detected.length === 1) {
-    console.log(style('info', `Detected: ${detected[0]}\n`));
-    await setupAgent(detected[0]);
-    return;
-  }
-
-  console.log(style('info', `Multiple agents detected: ${detected.join(', ')}\n`));
-  const choice = await promptAgentSelection(detected);
-  await setupAgent(choice);
-}
-
-const args = process.argv.slice(2);
-const isGlobal = args.includes('--global');
-const isLocal  = args.includes('--local');
-const command = args[0] || 'help';
-
-switch (command) {
-  case 'web': {
-    const { execSync } = await import('child_process');
-    const webDir = join(__dirname, '..', 'web');
-
-    if (!existsSync(webDir)) {
-      console.error(style('error', "Web UI not found. Ensure the package is fully installed (e.g. run from repo root or after npm install)."));
-      process.exit(1);
-    }
-
-    // Check for --production flag
-    const isProduction = args.includes('--production');
-    if (isProduction) {
-      process.env.NODE_ENV = 'production';
-    }
-
-    // In production mode, verify build exists
-    if (isProduction) {
-      const distPath = join(webDir, 'client', 'dist');
-      if (!existsSync(distPath)) {
-        console.error(style('warning', 'Production build not found.'));
-        console.error('   From repo root: npm run build');
-        console.error('   Then: npx course-professor web --production');
-        process.exit(1);
-      }
-    }
-
-    // Check for node_modules
-    if (!existsSync(join(webDir, 'node_modules'))) {
-      const spinner = ora('Installing web dependencies…').start();
-      try {
-        execSync('npm install', { cwd: webDir, stdio: 'pipe' });
-        spinner.succeed('Web dependencies installed.');
-      } catch {
-        spinner.fail('Web dependencies failed.');
-        console.error(style('error', `Check your network and try: cd ${webDir} && npm install`));
-        process.exit(1);
-      }
-    }
-
-    // Check for client node_modules (only in dev mode)
-    const clientDir = join(webDir, 'client');
-    if (!isProduction && existsSync(clientDir) && !existsSync(join(clientDir, 'node_modules'))) {
-      const spinner = ora('Installing client dependencies…').start();
-      try {
-        execSync('npm install', { cwd: clientDir, stdio: 'pipe' });
-        spinner.succeed('Client dependencies installed.');
-      } catch {
-        spinner.fail('Client dependencies failed.');
-        console.error(style('error', `Check your network and try: cd ${clientDir} && npm install`));
-        process.exit(1);
-      }
-    }
-
-    // API key only needed for chat feature - not required to start server
-    // Auto-detect from environment, .env file, Claude Code keychain, or config files
-    async function findApiKey() {
-      // 1. Environment variables (highest priority)
-      if (process.env.ANTHROPIC_API_KEY) return { key: process.env.ANTHROPIC_API_KEY, source: 'env' };
-      if (process.env.CLAUDE_API_KEY) return { key: process.env.CLAUDE_API_KEY, source: 'env' };
-      if (process.env.OPENAI_API_KEY) return { key: process.env.OPENAI_API_KEY, source: 'env' };
-
-      // 2. .env file in current working directory
-      const envFile = join(process.cwd(), '.env');
-      if (existsSync(envFile)) {
-        try {
-          const lines = readFileSync(envFile, 'utf-8').split('\n');
-          for (const line of lines) {
-            const m = line.match(/^(ANTHROPIC_API_KEY|CLAUDE_API_KEY|OPENAI_API_KEY)\s*=\s*(.+)$/);
-            if (m) return { key: m[2].trim().replace(/^["']|["']$/g, ''), source: '.env' };
-          }
-        } catch {}
-      }
-
-      // 3. macOS Keychain — look for a raw sk-ant-api key (not OAuth tokens)
-      if (process.platform === 'darwin') {
-        try {
-          const { execSync: _exec } = await import('child_process');
-          for (const svc of ['anthropic-api-key', 'Anthropic API Key', 'ANTHROPIC_API_KEY']) {
-            try {
-              const raw = _exec(`security find-generic-password -s "${svc}" -w`, {
-                encoding: 'utf-8', timeout: 2000, stdio: ['ignore', 'pipe', 'ignore']
-              }).trim();
-              if (raw?.startsWith('sk-ant-api')) return { key: raw, source: `keychain:${svc}` };
-            } catch {}
-          }
-        } catch {}
-      }
-
-      // 4. Claude Code / Anthropic config files
-      const home = process.env.HOME || '';
-      for (const p of [join(home, '.claude', 'settings.json'), join(home, '.anthropic', 'config.json')]) {
-        if (existsSync(p)) {
-          try {
-            const s = JSON.parse(readFileSync(p, 'utf-8'));
-            const k = s.ANTHROPIC_API_KEY || s.apiKey || s.api_key;
-            if (k) return { key: k, source: p };
-          } catch {}
-        }
-      }
-
-      return null;
-    }
-
-    let found = await findApiKey();
-
-    // Interactive prompt if no key found — save to .env so it's auto-detected next time
-    if (!found) {
-      if (!process.stdin.isTTY) {
-        console.log(style('info', 'No API key. Chat disabled. Add ANTHROPIC_API_KEY to .env or environment later.\n'));
-      } else {
-        console.log('');
-        console.log(style('info', 'No Anthropic API key detected.'));
-        console.log('   Get one at: https://console.anthropic.com/settings/keys');
-        console.log('   (Key will be saved to .env if you paste one; otherwise chat will be disabled.)');
-        console.log('');
-        const { apiKeyInput } = await inquirer.prompt([
-          {
-            type: 'input',
-            name: 'apiKeyInput',
-            message: 'Paste your API key (or press Enter to skip):',
-          },
-        ]);
-        const trimmed = (apiKeyInput || '').trim();
-        if (trimmed && trimmed.startsWith('sk-')) {
-          const envPath = join(process.cwd(), '.env');
-          const line = `ANTHROPIC_API_KEY=${trimmed}\n`;
-          try {
-            const existing = existsSync(envPath) ? readFileSync(envPath, 'utf-8') : '';
-            if (!existing.includes('ANTHROPIC_API_KEY')) {
-              writeFileSync(envPath, existing + line);
-              console.log(`   ${style('success', "Saved to .env — won't ask again.")}\n`);
-            }
-          } catch {}
-          found = { key: trimmed, source: '.env (just saved)' };
-        } else {
-          console.log('   Skipping. Chat disabled. You can add a key later to .env or environment.\n');
-        }
-      }
-    }
-
-    const apiKey = found?.key;
-    if (apiKey) {
-      console.log(style('success', `API key loaded (${found.source}).\n`));
-      process.env.ANTHROPIC_API_KEY = apiKey;
-    }
-
-    // Optional port argument (not allowed with --production)
-    let port = '3000';
-    if (!isProduction) {
-      port = args[1] || process.env.PORT || '3000';
-    } else if (args[1] && args[1] !== '--production') {
-      port = args[1];
-    }
-    process.env.PORT = port;
-    // Default to ./courses if it has content, otherwise use ./learning
-    let defaultCourses = './courses';
-    if (existsSync('./courses')) {
-      const coursesContent = readdirSync('./courses');
-      if (coursesContent.length === 0) defaultCourses = './learning';
-    } else if (existsSync('./learning')) {
-      defaultCourses = './learning';
-    }
-    process.env.COURSES_DIR = process.env.COURSES_DIR || defaultCourses;
-
-    const mode = isProduction ? 'production' : 'development';
-    const coursesDir = process.env.COURSES_DIR || defaultCourses;
-    console.log('');
-    console.log(style('info', 'Starting Professor Web UI…'));
-    console.log(`   Mode: ${mode} | Port: ${port} | Courses: ${coursesDir}`);
-    console.log('');
-    
-    // Start the server
-    await import(join(webDir, 'server.js'));
-    break;
-  }
-
-  case 'init':
-  case 'setup': {
-    printBanner();
-    console.log('');
-    const agentArg = args.slice(1).find(a => !a.startsWith('--'));
-    if (agentArg) {
-      await setupAgent(agentArg);
-    } else {
-      await init();
-    }
-    break;
-  }
-    
-  case 'courses': {
-    const spinner = ora('Fetching registry…').start();
-    try {
-      const index = await fetchRegistryIndex();
-      spinner.stop();
-      const courses = index.courses || [];
-      if (courses.length === 0) { console.log('No courses found in registry.'); break; }
-      const nw = Math.max(4, ...courses.map((c) => c.name.length));
-      const tw = Math.max(5, ...courses.map((c) => c.title.length));
-      const lw = Math.max(5, ...courses.map((c) => (c.level || '').length));
-      const header = `${'Name'.padEnd(nw)}  ${'Title'.padEnd(tw)}  ${'Level'.padEnd(lw)}  Sections`;
-      console.log('\n' + chalk.bold(header));
-      console.log(chalk.dim('─'.repeat(header.length)));
-      for (const c of courses) {
-        console.log(`${c.name.padEnd(nw)}  ${c.title.padEnd(tw)}  ${(c.level || '').padEnd(lw)}  ${c.sections}`);
-      }
-      console.log('');
-    } catch (err) {
-      spinner.fail(`Registry fetch failed: ${err.message}`);
-    }
-    break;
-  }
-
-  case 'search': {
-    const keyword = args.slice(1).find((a) => !a.startsWith('--'));
-    if (!keyword) { console.error(style('error', 'Usage: course-professor search <keyword>')); process.exit(1); }
-    const spinner = ora('Searching registry…').start();
-    try {
-      const index = await fetchRegistryIndex();
-      spinner.stop();
-      const q = keyword.toLowerCase();
-      const matches = (index.courses || []).filter(
-        (c) =>
-          c.name.toLowerCase().includes(q) ||
-          (c.title || '').toLowerCase().includes(q) ||
-          (c.description || '').toLowerCase().includes(q) ||
-          (c.topics || []).some((t) => t.toLowerCase().includes(q))
-      );
-      if (matches.length === 0) { console.log(`No courses found matching "${keyword}".`); break; }
-      for (const c of matches) {
-        console.log(`\n${chalk.bold(c.name)}  ${chalk.dim(`(${c.level}, ${c.sections} sections)`)}`);
-        console.log(`  ${c.title}`);
-        console.log(`  ${chalk.dim(c.description)}`);
-      }
-      console.log('');
-    } catch (err) {
-      spinner.fail(`Registry fetch failed: ${err.message}`);
-    }
-    break;
-  }
-
-  case 'install': {
-    const courseName = args.slice(1).find((a) => !a.startsWith('--'));
-    if (!courseName) {
-      console.error(style('error', 'Usage: course-professor install <course-name>'));
-      console.error('       course-professor courses    — list all available courses');
-      process.exit(1);
-    }
-    const spinner = ora('Fetching registry…').start();
-    let index;
-    try {
-      index = await fetchRegistryIndex();
-    } catch (err) {
-      spinner.fail(`Registry fetch failed: ${err.message}`);
-      process.exit(1);
-    }
-    const course = (index.courses || []).find((c) => c.name === courseName);
-    if (!course) {
-      spinner.fail(`Course "${courseName}" not found.`);
-      const names = (index.courses || []).map((c) => c.name);
-      if (names.length) console.error(`Available: ${names.join(', ')}`);
-      process.exit(1);
-    }
-    spinner.text = `Installing ${course.title}…`;
-    const destDir = join(REGISTRY_INSTALL_BASE, courseName);
-    mkdirSync(destDir, { recursive: true });
-    for (const file of ['COURSE.md', 'meta.json']) {
-      spinner.text = `Downloading ${file}…`;
-      try {
-        const text = await fetchRegistryText(`${RAW_COURSES_BASE}/${courseName}/${file}`);
-        writeFileSync(join(destDir, file), text, 'utf8');
-      } catch (err) {
-        spinner.fail(`Failed to download ${file}: ${err.message}`);
-        process.exit(1);
-      }
-    }
-    spinner.succeed(`Installed ${chalk.bold(course.title)} (${course.sections} sections, ${course.level})`);
-    console.log('');
-    console.log(style('info', 'To start learning, run in Claude Code:'));
-    console.log(`   professor:template-import ${destDir}/COURSE.md`);
-    console.log('');
-    break;
-  }
-
-  case 'list':
-    listAgents();
-    break;
-    
-  case 'help':
-  default:
-    printBanner();
-    console.log('');
-    printUsage();
-    break;
 }

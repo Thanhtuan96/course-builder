@@ -84,6 +84,8 @@ export function useSSE(url, options = {}) {
             } else if (parsed.sessionId) {
               // Store session ID for conversation continuity
               optionsRef.current.onSessionId?.(parsed.sessionId);
+            } else if (parsed.provider || parsed.model) {
+              optionsRef.current.onProviderMeta?.(parsed);
             } else if (parsed.filesUpdated) {
               // Course files were saved — trigger UI refresh
               const slug = parsed.courseSlug;

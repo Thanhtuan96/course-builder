@@ -8,9 +8,7 @@ import SplitPane from './components/SplitPane.jsx';
 import LecturePanel from './components/LecturePanel.jsx';
 import ChatPanel from './components/ChatPanel.jsx';
 import MobileTabSwitcher from './components/MobileTabSwitcher.jsx';
-import { useWebSocket } from './hooks/useWebSocket.js';
 import { fetchCourses } from './api/client.js';
-import './App.css';
 
 /**
  * Main App component - wires all components together
@@ -19,7 +17,7 @@ export default function App() {
   // State
   const [courses, setCourses] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState(null);
-  const [currentPhase] = useState('idle');
+  const [currentPhase, setCurrentPhase] = useState('idle');
   const [activeTab, setActiveTab] = useState('both'); // 'both', 'lecture', or 'chat'
   const [lectureContent, setLectureContent] = useState('');
   const [isMobile, setIsMobile] = useState(false);
@@ -76,9 +74,12 @@ export default function App() {
   // Handle course selection
   function handleCourseSelect(course) {
     setSelectedCourse(course);
-    setCurrentPhase('idle');
-    setChatMessages([]);
+    setCurrentPhase(course ? 'lecture' : 'idle');
   }
+
+  useEffect(() => {
+    setCurrentPhase(selectedCourse ? 'lecture' : 'idle');
+  }, [selectedCourse]);
 
   // Handle tab change for mobile
   function handleTabChange(tab) {
@@ -93,17 +94,14 @@ export default function App() {
     }
   }, [selectedCourse]);
 
-  // WebSocket connection for lecture updates
-  useWebSocket(`${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`, {
-    onMessage: handleLectureUpdate,
-    onError: (err) => console.error('WebSocket error:', err),
-  });
+  // NOTE: WebSocket updates are temporarily disabled until the backend WS endpoint is implemented.
+  // Lecture refresh is still triggered via SSE events from chat actions.
 
   // Mobile tab
   const mobileTab = activeTab === 'both' ? 'lecture' : activeTab;
 
   return (
-    <div className="app">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-slate-100">
       <Header 
         selectedCourse={selectedCourse} 
         onCourseSelect={handleCourseSelect}

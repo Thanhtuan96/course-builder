@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, statSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { copySharedFiles } from './_shared.js';
+import { copyDirectoryFiles, copySharedFiles } from './_shared.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PLUGIN_DIR = join(__dirname, '..', '..');
@@ -14,13 +14,13 @@ export function detect() {
   );
 }
 
-/** Install professor plugin. scope = 'global' → ~/.claude/plugins/professor/, 'local' → cwd/.claude/ */
+/** Install professor plugin. scope = 'global' → ~/.claude/plugins/professor/, 'local' → cwd/.claude/plugins/professor/ */
 export async function install(scope = 'local') {
   const targetDir = scope === 'global'
     ? join(process.env.HOME || '', '.claude', 'plugins', 'professor')
-    : join(process.cwd(), '.claude');
+    : join(process.cwd(), '.claude', 'plugins', 'professor');
 
-  const dirLabel = scope === 'global' ? '~/.claude/plugins/professor/' : '.claude/';
+  const dirLabel = scope === 'global' ? '~/.claude/plugins/professor/' : '.claude/plugins/professor/';
   if (!existsSync(targetDir)) {
     mkdirSync(targetDir, { recursive: true });
     console.log(`✓ Created ${dirLabel} directory`);
@@ -36,6 +36,12 @@ export async function install(scope = 'local') {
 
   // Copy shared/ files (agents/, commands/, hooks/, SKILL.md) with no-op substitution
   copySharedFiles(targetDir, 'claude');
+
+  // Copy resources/ files used by command fallbacks (e.g., static research templates)
+  const resourcesDir = join(PLUGIN_DIR, 'resources');
+  if (existsSync(resourcesDir)) {
+    copyDirectoryFiles(resourcesDir, join(targetDir, 'resources'), 'claude', { substitute: false });
+  }
 
   console.log(`
 ✅ Setup complete for Claude Code!

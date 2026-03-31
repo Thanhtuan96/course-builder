@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import { fetchCourses } from '../api/client.js';
-import './Header.css';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select.jsx';
 
 /**
  * Header component with course selector and progress indicator
@@ -36,8 +36,8 @@ export default function Header({ selectedCourse, onCourseSelect }) {
     }
   }
 
-  function handleCourseChange(e) {
-    const slug = e.target.value;
+  function handleCourseChange(value) {
+    const slug = value === '__none__' ? '' : value;
     const course = slug ? courses.find((c) => c.slug === slug) : null;
     onCourseSelect?.(course);
   }
@@ -69,47 +69,51 @@ export default function Header({ selectedCourse, onCourseSelect }) {
 
   if (loading) {
     return (
-      <header className="header">
-        <div className="header-loading">Loading courses...</div>
+      <header className="flex shrink-0 items-center border-b border-slate-800 bg-slate-900 px-4 py-3 md:px-5">
+        <div className="text-sm text-slate-400">Loading courses...</div>
       </header>
     );
   }
 
   return (
-    <header className="header">
-      <div className="header-brand">
-        <span className="header-logo">📚</span>
-        <span className="header-title">Professor</span>
+    <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-slate-800 bg-slate-900 px-3 py-3 md:px-5">
+      <div className="flex items-center gap-2">
+        <span className="text-lg">📚</span>
+        <span className="text-lg font-semibold">Professor</span>
       </div>
 
-      <div className="header-course-selector">
-        <select
-          value={selectedCourse?.slug || ''}
-          onChange={handleCourseChange}
+      <div className="w-full md:w-auto">
+        <Select
+          value={selectedCourse?.slug || '__none__'}
+          onValueChange={handleCourseChange}
           disabled={loading}
-          className="course-select"
         >
-          <option value="">Select course...</option>
-          {courses.map((course) => (
-            <option key={course.slug} value={course.slug}>
-              {course.name}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="h-9 w-full min-w-[180px] md:w-[220px]">
+            <SelectValue placeholder="Select course..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">Select course...</SelectItem>
+            {courses.map((course) => (
+              <SelectItem key={course.slug} value={course.slug}>
+                {course.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {selectedCourse && (
-        <div className="header-progress">
-          <span className="course-name">{selectedCourse.name}</span>
+        <div className="ml-0 flex w-full items-center gap-3 text-sm md:ml-auto md:w-auto">
+          <span className="font-medium text-slate-100">{selectedCourse.name}</span>
           {selectedCourse.lastActive && (
-            <span className="last-active">
+            <span className="text-xs text-slate-400">
               {formatLastActive(selectedCourse.lastActive)}
             </span>
           )}
         </div>
       )}
 
-      {error && <div className="header-error">{error}</div>}
+      {error && <div className="text-xs text-red-400">{error}</div>}
     </header>
   );
 }

@@ -1,6 +1,6 @@
 {
   "name": "course-learning-plugin",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "A Socratic learning plugin for Claude Code. The professor agent guides learners through courses using the Socratic method — asking questions rather than giving answers.",
   "agents": [
     {
@@ -47,7 +47,10 @@
     { "name": "professor:worktrees",      "file": "commands/professor/worktrees.md" },
     { "name": "professor:switch",         "file": "commands/professor/switch.md" },
     { "name": "professor:spotter",        "file": "commands/professor/spotter.md" },
-    { "name": "professor:navigator",   "file": "commands/professor/navigator.md" }
+    { "name": "professor:navigator",   "file": "commands/professor/navigator.md" },
+    { "name": "professor:publish",       "file": "commands/professor/publish.md" },
+    { "name": "professor:skill-export",  "file": "commands/professor/skill-export.md" },
+    { "name": "professor:onboard",        "file": "commands/professor/onboard.md" }
   ],
   "hooks": [
     {
