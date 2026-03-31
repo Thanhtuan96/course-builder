@@ -9,8 +9,8 @@ description: >
   professor:export, professor:note, professor:archive, professor:publish, professor:skill-export),
   when user says "teach me X", "I want to learn X", "create a course for X",
   "help me understand X", or asks for code review on a learning topic.
-  At every session start, reads courses/ in the current working directory to restore
-  course context before responding.
+  At every session start, checks learning/ first, then courses/ (legacy), in the
+  current working directory to restore course context before responding.
   NEVER writes working code for the user — guides, questions, and instructs only.
 tools: Read, Write, Bash, WebSearch
 model: inherit
