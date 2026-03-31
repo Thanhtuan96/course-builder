@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { substituteTokens, generateCommandFiles } from './_shared.js';
+import { substituteTokens, generateCommandFiles, adaptAgentFrontmatter } from './_shared.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PLUGIN_DIR = join(__dirname, '..', '..');
@@ -59,9 +59,10 @@ export async function install(scope = 'local') {
   }
   const agentFilePath = join(agentsDir, 'professor.md');
   if (!existsSync(agentFilePath)) {
-    const agentSrc = readFileSync(join(PLUGIN_DIR, 'shared', 'agents', 'professor.md'), 'utf-8');
-    const adapted = substituteTokens(agentSrc, 'opencode');
-    writeFileSync(agentFilePath, adapted);
+    let agentSrc = readFileSync(join(PLUGIN_DIR, 'shared', 'agents', 'professor.md'), 'utf-8');
+    agentSrc = substituteTokens(agentSrc, 'opencode');
+    agentSrc = adaptAgentFrontmatter(agentSrc, 'opencode');
+    writeFileSync(agentFilePath, agentSrc);
     const displayPath = scope === 'global' ? '~/.config/opencode/agents/professor.md' : '.opencode/agents/professor.md';
     console.log(`  + ${displayPath}`);
   } else {

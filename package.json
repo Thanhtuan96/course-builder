@@ -8,15 +8,28 @@
         "professor": "./bin/cli.js"
     },
     "scripts": {
-        "build": "cd web/client && npm run build",
+        "build": "cd web/client && npm install && npm run build",
         "start": "cd web && node server.js",
-        "test": "vitest"
+        "test": "vitest",
+        "prepublishOnly": "npm run build"
     },
     "files": [
         "bin/",
         "templates/",
         "shared/",
-        "plugin.json"
+        "plugin.json",
+        "web/server.js",
+        "web/package.json",
+        "web/package-lock.json",
+        "web/dist/",
+        "web/client/src/",
+        "web/client/index.html",
+        "web/client/package.json",
+        "web/client/package-lock.json",
+        "web/client/vite.config.js",
+        "web/client/tailwind.config.js",
+        "web/client/postcss.config.js",
+        "web/client/components.json"
     ],
     "keywords": [
         "learning",

@@ -1,0 +1,12 @@
+# Dev / test artifacts
+test/
+*.test.js
+.github/
+.vscode/
+
+# Web node_modules (never ship these)
+web/node_modules/
+web/client/node_modules/
+
+# Source maps only (keep the rest of dist)
+web/dist/**/*.map
