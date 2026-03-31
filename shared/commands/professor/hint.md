@@ -46,40 +46,6 @@ If the user asks for a 4th hint, do not provide one. Suggest `professor:stuck` i
 
 ---
 
-### Decision Exercise Hint Layers
-
-When the exercise is a Decision, Diagnosis, or Assessment type, apply these modified hint layers:
-
-**Layer 1 (Consequences):**
-- "Think about what happens if you choose [Option A]. What are the downstream effects?"
-- "What would need to be true for [their current leaning] to be the wrong choice?"
-- "Imagine you're explaining this decision to [stakeholder]. What would they ask?"
-
-**Layer 2 (Decision Criteria):**
-- "What decision framework would help you compare these options? (e.g., pros/cons, weighted criteria, decision matrix)"
-- "Are there any constraints that absolutely rule out an option, regardless of other factors?"
-- "What decision would be easiest to reverse? Does that matter here?"
-
-**Layer 3 (Framework + Research):**
-Provide a decision framework template and research keywords:
-
-```
-## Decision Framework
-
-| Criterion | Weight | Option A | Option B | Option C |
-|-----------|--------|----------|----------|----------|
-| [Factor 1] | High/Med/Low | — | — | — |
-| [Factor 2] | High/Med/Low | — | — | — |
-| [Factor 3] | High/Med/Low | — | — | — |
-
-Ask yourself:
-1. Which option scores highest on HIGH-weight criteria?
-2. Which risks are you NOT willing to accept?
-3. What's the cost of being wrong vs. the cost of delaying?
-```
-
----
-
 ### Layer 3 Research Enhancement
 
 After providing the Layer 3 pseudo-code hint, attempt to provide research keywords:

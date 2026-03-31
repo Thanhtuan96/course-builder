@@ -91,196 +91,29 @@ Write `LECTURE.md` for that section (overwrite any existing file). Update `COURS
    module.exports = { yourFunction };
    ```
 
-   **For NON-CODING exercises** - generate decision exercise with real scenarios:
-
-   **Detect decision exercise subtype** based on section content:
-   - **Architecture/System Design** → option comparison format
-   - **Debugging/Troubleshooting** → problem diagnosis format
-   - **Strategy/Planning** → action prioritization format
-   - **Analysis/Evaluation** → criteria assessment format
-
-   Generate the appropriate decision exercise type:
-
+   **For NON-CODING exercises** - generate pure instructions:
    ```markdown
    # Exercise: [Exercise Title]
 
-   > **Type**: Decision Exercise
-   > Work through this scenario independently, then run `professor:review` to discuss your reasoning.
+   ## Objective
+   [What user should accomplish - 1-2 sentences]
 
-   ---
-
-   ## Scenario
-
-   [Real-world context - who's involved, what's the problem, what needs to be decided]
+   ## Instructions
+   Complete the following:
    
-   Include:
-   - **Stakeholders**: [Who cares about this decision]
-   - **Context**: [Current situation]
-   - **Problem**: [What needs to be solved]
+   1. [Instruction 1]
+   2. [Instruction 2]
+   3. [Instruction 3]
 
-   ## Constraints
-
-   - [Hard constraint 1]
-   - [Hard constraint 2]
-   - [Budget/Time/Complexity limits]
-
-   ---
-
-   ## Your Options
-
-   ### Option A: [Name]
-   **What**: [Brief description of approach]
-   - **Pros**: [Benefit 1], [Benefit 2]
-   - **Cons**: [Risk 1], [Risk 2]
-
-   ### Option B: [Name]
-   **What**: [Brief description of approach]
-   - **Pros**: [Benefit 1], [Benefit 2]
-   - **Cons**: [Risk 1], [Risk 2]
-
-   ### Option C: [Hybrid/Alternative]
-   **What**: [Brief description]
-   - **Pros**: [Benefit 1]
-   - **Cons**: [Risk 1], [Risk 2]
-
-   ---
-
-   ## Your Decision
-
-   > **I chose**: [Circle one: A / B / C]
-   >
-   > **My reasoning**: [Explain your choice in 2-3 sentences]
-   >
-   > **Risks I'm accepting**: [What trade-offs you're making]
-
-   ---
-
-   ## Follow-Up Challenges
-
-   1. **If constraints changed**: How would your decision change if [constraint X] was removed/added?
-   2. **Edge case**: What if [unexpected scenario] happened?
-   3. **Consequence**: How does this decision impact [related system/stakeholder]?
-
-   ---
-
-   ## Verification Criteria
-
-   Your decision demonstrates understanding when:
-   - [ ] You can explain WHY you rejected the other options
-   - [ ] You acknowledge the trade-offs you're making
-   - [ ] You identify at least one risk you're accepting
-
-   ---
-
-   *Run `professor:review` to discuss your reasoning.*
-   ```
-
-   **For debugging/troubleshooting non-coding** (when section involves diagnosing issues):
-
-   ```markdown
-   # Exercise: [Exercise Title]
-
-   > **Type**: Problem Diagnosis
-   > Diagnose the issue, propose a solution, then run `professor:review`.
-
-   ---
-
-   ## The Problem
-
-   [Describe the symptoms, error messages, or unexpected behavior]
-
-   ## Evidence Collected
-
-   - **Symptom 1**: [Description]
-   - **Symptom 2**: [Description]
-   - **Environment**: [Relevant context]
-
-   ---
-
-   ## Diagnosis
-
-   > **Root Cause Hypothesis**: [Your best guess at what's causing this]
-   >
-   > **Evidence supporting this**: [Why you think this is the cause]
-   >
-   > **Evidence against this**: [What doesn't fit]
-
-   ---
-
-   ## Proposed Solution
-
-   > **Solution**: [Steps to fix]
-   >
-   > **Why this will work**: [Reasoning]
-   >
-   > **Risks**: [What could go wrong]
-
-   ---
+   ## Your Answer
+   [Space for user's response - either free text or specific format]
 
    ## Verification
+   [What makes a good answer - criteria for self-verification]
 
-   How will you confirm the fix worked?
-
-   ---
-
-   *Run `professor:review` to validate your diagnosis approach.*
-   ```
-
-   **For analysis/evaluation non-coding** (when section involves assessing criteria):
-
-   ```markdown
-   # Exercise: [Exercise Title]
-
-   > **Type**: Criteria Assessment
-   > Evaluate the options against key criteria, then run `professor:review`.
-
-   ---
-
-   ## Decision Context
-
-   [What needs to be evaluated and why]
-
-   ## Evaluation Criteria
-
-   Rate each criterion 1-5 and justify:
-   
-   | Criterion | Weight | Option A | Option B | Option C |
-   |-----------|--------|----------|----------|----------|
-   | [Criterion 1] | [High/Med/Low] | Score:/5 | Score:/5 | Score:/5 |
-   | [Criterion 2] | [High/Med/Low] | Score:/5 | Score:/5 | Score:/5 |
-   | [Criterion 3] | [High/Med/Low] | Score:/5 | Score:/5 | Score:/5 |
-
-   ---
-
-   ## Weighted Analysis
-
-   Calculate your scores:
-   
-   - **Option A Total**: [Weighted score]
-   - **Option B Total**: [Weighted score]  
-   - **Option C Total**: [Weighted score]
-
-   ---
-
-   ## Recommendation
-
-   > **I recommend**: [Option]
-   >
-   > **Because**: [Your analysis summary]
-   >
-   > **Tie-breaker**: [If scores are close, what tips the balance]
-
-   ---
-
-   ## Self-Check
-
-   - [ ] Criteria weights are justified
-   - [ ] Scores reflect real differences
-   - [ ] Tie-breaker logic is sound
-
-   ---
-
-   *Run `professor:review` to discuss your evaluation framework.*
+   ## Resources
+   - [Reference to LECTURE.md section]
+   - [Any additional hints without giving the answer]
    ```
 
 6. **Update COURSE.md**:

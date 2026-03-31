@@ -171,26 +171,20 @@ function updateCourseWithSession(coursePath, sessionState) {
       `lecture_summary: "${sessionState.lectureSummary || ''}"`
     );
   } else {
-    // Add session state section at the top (after frontmatter if exists)
-    const sessionStateBlock = `---
-session_state:
-  last_active_section: "${sessionState.lastActiveSection || ''}"
-  last_updated: "${timestamp}"
-  lecture_summary: "${sessionState.lectureSummary || ''}"
----
+    // Add session_state keys into existing frontmatter, or prepend a new frontmatter block
+    const sessionStateLines = `session_state:\n  last_active_section: "${sessionState.lastActiveSection || ''}"\n  last_updated: "${timestamp}"\n  lecture_summary: "${sessionState.lectureSummary || ''}"`;
 
-`;
-    
     if (content.startsWith('---')) {
-      // Find end of frontmatter
-      const frontmatterEnd = content.indexOf('---', 3);
+      // Inject session_state inside the existing frontmatter block (before closing ---)
+      const frontmatterEnd = content.indexOf('\n---', 3);
       if (frontmatterEnd !== -1) {
-        newContent = content.slice(0, frontmatterEnd + 3) + '\n' + sessionStateBlock + content.slice(frontmatterEnd + 3);
+        newContent = content.slice(0, frontmatterEnd) + '\n' + sessionStateLines + content.slice(frontmatterEnd);
       } else {
-        newContent = sessionStateBlock + content;
+        // Malformed frontmatter — prepend a new block
+        newContent = `---\n${sessionStateLines}\n---\n\n` + content;
       }
     } else {
-      newContent = sessionStateBlock + content;
+      newContent = `---\n${sessionStateLines}\n---\n\n` + content;
     }
   }
   
