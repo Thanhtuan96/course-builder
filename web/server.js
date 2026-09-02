@@ -5,6 +5,7 @@ import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { spawn, execSync } from 'child_process';
+import { assembleRuntimeInput } from './prompt-contract.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -247,89 +248,6 @@ app.post('/api/courses/:slug/:file', (req, res) => {
   res.json({ success: true });
 });
 
-// Professor system prompt — instructs AI to behave as a Socratic teaching assistant
-// and to wrap any course files it creates in <file path="...">...</file> tags so the
-// server can persist them to disk automatically.
-const PROFESSOR_SYSTEM_PROMPT = `You are Professor Claude — a Socratic technology mentor built into a web-based learning app.
-
-## Your role
-Teach users by asking questions, NOT by giving answers. Guide them to discover concepts themselves.
-- Never write working code for the user
-- Never complete exercises on their behalf
-- Always ask "What have you tried?" before offering hints
-- Give hints in layers: conceptual → pattern/tool → pseudo-code only
-
-## Commands you handle
-- \`professor:new-topic\` — Ask what they want to learn and their level (Beginner/Intermediate/Advanced/Expert), then create a course
-- \`professor:next\` — Load the next not-started section into LECTURE.md
-- \`professor:review\` — Socratic review: what's working → question → concept to study → next action
-- \`professor:done\` — Confirm understanding verbally, then mark section complete
-- \`professor:hint\` — Layer 1 (concept) → Layer 2 (tool/pattern) → Layer 3 (pseudo-code only)
-- \`professor:stuck\` — Walk through what they tried → exact sticking point → smaller steps → analogy
-- \`professor:discuss\` — Conceptual Q&A only
-- \`professor:quiz\` — 5 questions matched to their level
-- \`professor:syllabus\` — Describe course outline from COURSE.md
-- \`professor:progress\` — Summarize completed/current/remaining sections
-
-## Creating course files
-When creating or updating course files, include them in your response wrapped in XML tags.
-The app will save them automatically — do NOT mention the tags to the user.
-
-When creating a NEW course (professor:new-topic), derive a URL-safe slug from the topic name
-(e.g., "React Hooks" → "react-hooks") and include the slug in the path:
-
-<file path="courses/react-hooks/COURSE.md">
-[full file content here]
-</file>
-
-<file path="courses/react-hooks/CAPSTONE.md">
-[full file content here]
-</file>
-
-When updating an EXISTING course file (professor:next, professor:done, etc.), use just the filename:
-
-<file path="LECTURE.md">
-[full file content here]
-</file>
-
-<file path="COURSE.md">
-[updated content here]
-</file>
-
-## COURSE.md format
-\`\`\`
-# Course: {Topic Name}
-**Level**: {Beginner/Intermediate/Advanced/Expert}
-**Created**: {date}
-**Last active**: {date}
-
-## Syllabus
-- ⬜ Section 1: {Name}
-- ⬜ Section 2: {Name}
-...
-
-## Progress Log
-(entries added as sections are completed)
-\`\`\`
-
-Status icons: ⬜ Not started | 🔄 In progress | ✅ Done
-
-## LECTURE.md format
-\`\`\`
-# Section N: {Name}
-**Status**: 🔄 In progress
-
-## Concepts
-[key concepts explained clearly]
-
-## Exercise
-[one focused exercise — they must solve it themselves]
-
-## What to do
-Read through this, then attempt the exercise. Use \`professor:review\` when ready, or \`professor:hint\` if stuck.
-\`\`\`
-`;
-
 // Helper: parse <file path="...">...</file> blocks from AI response and save them.
 // Handles two formats:
 //   <file path="courses/{slug}/COURSE.md"> — new course creation
@@ -370,7 +288,8 @@ function saveFilesFromResponse(fullText, courseSlug) {
 
 // Stream chat response via claude CLI subprocess (uses Claude Code's existing OAuth)
 function streamViaCLI(res, messages, courseSlug, sessionId) {
-  const lastUser = [...messages].reverse().find(m => m.role === 'user');
+  const runtimeInput = assembleRuntimeInput(messages);
+  const lastUser = runtimeInput.messages.slice().reverse().find(message => message.role === 'user');
   if (!lastUser) {
     res.write(`data: ${JSON.stringify({ error: 'No user message' })}\n\n`);
     res.end();
@@ -389,7 +308,7 @@ function streamViaCLI(res, messages, courseSlug, sessionId) {
     args.push('--resume', sessionId);
   }
 
-  args.push(lastUser.content);
+  args.push(runtimeInput.cliPrompt);
 
   // Delete CLAUDECODE so nested claude CLI is allowed
   const env = { ...process.env };
@@ -623,19 +542,10 @@ function sendSSEError(res, code, message, details = {}) {
   res.end();
 }
 
-function normalizeOllamaMessages(messages) {
-  return messages
-    .filter(m => m.content && m.content.trim())
-    .map(m => ({
-      role: m.role === 'user' ? 'user' : 'assistant',
-      content: m.content
-    }));
-}
-
 async function streamViaOllama(res, messages, courseSlug, model) {
   const selectedModel = model || process.env.OLLAMA_MODEL || 'qwen2.5-coder:latest';
-  const ollamaMessages = normalizeOllamaMessages(messages);
-  ollamaMessages.unshift({ role: 'system', content: PROFESSOR_SYSTEM_PROMPT });
+  const runtimeInput = assembleRuntimeInput(messages);
+  const ollamaMessages = [{ role: 'system', content: runtimeInput.systemPrompt }, ...runtimeInput.messages];
 
   let fullText = '';
   try {
@@ -729,7 +639,8 @@ function saveResponseFilesAndComplete(res, text, courseSlug, metadata = {}) {
 }
 
 function streamViaCursor(res, messages, courseSlug, sessionId, model) {
-  const lastUser = [...messages].reverse().find(m => m.role === 'user');
+  const runtimeInput = assembleRuntimeInput(messages);
+  const lastUser = runtimeInput.messages.slice().reverse().find(message => message.role === 'user');
   if (!lastUser) {
     sendSSEError(res, 'missing_message', 'No user message provided.');
     return;
@@ -747,7 +658,7 @@ function streamViaCursor(res, messages, courseSlug, sessionId, model) {
   if (model) {
     args.push('--model', model);
   }
-  args.push(lastUser.content);
+  args.push(runtimeInput.cliPrompt);
 
   const proc = spawn('cursor-agent', args, { cwd: __dirname, stdio: ['ignore', 'pipe', 'pipe'] });
   let buffer = '';
@@ -822,7 +733,8 @@ function streamViaCursor(res, messages, courseSlug, sessionId, model) {
 }
 
 function streamViaOpenCode(res, messages, courseSlug, sessionId, model) {
-  const lastUser = [...messages].reverse().find(m => m.role === 'user');
+  const runtimeInput = assembleRuntimeInput(messages);
+  const lastUser = runtimeInput.messages.slice().reverse().find(message => message.role === 'user');
   if (!lastUser) {
     sendSSEError(res, 'missing_message', 'No user message provided.');
     return;
@@ -837,7 +749,7 @@ function streamViaOpenCode(res, messages, courseSlug, sessionId, model) {
   if (model) {
     args.push('--model', model);
   }
-  args.push(lastUser.content);
+  args.push(runtimeInput.cliPrompt);
 
   const proc = spawn('opencode', args, { cwd: __dirname, stdio: ['ignore', 'pipe', 'pipe'] });
   let buffer = '';
@@ -1020,12 +932,8 @@ app.post('/api/chat', (req, res) => {
   }
 
   // Build messages for API (filter out empty assistant messages from streaming)
-  const apiMessages = messages
-    .filter(m => m.content && m.content.trim())
-    .map(m => ({
-      role: m.role === 'user' ? 'user' : 'assistant',
-      content: m.content
-    }));
+  const runtimeInput = assembleRuntimeInput(messages);
+  const apiMessages = runtimeInput.messages;
 
   // Determine API provider
   const isOpenAI = !!process.env.OPENAI_API_KEY && !process.env.ANTHROPIC_API_KEY && !process.env.CLAUDE_API_KEY;
@@ -1037,7 +945,7 @@ app.post('/api/chat', (req, res) => {
     headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` };
     requestBody = {
       model: 'gpt-4o',
-      messages: [{ role: 'system', content: PROFESSOR_SYSTEM_PROMPT }, ...apiMessages],
+      messages: [{ role: 'system', content: runtimeInput.systemPrompt }, ...apiMessages],
       stream: true
     };
     console.log('🤖 Using model: gpt-4o');
@@ -1047,7 +955,7 @@ app.post('/api/chat', (req, res) => {
     requestBody = {
       model: 'claude-sonnet-4-6',
       max_tokens: 4096,
-      system: PROFESSOR_SYSTEM_PROMPT,
+      system: runtimeInput.systemPrompt,
       messages: apiMessages,
       stream: true
     };
