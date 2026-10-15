@@ -14,9 +14,10 @@ import { createMemoryAdapter, validateDump, APP_ID } from './memory-adapter.js';
 
 const DB_NAME = 'professor-studio';
 // v1 = the seed db.js (courses/cards/meta); v2 = the normalized schema; v3 adds the CLI-import
-// `external_id` indexes. Bumping the version is what makes `onupgradeneeded` run for browsers that
-// already have an older database — otherwise the new indexes would never be created.
-export const DB_VERSION = 3;
+// `external_id` indexes; v4 adds the capstone tables (Phase 33). Bumping the version is what makes
+// `onupgradeneeded` run for browsers that already have an older database — otherwise the new
+// stores/indexes would never be created.
+export const DB_VERSION = 4;
 
 /**
  * Bring an open (upgrading) database in line with schema.js: create missing stores AND add any

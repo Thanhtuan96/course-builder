@@ -531,6 +531,173 @@ export async function listRunResults(lessonId) {
   });
 }
 
+/* ------------------------------------------------------------------ capstone (Phase 33) */
+
+/** Parse a JSON TEXT column, falling back when it is absent or invalid. */
+function parseJsonColumn(value, fallback) {
+  if (value === null || value === undefined || value === '') return fallback;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed === null || parsed === undefined ? fallback : parsed;
+  } catch {
+    return fallback;
+  }
+}
+
+/**
+ * Normalise a stored capstone row: JSON columns become live objects. Rows keep their raw
+ * `*_json` columns too so backups stay byte-identical across adapters.
+ * @param {object|null} row
+ */
+export function decodeCapstone(row) {
+  if (!row) return null;
+  return {
+    ...row,
+    rubric: parseJsonColumn(row.rubric_json, []),
+    tests: parseJsonColumn(row.tests_json, null),
+    hiddenAnswers: parseJsonColumn(row.hidden_answers_json, null),
+    artifact: parseJsonColumn(row.artifact_json, null),
+  };
+}
+
+/** @param {object|null} row */
+export function decodeCapstoneSubmission(row) {
+  if (!row) return null;
+  return {
+    ...row,
+    files: parseJsonColumn(row.files_json, null),
+    testResults: parseJsonColumn(row.test_results_json, null),
+    review: parseJsonColumn(row.review_json, null),
+  };
+}
+
+/**
+ * The capstone for a course, or null. At most one exists — the brief is immutable.
+ * @param {string} courseId
+ * @returns {Promise<object|null>}
+ */
+export async function getCapstone(courseId) {
+  const rows = await adapter.list('capstones', {
+    where: { course_id: courseId },
+    orderBy: { field: 'created_at', dir: 'asc' },
+  });
+  return decodeCapstone(rows[0] || null);
+}
+
+/**
+ * Create the (immutable) capstone for a course. If one already exists it is returned unchanged —
+ * there is deliberately no update API, so the learner always builds against the original brief.
+ * @param {{ courseId: string, kind?: string, brief_md?: string, rubric?: any[], tests?: any, hiddenAnswers?: any, artifact?: any, externalId?: string|null }} input
+ * @returns {Promise<object>}
+ */
+export async function createCapstone({
+  courseId,
+  kind = 'conceptual',
+  brief_md = '',
+  rubric = [],
+  tests = null,
+  hiddenAnswers = null,
+  artifact = null,
+  externalId = null,
+} = {}) {
+  if (!courseId) throw new Error('createCapstone needs a courseId');
+  const existing = await getCapstone(courseId);
+  if (existing) return existing;
+  const row = stampCreate({
+    course_id: courseId,
+    kind,
+    brief_md,
+    rubric_json: JSON.stringify(Array.isArray(rubric) ? rubric : []),
+    tests_json: tests == null ? null : JSON.stringify(tests),
+    hidden_answers_json: hiddenAnswers == null ? null : JSON.stringify(hiddenAnswers),
+    artifact_json: artifact == null ? null : JSON.stringify(artifact),
+    external_id: externalId,
+  });
+  await adapter.put('capstones', row);
+  emit('capstones', row.id, 'create');
+  return decodeCapstone(row);
+}
+
+/**
+ * Append a submission. Attempts are never overwritten: each call adds a new row with attempt =
+ * max(existing) + 1. When `externalId` matches an existing row the existing one is returned
+ * unchanged (idempotent CLI import).
+ * @param {{ capstoneId: string, content_md?: string, repo_url?: string|null, files?: object|null, testResults?: any, review?: any, verdict?: string|null, externalId?: string|null }} input
+ * @returns {Promise<object>}
+ */
+export async function createCapstoneSubmission({
+  capstoneId,
+  content_md = '',
+  repo_url = null,
+  files = null,
+  testResults = null,
+  review = null,
+  verdict = null,
+  externalId = null,
+} = {}) {
+  if (!capstoneId) throw new Error('createCapstoneSubmission needs a capstoneId');
+  const existing = await adapter.list('capstone_submissions', { where: { capstone_id: capstoneId } });
+  if (externalId) {
+    const match = existing.find((s) => s.external_id === externalId);
+    if (match) return decodeCapstoneSubmission(match);
+  }
+  const attempt = existing.reduce((max, s) => Math.max(max, s.attempt || 0), 0) + 1;
+  const row = stampCreate({
+    capstone_id: capstoneId,
+    attempt,
+    content_md,
+    repo_url,
+    files_json: files == null ? null : JSON.stringify(files),
+    test_results_json: testResults == null ? null : JSON.stringify(testResults),
+    review_json: review == null ? null : JSON.stringify(review),
+    verdict,
+    external_id: externalId,
+  });
+  await adapter.put('capstone_submissions', row);
+  emit('capstone_submissions', row.id, 'create');
+  return decodeCapstoneSubmission(row);
+}
+
+/**
+ * Every submission for a capstone, oldest attempt first.
+ * @param {string} capstoneId
+ */
+export async function listCapstoneSubmissions(capstoneId) {
+  const rows = await adapter.list('capstone_submissions', {
+    where: { capstone_id: capstoneId },
+    orderBy: { field: 'attempt', dir: 'asc' },
+  });
+  return rows.map(decodeCapstoneSubmission);
+}
+
+/** @param {string} capstoneId */
+export async function getLatestCapstoneSubmission(capstoneId) {
+  const list = await listCapstoneSubmissions(capstoneId);
+  return list[list.length - 1] || null;
+}
+
+/**
+ * Every workspace file for a course, across its lessons, keyed by path (later lessons win).
+ * Used to snapshot the learner's code for a programming capstone submission (CAP-03).
+ * @param {string} courseId
+ * @returns {Promise<Array<{ path: string, content: string, language: string|null }>>}
+ */
+export async function listCourseWorkspaceFiles(courseId) {
+  const lessons = await adapter.list('lessons', {
+    where: { course_id: courseId },
+    orderBy: { field: 'position', dir: 'asc' },
+  });
+  const byPath = new Map();
+  for (const lesson of lessons) {
+    const files = await adapter.list('workspace_files', {
+      where: { lesson_id: lesson.id },
+      orderBy: { field: 'path', dir: 'asc' },
+    });
+    for (const file of files) byPath.set(file.path, file);
+  }
+  return [...byPath.values()].map((f) => ({ path: f.path, content: f.content ?? '', language: f.language || null }));
+}
+
 /* ------------------------------------------------------------------ activity */
 
 /** @param {string} kind @param {string|null} [refId] */

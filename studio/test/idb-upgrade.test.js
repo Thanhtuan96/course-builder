@@ -12,9 +12,10 @@ import { describe, it, expect } from 'vitest';
 import { createIdbAdapter, DB_VERSION } from '../src/lib/repo/idb-adapter.js';
 import { TABLE_NAMES, tableSpec } from '../src/lib/repo/schema.js';
 
-// Index a table must have gained with the CLI-07 migration.
+// Index a table must have gained with the CLI-07 migration (and the Phase 33 capstone tables,
+// which ship with external_id from the start and are backfilled onto older databases the same way).
 const NEW_INDEXES = ['external_id'];
-const NEW_INDEX_TABLES = ['courses', 'lessons', 'lesson_versions', 'cards'];
+const NEW_INDEX_TABLES = ['courses', 'lessons', 'lesson_versions', 'cards', 'capstones', 'capstone_submissions'];
 
 let counter = 0;
 const uniqueDb = () => `upgrade-${Date.now()}-${++counter}`;
@@ -71,8 +72,8 @@ function seedV2(db, rows) {
 }
 
 describe('IndexedDB upgrade to the external_id schema', () => {
-  it('is version 3', () => {
-    expect(DB_VERSION).toBe(3);
+  it('is version 4 (Phase 33 capstone tables)', () => {
+    expect(DB_VERSION).toBe(4);
   });
 
   it('adds external_id indexes to existing stores and preserves rows', async () => {
@@ -111,5 +112,15 @@ describe('IndexedDB upgrade to the external_id schema', () => {
     expect(await indexNames(dbName, 'cards')).toContain('external_id');
     const due = await adapter.list('cards', { where: { external_id: 'cli:x:card:1' } });
     expect(due).toHaveLength(1);
+  });
+
+  it('creates the Phase 33 capstone stores and filters by course_id', async () => {
+    const dbName = uniqueDb();
+    const adapter = createIdbAdapter({ dbName });
+    await adapter.put('capstones', { id: 'cap-1', course_id: 'c1', brief_md: 'ship', external_id: 'ai:c1' });
+    await adapter.put('capstone_submissions', { id: 'sub-1', capstone_id: 'cap-1', attempt: 1, external_id: 'cli:x:completion' });
+    expect(await adapter.list('capstones', { where: { course_id: 'c1' } })).toHaveLength(1);
+    expect(await adapter.list('capstone_submissions', { where: { capstone_id: 'cap-1' } })).toHaveLength(1);
+    expect(await indexNames(dbName, 'capstones')).toContain('external_id');
   });
 });

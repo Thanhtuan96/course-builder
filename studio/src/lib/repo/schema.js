@@ -75,6 +75,16 @@ export const TABLES = {
     fields: ['id', 'owner_id', 'lesson_id', 'file_id', 'runner', 'language', 'stdout', 'stderr', 'exit_code', 'checks_json', 'duration_ms', 'created_at', 'updated_at', 'deleted_at'],
     indexes: ['lesson_id'],
   },
+  capstones: {
+    id: 'id',
+    fields: ['id', 'owner_id', 'course_id', 'kind', 'brief_md', 'rubric_json', 'tests_json', 'hidden_answers_json', 'artifact_json', 'external_id', 'created_at', 'updated_at', 'deleted_at'],
+    indexes: ['course_id', 'external_id'],
+  },
+  capstone_submissions: {
+    id: 'id',
+    fields: ['id', 'owner_id', 'capstone_id', 'attempt', 'content_md', 'repo_url', 'files_json', 'test_results_json', 'review_json', 'verdict', 'external_id', 'created_at', 'updated_at', 'deleted_at'],
+    indexes: ['capstone_id', 'external_id'],
+  },
 };
 
 export const TABLE_NAMES = Object.keys(TABLES);
