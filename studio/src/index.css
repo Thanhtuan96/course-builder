@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+*:focus-visible {
+  outline: 2px solid #4f46e5;
+  outline-offset: 2px;
+}
+
+/* Calm, editorial lesson typography — max ~70ch for readability. */
+.prose-lesson {
+  max-width: 70ch;
+  line-height: 1.7;
+  font-size: 1.0125rem;
+}
+
+.prose-lesson > :first-child {
+  margin-top: 0;
+}
+
+.prose-lesson h1,
+.prose-lesson h2,
+.prose-lesson h3 {
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 1.7em 0 0.6em;
+}
+
+.prose-lesson h1 {
+  font-size: 1.6rem;
+}
+.prose-lesson h2 {
+  font-size: 1.3rem;
+}
+.prose-lesson h3 {
+  font-size: 1.1rem;
+}
+
+.prose-lesson p,
+.prose-lesson ul,
+.prose-lesson ol,
+.prose-lesson blockquote,
+.prose-lesson table,
+.prose-lesson pre {
+  margin: 0.85em 0;
+}
+
+.prose-lesson ul,
+.prose-lesson ol {
+  padding-left: 1.4rem;
+}
+
+.prose-lesson li {
+  margin: 0.3em 0;
+}
+
+.prose-lesson a {
+  color: #4f46e5;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.prose-lesson blockquote {
+  border-left: 3px solid #a5b4fc;
+  padding-left: 1rem;
+  opacity: 0.9;
+}
+
+.prose-lesson code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+.prose-lesson :not(pre) > code {
+  background: rgba(127, 127, 127, 0.16);
+  padding: 0.12em 0.36em;
+  border-radius: 0.3rem;
+}
+
+.prose-lesson pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 1rem;
+  border-radius: 0.6rem;
+  overflow-x: auto;
+}
+
+.prose-lesson table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.95em;
+}
+
+.prose-lesson th,
+.prose-lesson td {
+  border: 1px solid rgba(127, 127, 127, 0.35);
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+}
+
+.prose-lesson hr {
+  border: none;
+  border-top: 1px solid rgba(127, 127, 127, 0.3);
+  margin: 1.6em 0;
+}
