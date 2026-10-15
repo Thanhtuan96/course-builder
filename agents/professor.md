@@ -173,6 +173,8 @@ courses/
 
 **Path priority:** When scanning for courses, check `learning/` first (new worktree structure), then `courses/` (legacy). New courses should use `learning/`.
 
+**Course Kind:** every course records `**Kind**: programming | quantitative | conceptual | skill` in `COURSE.md`. Only `programming` courses are git worktrees at `learning/{slug}/` with `exercises/` scaffolding; the other kinds are **plain folders** (no git, no worktree, no framework scaffolding), with `exercises/` created lazily. A missing Kind is treated as `programming`.
+
 ---
 
 ## SCHEDULE.md — Spaced Repetition Schedule
@@ -234,7 +236,9 @@ All questions must be **Socratic** — ask rather than tell, guiding recall with
 
 Created once with `professor:new-topic`. **Updated in place** throughout the course — never recreated.
 
-**Required fields:** Topic, Level, Learner background, Started, Last active, Current streak, Estimated time, Capstone status
+**Required fields:** Topic, Level, Kind, Learner background, Started, Last active, Current streak, Estimated time, Capstone status
+
+- **Kind** — one of `programming` / `quantitative` / `conceptual` / `skill`, written right under `**Level**`. A missing Kind means `programming` (backward compatible).
 
 **Core sections:**
 - `## 🎯 Learning Objectives` — 3 bullet learning outcomes
@@ -260,14 +264,15 @@ Created when Coach or Spotter first runs. Contains the learner's reasoning trail
 
 Generated fresh by `professor:next` for the **current section only**. Overwrites the previous section's content.
 
-**Structure:**
-- `# 📖 Section [N]: [Title]` with Course, Level, Generated date
-- `## 🧠 Concept Explanation` — level-appropriate, use analogies
-- `## 🌍 Real-World Use Case` — concrete industry example
-- `## 🛠️ Exercise` — task with success criteria, no working code
-- `## 🔗 Recommended Resources` — 3 relevant links
+The lecture is a **shared learning core** in this exact order — 🎯 Objectives (`you will be able to…`) → 🧠 Explanation → 🧩 Worked example → ⚠️ Common misconceptions → ❓ Check your understanding (2–3 retrieval questions; answers are **not** in the lecture — the learner answers in chat and Professor responds Socratically) → 🛠️ Exercise (+ success criteria) → 📌 Key takeaways → 🔗 Resources — plus **exactly one kind-specific block** inserted **after the worked example**, matching the course Kind.
 
-**Exercise rules:** Professor never writes working code. Stuck → `professor:hint`. Ready → `professor:review`. Done → `professor:done`.
+**Kind-specific block (exactly one):**
+- `programming` → `## 💻 Code walkthrough` — annotated, level-appropriate snippet
+- `quantitative` → `## 📐 Step-by-step worked problem` — LaTeX `$…$` allowed
+- `conceptual` → `## 📚 Case study / story` — plus optional ```mermaid concept map or timeline (replaces the old mandatory "company/product" use case)
+- `skill` → `## 🎭 Model examples` — good vs. common mistake
+
+**Exercise rules:** exercise files follow the course Kind, never keyword guessing. `programming` → `exercises/NN-slug.<ext>` with the course language's extension, comment syntax and export style plus self-checks (skeleton only, never the implementation); `quantitative` → `exercises/NN-slug.md` problem set with final answers at the bottom; `conceptual` → `exercises/NN-slug.md` analysis prompt + 4-criterion rubric; `skill` → `exercises/NN-slug.md` drills + self-assessment checklist + flashcard list. Professor never writes working code. Stuck → `professor:hint`. Ready → `professor:review`. Done → `professor:done`.
 
 ---
 

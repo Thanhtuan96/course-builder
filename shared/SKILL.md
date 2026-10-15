@@ -37,6 +37,8 @@ courses/
     └── CAPSTONE.md     ← Capstone project brief (created with course, never changed)
 ```
 
+> **Course Kind:** every course stores `**Kind**: programming | quantitative | conceptual | skill` in `COURSE.md`. Only `programming` courses are git worktrees with `exercises/` scaffolding; the other kinds are plain folders. A missing Kind means `programming`.
+
 **At the start of every conversation**, before doing anything else:
 1. Check if a `courses/` folder exists
 2. If yes, read `COURSE.md` to restore context (current topic, level, active section, progress)
@@ -79,11 +81,19 @@ courses/
 
 2. **Research the topic** using web search — find current best practices, common pitfalls, recommended learning path
 
-3. Create two files inside `courses/{topic-slug}/`:
-   - **`COURSE.md`** using the COURSE.md format below — syllabus only, all sections ⬜ Not started, progress log initialized
+3. **Propose a course Kind** — exactly one of `programming` / `quantitative` / `conceptual` / `skill` — with a one-line reason. Include it **inside the same syllabus confirmation** so the learner can accept or change it. Guidance:
+   - `programming` — writing/running code ("Python cơ bản", "React", "SQL")
+   - `quantitative` — numbers, formulas, proofs ("Linear algebra", "Statistics")
+   - `conceptual` — ideas, history, theory, culture ("Lịch sử Việt Nam thế kỷ 20", "Marketing")
+   - `skill` — a craft performed by drill ("Public speaking", "Chess openings")
+
+4. After confirmation, create the course **as a plain folder** `learning/{topic-slug}/` — except `programming`, which requires a git repo + worktree at `learning/{topic-slug}/` with `exercises/` scaffolding. Two files:
+   - **`COURSE.md`** using the COURSE.md format below — syllabus only, all sections ⬜ Not started, progress log initialized, and `**Kind**: {kind}` under `**Level**`
    - **`CAPSTONE.md`** using the CAPSTONE.md format below — the full pet project brief the user will build alone at the end
 
-4. Tell the user: *"Course created! Your capstone project brief is saved in CAPSTONE.md — you'll build it solo after completing all sections. Run `profesor:next` to load your first section."*
+5. Tell the user: *"Course created as a **{kind}** course! Your capstone project brief is saved in CAPSTONE.md — you'll build it solo after completing all sections. Run `profesor:next` to load your first section."*
+
+A **missing Kind is treated as `programming`** by every command (backward compatible with existing courses).
 
 ---
 
@@ -177,11 +187,11 @@ After user answers → Socratic review (see above). Never just say "correct" or 
 
 ### `profesor:hint`
 
-Give the **next hint layer** — infer the layer from how many times they've asked this session:
+Give the **next hint layer** — infer the layer from how many times they've asked this session. The three layers always advance **concept → approach → structural hint**; what Layer 2/3 look like follows the course Kind (`**Kind**: ...`; missing → `programming`):
 
-- **Layer 1** (first hint): Conceptual nudge — *"Think about what happens to state when..."*
-- **Layer 2** (second hint): Point to the right tool/pattern — *"Have you looked at how X is typically handled in this framework?"*
-- **Layer 3** (third hint): Structural hint — pseudo-code shape only, no working logic
+- **Layer 1** (first hint): Conceptual nudge, plain language, no code — *"Think about what happens to state when..."*
+- **Layer 2** (second hint): The approach — the tool/pattern (`programming`), the method (`quantitative`), the lens/framework (`conceptual`), the technique to practise (`skill`) — *"Have you looked at how X is typically handled?"*
+- **Layer 3** (third hint): Structural hint — pseudo-code shape only (`programming`), partial setup (`quantitative`), argument outline (`conceptual`), or a scaffolded mini-example (`skill`). Never working logic.
 
 Never skip layers. If user asks for a 4th hint, suggest `profesor:stuck` instead.
 
@@ -261,6 +271,7 @@ Created once with `profesor:new-topic`. **Updated in place** throughout the cour
 ```markdown
 # 📚 Course: [Topic Name]
 **Level**: [Beginner / Intermediate / Advanced / Expert]
+**Kind**: [programming / quantitative / conceptual / skill]
 **Learner background**: [brief summary of what user already knows]
 **Started**: [date]
 **Last active**: [date]
@@ -305,30 +316,75 @@ Status legend: ⬜ Not started · 🔄 In progress · ✅ Done · 🔒 Locked
 
 Generated fresh by `profesor:next` for the **current section only**. Overwrites the previous section's content.
 
-```markdown
+The lecture is a **shared learning core** (in this exact order) plus **exactly one kind-specific block** placed **after the worked example**. The kind comes from `**Kind**` in `COURSE.md` (missing → `programming`).
+
+````markdown
 # 📖 Section [N]: [Section Title]
-**Course**: [Topic Name] · **Level**: [Level]
+**Course**: [Topic Name] · **Level**: [Level] · **Kind**: [kind]
 **Generated**: [date]
 
 ---
 
-## 🧠 Concept Explanation
+## 🎯 Objectives
+By the end of this section you will be able to:
+- [you will be able to …]
+- [you will be able to …]
+
+---
+
+## 🧠 Explanation
 [Clear, level-appropriate explanation — focus on understanding, not syntax dumps]
 [Use analogies where helpful]
 [For Advanced/Expert: include trade-offs, edge cases, common pitfalls]
 
 ---
 
-## 🌍 Real-World Use Case
-[A concrete industry example of where/how this is used]
-[Mention a specific company, product, or scenario]
+## 🧩 Worked Example
+[One fully worked example the learner can follow along with — show the reasoning step by step]
+[This is illustrative only — it is NOT the exercise solution]
+
+---
+
+<!-- INSERT EXACTLY ONE kind-specific block here, matching the course Kind: -->
+
+## 💻 Code walkthrough        <!-- programming -->
+[An annotated, level-appropriate code snippet. Explain what each meaningful line does.]
+[Never the solution to the exercise below — a separate illustrative example.]
+
+## 📐 Step-by-step worked problem        <!-- quantitative -->
+[A fully worked problem with every step shown. LaTeX `$…$` is allowed for formulas.]
+
+## 📚 Case study / story        <!-- conceptual -->
+[A short real case study or story that illustrates the concept — replaces the old mandatory "company/product" use case.]
+[Optionally add a ```mermaid concept map or timeline:]
+```mermaid
+flowchart LR
+  A[Idea] --> B[Consequence]
+```
+
+## 🎭 Model examples        <!-- skill -->
+[Show a good example next to a common mistake, and explain what makes the good one good.]
+
+---
+
+## ⚠️ Common misconceptions
+- **Misconception:** [what learners often believe] → **Reality:** [correction]
+- **Misconception:** [what learners often believe] → **Reality:** [correction]
+
+---
+
+## ❓ Check your understanding
+Answer these in your own words — the answers are **not** written here. Reply in chat and the Professor responds Socratically.
+1. [retrieval question 1]
+2. [retrieval question 2]
+3. [retrieval question 3 — optional]
 
 ---
 
 ## 🛠️ Exercise
 > **Your task** — do this yourself, do NOT ask Claude to do it:
 >
-> [Clear, specific, achievable task for this section]
+> [Clear, specific, achievable task for this section — for programming this is the skeleton file in `exercises/`]
 >
 > **Success criteria** — you're done when:
 > - [ ] [Measurable criterion 1]
@@ -341,11 +397,29 @@ Generated fresh by `profesor:next` for the **current section only**. Overwrites 
 
 ---
 
-## 🔗 Recommended Resources
+## 📌 Key takeaways
+- [takeaway 1]
+- [takeaway 2]
+- [takeaway 3]
+
+---
+
+## 🔗 Resources
 - [Resource name](url) — [one-line description]
 - [Resource name](url) — [one-line description]
 - [Resource name](url) — [one-line description]
-```
+````
+
+### Course Kind and exercise files
+
+The exercise file format follows the **course Kind**, never keyword guessing:
+
+| Kind | Exercise file |
+|---|---|
+| `programming` | `exercises/NN-slug.<ext>` — extension, comment syntax, and export style match the course language (Python `# TODO` + `def` + `__main__` asserts; JS/TS `// TODO` + `console.assert`; SQL commented task + expected result; etc.). Skeleton + self-checks only. |
+| `quantitative` | `exercises/NN-slug.md` — problem set with final answers in a separate "Answers (check after trying)" section at the bottom, no worked solutions. |
+| `conceptual` | `exercises/NN-slug.md` — analysis/argument prompt + 4-criterion rubric. |
+| `skill` | `exercises/NN-slug.md` — drills + self-assessment checklist + "turn these into flashcards" list. |
 
 ---
 
