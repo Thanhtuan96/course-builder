@@ -1,12 +1,23 @@
-# Dev / test artifacts
-test/
-*.test.js
-.github/
-.vscode/
+# Belt-and-braces excludes on top of the `files` allowlist in package.json.
+# Nothing here is required by the CLI at runtime.
 
-# Web node_modules (never ship these)
+# Dev / CI / test artifacts
+test/
+scripts/
+.github/
+.planning/
+.worktrees/
+*.tgz
+*.log
+
+# Nested node_modules (root deps are installed by npm)
+node_modules/
 web/node_modules/
 web/client/node_modules/
+studio/node_modules/
 
-# Source maps only (keep the rest of dist)
-web/dist/**/*.map
+# The pairing token must never leave a machine
+web/.studio-token
+
+# Source maps (shipped builds are minified assets, not debug source)
+**/*.map
