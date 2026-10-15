@@ -9,7 +9,14 @@
  * course context + the full outline (so every heading and rule is in one auditable string),
  * `messages` = the single user turn.
  */
-import { LEARNING_CORE_SECTIONS, buildSystemPrompt, courseContext } from './base.js';
+import {
+  LEARNING_CORE_SECTIONS,
+  buildSystemPrompt,
+  courseContext,
+  appendLanguageInstruction,
+  languageStrictInstruction,
+} from './base.js';
+import { languageName } from '../i18n/languages.js';
 
 /**
  * Localised learning-core headings + labels, keyed by a STABLE internal section id.
@@ -27,6 +34,7 @@ export const LESSON_LABELS = {
       'worked-example': 'Worked example',
       misconceptions: 'Common misconceptions',
       check: 'Check your understanding',
+      verify: 'Verify it yourself',
       exercise: 'Exercise',
       takeaways: 'Key takeaways',
       resources: 'Resources',
@@ -49,6 +57,7 @@ export const LESSON_LABELS = {
       'worked-example': 'Ví dụ minh hoạ',
       misconceptions: 'Hiểu nhầm thường gặp',
       check: 'Kiểm tra hiểu biết',
+      verify: 'Tự kiểm chứng',
       exercise: 'Bài tập',
       takeaways: 'Điểm chính cần nhớ',
       resources: 'Tài nguyên tham khảo',
@@ -66,10 +75,14 @@ export const LESSON_LABELS = {
   },
 };
 
-/** Resolve the label table for a language, falling back to English. @param {string} [language] */
+/**
+ * Resolve the label table for a language, falling back to English. Accepts a BCP-47 code or a
+ * legacy display name (LANG-01/03).
+ * @param {string} [language]
+ */
 export function lessonLabels(language) {
-  const key = String(language || '').trim().toLowerCase();
-  const match = Object.keys(LESSON_LABELS).find((name) => name.toLowerCase() === key);
+  const name = languageName(language).toLowerCase();
+  const match = Object.keys(LESSON_LABELS).find((key) => key.toLowerCase() === name);
   return LESSON_LABELS[match || 'English'];
 }
 
@@ -190,6 +203,7 @@ export function buildLessonOutline({ kind = 'conceptual', level = 'Beginner', la
     'worked-example': 'One concrete real-world example, worked end to end, showing the reasoning step by step (illustrative only).',
     misconceptions: `Two or three "${labels.misconception}: … → ${labels.reality}: …" lines.`,
     check: 'Two or three retrieval questions in the learner\'s own words. Do NOT put the answers beside them.',
+    verify: 'A short SIFT checklist (Stop · Investigate the source · Find better coverage · Trace to the original) for checking this lesson\'s claims yourself. ≤ 6 lines.',
     exercise: `One hands-on task with a success-criteria checklist. ${EXERCISE_GUIDANCE[kind] || EXERCISE_GUIDANCE.conceptual}`,
     takeaways: 'Three to five one-line takeaways worth remembering.',
     resources: 'Optional further reading from well-known sources only. If unsure a link is current, say "verify links".',
@@ -233,7 +247,7 @@ export function buildsTowardLine(artifact, language) {
  * @param {{ course?: object, lesson?: object, level?: string, language?: string, kind?: string, artifact?: object }} input
  * @returns {{ system: string, messages: { role: string, content: string }[] }}
  */
-export function buildLessonMessages({ course, lesson, level, language, kind, artifact } = {}) {
+export function buildLessonMessages({ course, lesson, level, language, kind, artifact, strict = false } = {}) {
   const resolvedLevel = level || course?.level || 'Beginner';
   const resolvedKind = kind || course?.kind || 'conceptual';
   const resolvedLanguage = language ?? course?.language;
@@ -248,9 +262,14 @@ export function buildLessonMessages({ course, lesson, level, language, kind, art
     extra: toward ? `${toward}\n\n${outline}` : outline,
   });
 
-  const heading = lesson
+  let heading = lesson
     ? `Write the full lesson "${lesson.title}"${lesson.summary ? ` (${lesson.summary})` : ''}.`
     : 'Write the full lesson.';
+  // LANG-04: the strict one-liner is used only by the single auto-regenerate retry.
+  if (strict) {
+    const strictLine = languageStrictInstruction(resolvedLanguage);
+    if (strictLine) heading = `${heading}\n\n${strictLine}`;
+  }
 
-  return { system, messages: [{ role: 'user', content: heading }] };
+  return { system, messages: appendLanguageInstruction([{ role: 'user', content: heading }], resolvedLanguage) };
 }

@@ -69,6 +69,7 @@ describe('prompts/base', () => {
       'worked-example',
       'misconceptions',
       'check',
+      'verify',
       'exercise',
       'takeaways',
       'resources',

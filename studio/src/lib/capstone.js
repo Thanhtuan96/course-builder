@@ -7,6 +7,7 @@
  */
 import { run as runCode } from './runner/index.js';
 import { slugify } from './course.js';
+import { normalizeLanguage } from './i18n/languages.js';
 import { getProvider, createGenerateJson } from './ai/index.js';
 import { buildCapstoneMessages, validateCapstone, capstoneValidator } from './prompts/capstone.js';
 import { createCapstone } from './repo/index.js';
@@ -98,6 +99,7 @@ export async function generateCapstoneForCourse({ course, artifact, settings = {
     messages,
     signal,
     validate: capstoneValidator(course?.kind, { artifact }),
+    language: course?.language,
   });
   const validated = validateCapstone(raw, { kind: course?.kind, artifact });
   if (!validated.ok) throw new Error(validated.error);
@@ -117,8 +119,7 @@ export async function generateCapstoneForCourse({ course, artifact, settings = {
 
 /** Minimal page copy, localised by course language (English fallback). */
 export function capstoneCopy(language) {
-  const key = String(language || '').trim().toLowerCase();
-  if (key === 'vietnamese' || key === 'tiếng việt' || key === 'viet') {
+  if (normalizeLanguage(language) === 'vi') {
     return {
       yourArtifact: 'Sản phẩm của bạn',
       definitionOfDone: 'Định nghĩa hoàn thành',

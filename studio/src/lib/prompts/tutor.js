@@ -6,7 +6,7 @@
  * (Pitfall 13/14): lesson content and chat history are untrusted data, so the authoritative
  * rules stay in `system` and the echoed content is delimited as reference material.
  */
-import { buildSystemPrompt, courseContext, wrapUntrusted } from './base.js';
+import { buildSystemPrompt, courseContext, wrapUntrusted, appendLanguageInstruction, languageStrictInstruction } from './base.js';
 import { COURSE_KIND_IDS } from '../course.js';
 
 /** How many prior messages are sent back to the model. */
@@ -232,7 +232,9 @@ export function buildTutorMessages({
   learnerCode = null,
   capstone = false,
   capstoneBrief = null,
+  strict = false,
 } = {}) {
+  const resolvedLanguage = language ?? course?.language;
   // In capstone mode the ordinary tutor rules and every hint/check affordance are replaced by the
   // single, stricter CAPSTONE_RULES block — the learner gets concept discussion and nothing else.
   const rules = capstone ? [CAPSTONE_RULES] : [TUTOR_RULES];
@@ -251,8 +253,10 @@ export function buildTutorMessages({
     : '';
 
   const system = buildSystemPrompt({
-    language: language ?? course?.language,
-    rules: rules.join('\n\n'),
+    language: resolvedLanguage,
+    rules: strict && languageStrictInstruction(resolvedLanguage)
+      ? `${rules.join('\n\n')}\n\n${languageStrictInstruction(resolvedLanguage)}`
+      : rules.join('\n\n'),
     context,
     extra: [lessonBlock, briefBlock].filter(Boolean).join('\n\n'),
   });
@@ -272,5 +276,6 @@ export function buildTutorMessages({
     }
   }
 
-  return { system, messages };
+  // LANG-04: the final one-line language instruction is the last thing the model reads.
+  return { system, messages: appendLanguageInstruction(messages, resolvedLanguage) };
 }

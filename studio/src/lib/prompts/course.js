@@ -7,7 +7,7 @@
  * falls back to `conceptual` rather than failing the whole proposal.
  */
 import { COURSE_KIND_IDS } from '../course.js';
-import { withLanguage } from './base.js';
+import { withLanguage, languageHeadline, appendLanguageInstruction } from './base.js';
 
 export const MIN_LESSONS = 4;
 export const MAX_LESSONS = 10;
@@ -86,9 +86,11 @@ export function buildSyllabusMessages({ topic, level = 'Beginner', goal = '', la
   }
   lines.push('', 'Return only the JSON object.');
 
+  const head = languageHeadline(language);
+  const body = withLanguage(RULES, language);
   return {
-    system: withLanguage(RULES, language),
-    messages: [{ role: 'user', content: lines.join('\n') }],
+    system: head ? `${head}\n\n${body}` : body,
+    messages: appendLanguageInstruction([{ role: 'user', content: lines.join('\n') }], language),
   };
 }
 

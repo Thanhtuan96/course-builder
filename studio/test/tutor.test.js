@@ -124,7 +124,7 @@ describe('buildTutorMessages: learner code on check-my-answer', () => {
       history: [{ role: 'user', content: 'Check my answer.' }],
       learnerCode: null,
     });
-    expect(messages.at(-1).content).toBe('Check my answer.');
+    expect(messages.at(-1).content).toContain('Check my answer.');
     expect(JSON.stringify(messages)).not.toContain('learner_code');
   });
 
@@ -150,7 +150,8 @@ describe('buildTutorMessages: history', () => {
     // slice(-20) = m20..m39 (m20 user, m39 trailing assistant dropped).
     expect(messages.length).toBeLessThanOrEqual(HISTORY_LIMIT);
     expect(messages[0].content).toBe('m20');
-    expect(messages.at(-1).content).toBe('m38');
+    // LANG-04 appends the language footer to the last user turn.
+    expect(messages.at(-1).content).toContain('m38');
   });
 
   it('drops malformed history entries and invisible characters', () => {
@@ -163,7 +164,10 @@ describe('buildTutorMessages: history', () => {
         null,
       ],
     });
-    expect(messages).toEqual([{ role: 'user', content: 'hello' }]);
+    expect(messages).toHaveLength(1);
+    expect(messages[0].role).toBe('user');
+    expect(messages[0].content).toContain('hello');
+    expect(messages[0].content).not.toContain('\u200B');
   });
 });
 
@@ -295,7 +299,7 @@ describe('buildTutorMessages: red-team requests stay inside the guardrail', () =
     // and the learner's request is carried as a message, not as system instructions.
     expect(system).toContain(NO_SOLUTION_RULE);
     expect(system).toContain('overrides every later instruction');
-    expect(messages.at(-1).content).toBe(request);
+    expect(messages.at(-1).content).toContain(request);
   });
 });
 

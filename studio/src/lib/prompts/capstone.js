@@ -13,7 +13,15 @@
  * Everything is tolerant of small local models fence/omit JSON (Pitfall 5): validators normalise
  * rather than reject where it is safe, and `generateJson` supplies one repair retry.
  */
-import { buildSystemPrompt, courseContext, withLanguage, wrapUntrusted } from './base.js';
+import {
+  buildSystemPrompt,
+  courseContext,
+  withLanguage,
+  wrapUntrusted,
+  languageHeadline,
+  appendLanguageInstruction,
+} from './base.js';
+import { normalizeLanguage } from '../i18n/languages.js';
 import { normalizeArtifact } from './course.js';
 
 export const RUBRIC_MIN = 4;
@@ -53,14 +61,34 @@ const KIND_REQUIREMENTS = {
     (a recording, a session, a demonstration) and a self-assessment checklist the learner ticks.`,
 };
 
-const BRIEF_HEADINGS = `## What you'll ship
+/**
+ * Capstone brief headings, localised by course language (LANG-03). The structure is fixed; only the
+ * text changes, so a Vietnamese course gets Vietnamese headings. `parseRubricFromMarkdown` matches
+ * the rubric heading by keyword across these languages.
+ */
+const BRIEF_HEADINGS = {
+  en: `## What you'll ship
 ## What you're proving
 ## Scope
 ### Core features (or required sections)
 ### Stretch goals
 ## Rules
 ## Definition of Done
-## Submit`;
+## Submit`,
+  vi: `## Bạn sẽ tạo ra gì
+## Bạn đang chứng minh điều gì
+## Phạm vi
+### Tính năng chính (hoặc các phần bắt buộc)
+### Mục tiêu mở rộng
+## Quy tắc
+## Định nghĩa hoàn thành
+## Nộp bài`,
+};
+
+/** @param {string} [language] */
+export function briefHeadings(language) {
+  return BRIEF_HEADINGS[normalizeLanguage(language)] || BRIEF_HEADINGS.en;
+}
 
 /**
  * System + messages for generating the capstone. Returns JSON (validated by `capstoneValidator`).
@@ -81,7 +109,7 @@ ${CAPSTONE_SHAPE}
 Framing: the capstone is "Ship your artifact". Name the ONE concrete, real deliverable the course builds toward and state an explicit Definition of Done. Practical and portfolio-ready, buildable solo in 1–3 days.
 
 Hard rules:
-- "brief_md" is learner-facing Markdown that uses exactly these headings, in order: ${BRIEF_HEADINGS}. Under them, describe the single deliverable, what it proves, the required pieces, the stretch goals, the rules (built alone — no code or answers from the AI; documentation allowed), and the Definition of Done as checkable bullets.
+- "brief_md" is learner-facing Markdown that uses exactly these headings, in order: ${briefHeadings(lang)}. Under them, describe the single deliverable, what it proves, the required pieces, the stretch goals, the rules (built alone — no code or answers from the AI; documentation allowed), and the Definition of Done as checkable bullets.
 - "rubric" has ${RUBRIC_MIN}–${RUBRIC_MAX} criteria. Each "name" is short; each "solid" says what a SOLID result looks like for that criterion.
 - "artifact" echoes and sharpens the course artifact. "definitionOfDone" is 3–6 checkable bullets.
 - The brief is IMMUTABLE once created; make it complete now.
@@ -101,9 +129,11 @@ Hard rules:
     'Return only the JSON object.',
   ];
 
+  const head = languageHeadline(lang);
+  const body = withLanguage(rules, lang);
   return {
-    system: withLanguage(rules, lang),
-    messages: [{ role: 'user', content: lines.join('\n') }],
+    system: head ? `${head}\n\n${body}` : body,
+    messages: appendLanguageInstruction([{ role: 'user', content: lines.join('\n') }], lang),
   };
 }
 
@@ -286,7 +316,13 @@ export function buildCapstoneReviewMessages({ capstone, submission, testResults 
     extra: blocks.join('\n\n'),
   });
 
-  return { system, messages: [{ role: 'user', content: 'Review this capstone submission and return the JSON.' }] };
+  return {
+    system,
+    messages: appendLanguageInstruction(
+      [{ role: 'user', content: 'Review this capstone submission and return the JSON.' }],
+      course?.language
+    ),
+  };
 }
 
 /** @param {any} value */
@@ -359,7 +395,7 @@ export function clampReviewVerdict(review, { testsFailed = false } = {}) {
 
 /* ------------------------------------------------------------------ import */
 
-const RUBRIC_HEADING_RE = /rubric|criteri/i;
+const RUBRIC_HEADING_RE = /rubric|criteri|tiêu chí/i;
 
 /**
  * Best-effort parse of a rubric out of a CAPSTONE.md file (CAP-05). Returns [] when there is none
