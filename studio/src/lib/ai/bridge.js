@@ -12,7 +12,7 @@
  */
 import { parseSSE } from './sse.js';
 import { createGenerateJson, MAX_TOKENS } from './provider-utils.js';
-import { providerError, isAbortError } from './errors.js';
+import { providerError, isAbortError, ProviderError } from './errors.js';
 import { localFetch, classifyNetworkError, mapHttpError } from './fetch-local.js';
 
 export const DEFAULT_BRIDGE_URL = 'http://localhost:3000';

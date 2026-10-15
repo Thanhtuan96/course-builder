@@ -153,6 +153,19 @@ describe('repo: code workspace', () => {
     expect(files.find((f) => f.path === 'main.js').content).toBe('b');
   });
 
+  it('deleteWorkspaceFile soft-deletes by (lesson_id, path) and hides the row', async () => {
+    const course = await repo.createCourse({ title: 'I2', kind: 'programming', lessons: [{ title: 'L' }] });
+    const lesson = course.lessons[0];
+    await repo.saveWorkspaceFile({ courseId: course.id, lessonId: lesson.id, path: 'main.js', content: 'a' });
+    await repo.saveWorkspaceFile({ courseId: course.id, lessonId: lesson.id, path: 'old.js', content: 'b' });
+
+    const removed = await repo.deleteWorkspaceFile({ lessonId: lesson.id, path: 'old.js' });
+    expect(removed.deleted_at).toBeTruthy();
+    const files = await repo.listWorkspaceFiles(lesson.id);
+    expect(files.map((f) => f.path)).toEqual(['main.js']);
+    expect(await repo.deleteWorkspaceFile({ lessonId: lesson.id, path: 'missing.js' })).toBeNull();
+  });
+
   it('saveRunResult + listRunResults', async () => {
     const course = await repo.createCourse({ title: 'J', kind: 'programming', lessons: [{ title: 'L' }] });
     const lesson = course.lessons[0];
@@ -162,5 +175,27 @@ describe('repo: code workspace', () => {
     expect(results).toHaveLength(1);
     expect(results[0].exit_code).toBe(0);
     expect(JSON.parse(results[0].checks_json)).toEqual([{ ok: true }]);
+  });
+});
+
+describe('repo: listCards', () => {
+  it('lists cards soonest-due-first, scoped by course/lesson and excluding deleted', async () => {
+    const a = await repo.createCourse({ title: 'A', lessons: [{ title: 'L1' }] });
+    const b = await repo.createCourse({ title: 'B', lessons: [{ title: 'L2' }] });
+    const aCards = await repo.addCards(a.id, a.lessons[0].id, [
+      { front: 'later', back: 'x' },
+      { front: 'sooner', back: 'y' },
+    ]);
+    await repo.addCards(b.id, b.lessons[0].id, [{ front: 'other', back: 'z' }]);
+    // Force distinct due times: make one card due far in the future.
+    await repo.gradeCard(aCards[1].id, 3);
+
+    const scoped = await repo.listCards({ courseId: a.id });
+    expect(scoped).toHaveLength(2);
+    expect(scoped.every((c) => c.course_id === a.id)).toBe(true);
+    expect(Date.parse(scoped[0].due_at)).toBeLessThanOrEqual(Date.parse(scoped[1].due_at));
+
+    expect(await repo.listCards({ lessonId: b.lessons[0].id })).toHaveLength(1);
+    expect(await repo.listCards()).toHaveLength(3);
   });
 });

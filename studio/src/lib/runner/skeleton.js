@@ -14,13 +14,6 @@ import { defaultEntry, guessCourseLanguage, languageForPath, normalizeLanguage }
  */
 
 /**
- * Tombstone written to a workspace_files row when the learner deletes/renames a file. The Phase 22
- * repository has no `deleteWorkspaceFile`, so a content marker lets the workspace hide the row on
- * reload (see HANDOFF-29.md). Contains a NUL byte so it can never collide with real code.
- */
-export const DELETED_MARKER = '\u0000__professor_deleted__';
-
-/**
  * Extract all fenced code blocks from Markdown.
  * @param {string} markdown
  * @returns {Array<{ info: string, code: string, start: number, end: number }>}
@@ -122,13 +115,13 @@ export function seedFiles(lesson, course = null, { language = null } = {}) {
 }
 
 /**
- * Normalise stored repo rows into `{ path, content, language }`.
+ * Normalise stored repo rows into `{ path, content, language }`. Soft-deleted rows never reach
+ * here — the adapter filters them out (see `repo.deleteWorkspaceFile`).
  * @param {Array<object>} rows
  * @returns {SeedFile[]}
  */
 export function filesFromRows(rows) {
   return (rows || [])
-    .filter((r) => r.content !== DELETED_MARKER)
     .map((r) => ({
       path: r.path,
       content: r.content ?? '',

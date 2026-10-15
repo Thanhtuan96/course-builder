@@ -43,14 +43,15 @@ Example: [{"front":"Active recall","back":"Reproducing an idea from memory inste
 
 /**
  * Build the system + messages for quiz generation.
- * @param {{ course?: object, lesson?: object, content?: string }} input
+ * @param {{ course?: object, lesson?: object, content?: string, language?: string }} input
  */
-export function buildQuizMessages({ course, lesson, content = '' } = {}) {
+export function buildQuizMessages({ course, lesson, content = '', language } = {}) {
   return {
     system: buildSystemPrompt({
       rules: QUIZ_RULES,
       context: courseContext(course, lesson),
       extra: QUIZ_SHAPE,
+      language: language ?? course?.language,
     }),
     messages: [
       {
@@ -65,15 +66,16 @@ export function buildQuizMessages({ course, lesson, content = '' } = {}) {
 
 /**
  * Build the system + messages for flashcard generation.
- * @param {{ course?: object, lesson?: object, content?: string, count?: number }} input
+ * @param {{ course?: object, lesson?: object, content?: string, count?: number, language?: string }} input
  */
-export function buildFlashcardsMessages({ course, lesson, content = '', count = FLASHCARD_DEFAULT } = {}) {
+export function buildFlashcardsMessages({ course, lesson, content = '', count = FLASHCARD_DEFAULT, language } = {}) {
   const n = clampCount(count);
   return {
     system: buildSystemPrompt({
       rules: FLASHCARD_RULES,
       context: courseContext(course, lesson),
       extra: FLASHCARD_SHAPE,
+      language: language ?? course?.language,
     }),
     messages: [
       {
@@ -98,7 +100,8 @@ function isNonEmptyString(value) {
 }
 
 /**
- * Validate one quiz item. The demo seed uses `answer`; generated quizzes use `answerIndex`.
+ * Validate one quiz item. Generated quizzes use `answerIndex`; the normaliser still tolerates a
+ * legacy `answer` key on older demo seeds.
  * @param {any} item
  * @returns {true|string}
  */
@@ -166,7 +169,7 @@ function asArray(raw, key) {
 
 /**
  * Coerce one raw quiz item to `{ question, options, answerIndex, explanation }`, or null if it is
- * structurally unusable. Tolerates the demo seed's `answer` key.
+ * structurally unusable. Tolerates a legacy `answer` key from older seeds.
  * @param {any} raw
  */
 export function normalizeQuizItem(raw) {

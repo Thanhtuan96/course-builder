@@ -59,11 +59,11 @@ Free (static assets free/unlimited, 100k requests/day). 📖
 
 ### Configure
 
-A minimal `studio/void.config.ts` is committed. Move it to the **repository root** (Void reads
-`void.config.ts` from the project root, next to `package.json`): 📖
+A minimal `void.config.ts` is committed at the **repository root** (Void reads it from the project
+root, next to `package.json`); `studio/void.config.ts` is kept as a pointer/example:
 
 ```ts
-// void.config.ts  (project root)
+// void.config.ts  (repository root)
 import { defineConfig } from 'void/config';
 
 export default defineConfig({
@@ -77,9 +77,13 @@ export default defineConfig({
   `studio/dist`. 📖
 - `cloudflare.name` — the Worker name in your Cloudflare account. 📖
 
-### Deploy
+### Build & deploy
+
+Build Studio from the repo root (no need to `cd studio` first):
 
 ```bash
+npm run build:studio        # = npm --prefix studio run build → studio/dist/
+
 npm install -D void@latest
 npx void init                         # optional: scaffolds config / links a target
 npx void connect --platform cloudflare   # opens a browser to sign in to your CF account
@@ -119,6 +123,26 @@ static host:
 - **Cloudflare Pages / Netlify / GitHub Pages:** publish the `studio/dist` directory; add the
   `/* /index.html 200` redirect only if you switch away from hash routing (not needed today).
 - **Any web server:** serve `studio/dist` as static files.
+
+### Content Security Policy (Pyodide CDN)
+
+Almost everything Studio needs is bundled and **code-split** (CodeMirror + grammars, `sql.js`, the
+Web Workers). The one runtime exception is **Pyodide**: the Python runner is *not* bundled — it is
+fetched on first Python run from the pinned CDN
+
+```
+https://cdn.jsdelivr.net/pyodide/v314.0.7/full/
+```
+
+A hosted deploy must therefore allow `cdn.jsdelivr.net` in its CSP, e.g.
+
+```
+script-src 'self' https://cdn.jsdelivr.net;
+connect-src 'self' https://cdn.jsdelivr.net;
+```
+
+(TypeScript needs no CDN — it is erased in-browser by a small dependency-free helper,
+`lib/runner/strip-types.js`, not `esbuild-wasm`.)
 
 ---
 

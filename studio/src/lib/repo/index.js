@@ -121,6 +121,7 @@ export async function createCourse(input = {}) {
       level: input.level || 'Beginner',
       kind: input.kind || 'conceptual',
       goal: input.goal || '',
+      language: input.language || null,
       topics_json: JSON.stringify(input.topics || []),
       source: input.source || 'ai',
       status: input.status || 'active',
@@ -165,12 +166,12 @@ export async function createCourse(input = {}) {
 
 /**
  * @param {string} id
- * @param {{ title?: string, description?: string, level?: string, goal?: string, status?: string, topics?: string[] }} patch
+ * @param {{ title?: string, description?: string, level?: string, goal?: string, status?: string, language?: string|null, topics?: string[] }} patch
  */
 export async function updateCourse(id, patch = {}) {
   const prev = await adapter.get('courses', id);
   if (!prev) return null;
-  const merged = mergeAllowed(prev, patch, ['title', 'description', 'level', 'goal', 'status', 'source']);
+  const merged = mergeAllowed(prev, patch, ['title', 'description', 'level', 'goal', 'status', 'source', 'language']);
   if (patch.topics !== undefined) merged.topics_json = JSON.stringify(patch.topics);
   const next = stampUpdate(prev, merged);
   await adapter.put('courses', next);
@@ -329,6 +330,18 @@ export async function addCards(courseId, lessonId, cards = []) {
 }
 
 /**
+ * Cards across every course (optionally scoped), soonest due first. Soft-deleted rows are omitted
+ * by the adapter (HANDOFF-24 §1).
+ * @param {{ courseId?: string|null, lessonId?: string|null }} [q]
+ */
+export async function listCards({ courseId, lessonId } = {}) {
+  const where = {};
+  if (courseId) where.course_id = courseId;
+  if (lessonId) where.lesson_id = lessonId;
+  return adapter.list('cards', { where, orderBy: { field: 'due_at', dir: 'asc' } });
+}
+
+/**
  * Due cards across every course, soonest first.
  * @param {number|string} [now]
  */
@@ -463,6 +476,21 @@ export async function saveWorkspaceFile({ courseId = null, lessonId, path, langu
   await adapter.put('workspace_files', row);
   emit('workspace_files', row.id, match ? 'update' : 'create');
   return row;
+}
+
+/**
+ * Soft-delete a workspace file by (lesson_id, path). The tombstone keeps the row (and its run
+ * history) while `listWorkspaceFiles` hides it — replaces the DELETED_MARKER workaround.
+ * @param {{ lessonId: string, path: string }} input
+ * @returns {Promise<object|null>} the tombstoned row, or null when there was no such file
+ */
+export async function deleteWorkspaceFile({ lessonId, path }) {
+  const rows = await adapter.list('workspace_files', { where: { lesson_id: lessonId } });
+  const match = rows.find((f) => f.path === path);
+  if (!match) return null;
+  await adapter.softDelete('workspace_files', match.id);
+  emit('workspace_files', match.id, 'delete');
+  return { ...match, deleted_at: nowIso() };
 }
 
 /**

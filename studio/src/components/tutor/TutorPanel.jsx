@@ -15,6 +15,7 @@ import { getProvider, MAX_TOKENS } from '../../lib/ai/index.js';
 import { useStream } from '../../lib/ai/useStream.js';
 import { buildTutorMessages, TUTOR_MODES } from '../../lib/prompts/tutor.js';
 import { useHintLevel } from '../../lib/chat-store.js';
+import { currentCodeBlock } from '../../lib/runner/current-code.js';
 import { useSettings } from '../../lib/settings.js';
 import { Card } from '../ui/Card.jsx';
 import { Button } from '../ui/Button.jsx';
@@ -132,6 +133,17 @@ export function TutorPanel({ lesson, course }) {
       const userRow = await appendChat(lesson.id, { role: 'user', content: trimmed, mode });
       const history = [...messagesRef.current, userRow];
 
+      // "Check my answer" in a programming lesson: attach the learner's current code (if any) as
+      // untrusted reference data. When there is none we keep today's behaviour — ask them to paste.
+      let learnerCode = null;
+      if (mode === 'check_answer' && course?.kind === 'programming') {
+        try {
+          learnerCode = await currentCodeBlock(lesson.id);
+        } catch {
+          learnerCode = null;
+        }
+      }
+
       draftRef.current = '';
       pendingRef.current = { lessonId: lesson.id, mode };
       setInput('');
@@ -140,7 +152,7 @@ export function TutorPanel({ lesson, course }) {
 
       try {
         await start(async ({ onText, signal }) => {
-          const provider = getProvider(settingsRef.current);
+          const provider = await getProvider(settingsRef.current);
           const { system, messages: built } = buildTutorMessages({
             course,
             lesson,
@@ -148,7 +160,8 @@ export function TutorPanel({ lesson, course }) {
             history,
             mode: mode || undefined,
             hintLevel: level,
-            language: settingsRef.current.language,
+            language: course?.language ?? settingsRef.current.language,
+            learnerCode,
           });
           return provider.streamText({
             system,

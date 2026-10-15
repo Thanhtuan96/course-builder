@@ -48,8 +48,8 @@ export function NewCourse() {
     setError(null);
     try {
       const { system, messages } = buildSyllabusMessages({ topic, level, goal, language });
-      const proposed = await gen.start(({ signal }) => {
-        const provider = getProvider(settings);
+      const proposed = await gen.start(async ({ signal }) => {
+        const provider = await getProvider(settings);
         const generateJson = createGenerateJson(provider.streamText.bind(provider));
         return generateJson({ system, messages, signal, validate: syllabusValidator });
       });
@@ -85,6 +85,7 @@ export function NewCourse() {
         description: syllabus.description || '',
         level,
         goal: goal.trim(),
+        language,
         kind: COURSE_KIND_IDS.includes(syllabus.kind) ? syllabus.kind : 'conceptual',
         source: input ? 'manual' : 'ai',
         lessons: syllabus.lessons

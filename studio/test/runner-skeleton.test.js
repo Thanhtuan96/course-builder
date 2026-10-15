@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractFencedBlocks, findExerciseSection, extractSkeleton, seedFiles, filesFromRows, DELETED_MARKER } from '../src/lib/runner/skeleton.js';
+import { extractFencedBlocks, findExerciseSection, extractSkeleton, seedFiles, filesFromRows } from '../src/lib/runner/skeleton.js';
 
 const LESSON = `# Functions
 
@@ -66,11 +66,13 @@ describe('runner skeleton extraction', () => {
     expect(files[0].content).toBe('');
   });
 
-  it('filters deleted tombstones when reading rows', () => {
+  it('normalises rows into files, dropping rows without a path', () => {
     const rows = [
       { path: 'main.js', content: 'a', language: 'javascript' },
-      { path: 'old.js', content: DELETED_MARKER, language: 'javascript' },
+      { path: '', content: 'orphan' },
+      { path: 'util.py', content: 'b' },
     ];
-    expect(filesFromRows(rows).map((f) => f.path)).toEqual(['main.js']);
+    expect(filesFromRows(rows).map((f) => f.path)).toEqual(['main.js', 'util.py']);
+    expect(filesFromRows(rows)[1].language).toBe('python');
   });
 });

@@ -179,21 +179,9 @@ export function statusIcon(status) {
   return STATUS_ICON[status] || '⬜';
 }
 
-// ---- Activity / streaks -----------------------------------------------------
+// ---- Activity day keys ------------------------------------------------------
 
 export function dayKey(date = new Date()) {
   const d = new Date(date);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-/** activity: { [dayKey]: count } → current streak in days (today or yesterday must be active). */
-export function streak(activity, today = new Date()) {
-  let count = 0;
-  const cursor = new Date(today);
-  if (!activity[dayKey(cursor)]) cursor.setDate(cursor.getDate() - 1);
-  while (activity[dayKey(cursor)]) {
-    count += 1;
-    cursor.setDate(cursor.getDate() - 1);
-  }
-  return count;
 }

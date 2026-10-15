@@ -7,6 +7,7 @@
  * rules stay in `system` and the echoed content is delimited as reference material.
  */
 import { buildSystemPrompt, courseContext, wrapUntrusted } from './base.js';
+import { COURSE_KIND_IDS } from '../course.js';
 
 /** How many prior messages are sent back to the model. */
 export const HISTORY_LIMIT = 20;
@@ -61,8 +62,8 @@ export const HINT_LEVELS = [
 
 export const MAX_HINT_LEVEL = HINT_LEVELS.length;
 
-/** Course kinds the tutor adapts to. */
-export const COURSE_KINDS = ['programming', 'quantitative', 'conceptual', 'skill'];
+/** Course kinds the tutor adapts to — one source of truth, from the course model. */
+export const COURSE_KINDS = COURSE_KIND_IDS;
 
 /** Fallback kind when a course does not declare one. */
 export const DEFAULT_COURSE_KIND = 'programming';
@@ -194,6 +195,7 @@ export function hintLevelLabel(level) {
  * @param {string} [opts.mode] one of TUTOR_MODES ids
  * @param {number} [opts.hintLevel] 1..3, used when mode === 'hint'
  * @param {string} [opts.language] learner language for the whole reply
+ * @param {string|null} [opts.learnerCode] the learner's current code (attached as untrusted data)
  * @returns {{ system: string, messages: Array<{ role: string, content: string }> }}
  */
 export function buildTutorMessages({
@@ -204,6 +206,7 @@ export function buildTutorMessages({
   mode,
   hintLevel,
   language,
+  learnerCode = null,
 } = {}) {
   const rules = [TUTOR_RULES];
   const modeRule = mode && MODE_INSTRUCTIONS[mode];
@@ -216,13 +219,26 @@ export function buildTutorMessages({
     : '';
 
   const system = buildSystemPrompt({
-    language,
+    language: language ?? course?.language,
     rules: rules.join('\n\n'),
     context,
     extra: lessonBlock,
   });
 
   const messages = normalizeMessages(history, HISTORY_LIMIT);
+
+  // "Check my answer" for a programming lesson attaches the learner's current code as delimited,
+  // untrusted reference material on the last user turn (never a solution — HANDOFF-29 §2).
+  const code = String(learnerCode || '').trim();
+  if (code) {
+    const block = wrapUntrusted(stripInvisible(code), 'learner_code');
+    const last = messages[messages.length - 1];
+    if (last && last.role === 'user') {
+      messages[messages.length - 1] = { ...last, content: `${last.content}\n\n${block}` };
+    } else {
+      messages.push({ role: 'user', content: block });
+    }
+  }
 
   return { system, messages };
 }

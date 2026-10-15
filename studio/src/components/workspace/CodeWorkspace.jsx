@@ -10,7 +10,7 @@
  * Props are fixed by Lesson.jsx: `{ lesson, course }`.
  */
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
-import { listWorkspaceFiles, saveWorkspaceFile, saveRunResult, listRunResults } from '../../lib/repo/index.js';
+import { listWorkspaceFiles, saveWorkspaceFile, deleteWorkspaceFile, saveRunResult, listRunResults } from '../../lib/repo/index.js';
 import { useSettings } from '../../lib/settings.js';
 import { Card } from '../ui/Card.jsx';
 import { Button } from '../ui/Button.jsx';
@@ -23,7 +23,6 @@ import { HistoryDrawer } from './HistoryDrawer.jsx';
 import {
   seedFiles,
   filesFromRows,
-  DELETED_MARKER,
 } from '../../lib/runner/skeleton.js';
 import { guessCourseLanguage, getLanguage, languageForPath, normalizeLanguage } from '../../lib/runner/languages.js';
 import { run as runCode, describeRunner, checkToolchains } from '../../lib/runner/index.js';
@@ -132,7 +131,7 @@ export function CodeWorkspace({ lesson, course }) {
         const rows = await listWorkspaceFiles(lesson.id);
         if (rows.length) {
           seed = filesFromRows(rows);
-          for (const row of rows) if (row.content !== DELETED_MARKER) idByPathRef.current.set(row.path, row.id);
+          for (const row of rows) idByPathRef.current.set(row.path, row.id);
         }
       } catch {
         seed = [];
@@ -355,7 +354,7 @@ export function CodeWorkspace({ lesson, course }) {
       if (activePath === from) setActivePath(to);
       try {
         await saveWorkspaceFile({ courseId, lessonId: lesson.id, path: to, language, content: target.content });
-        await saveWorkspaceFile({ courseId, lessonId: lesson.id, path: from, language: null, content: DELETED_MARKER });
+        await deleteWorkspaceFile({ lessonId: lesson.id, path: from });
       } catch {
         /* ignore */
       }
@@ -371,7 +370,7 @@ export function CodeWorkspace({ lesson, course }) {
       setFiles(remaining);
       if (activePath === path) setActivePath(remaining[0]?.path || null);
       try {
-        await saveWorkspaceFile({ courseId, lessonId: lesson.id, path, language: null, content: DELETED_MARKER });
+        await deleteWorkspaceFile({ lessonId: lesson.id, path });
       } catch {
         /* ignore */
       }

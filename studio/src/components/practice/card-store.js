@@ -1,12 +1,10 @@
 /**
  * Card helpers used by the flashcard generator and the Review page.
  *
- * The repository exposes `listDueCards` / `addCards` / `gradeCard` but no "all cards" reader, so
- * we read the backup dump (`repo.exportAll`) to dedupe and to find the next due time. A dedicated
- * `repo.listCards()` would be cheaper — noted in HANDOFF-24.md. Keeping this in one place avoids
- * duplicating the workaround across components.
+ * Reads cards through the repository's indexed `listCards` (soonest due first), so the whole
+ * backup dump is never serialised just to dedupe (HANDOFF-24 §1).
  */
-import { exportAll } from '../../lib/repo/index.js';
+import { listCards as repoListCards } from '../../lib/repo/index.js';
 
 /** Normalise card text for duplicate detection. */
 export function normText(value) {
@@ -16,10 +14,9 @@ export function normText(value) {
     .replace(/\s+/g, ' ');
 }
 
-/** Every live (non-deleted) card across all courses. */
-export async function listCards() {
-  const dump = await exportAll();
-  return (dump?.tables?.cards || []).filter((c) => !c.deleted_at);
+/** Every live (non-deleted) card, optionally scoped to a course/lesson. */
+export async function listCards({ courseId, lessonId } = {}) {
+  return repoListCards({ courseId, lessonId });
 }
 
 /** Set of normalised fronts already stored for a lesson. */

@@ -66,12 +66,12 @@ export function LessonContent({ lesson, course }) {
   const generate = async () => {
     setError(null);
     try {
-      const provider = getProvider(settings);
+      const provider = await getProvider(settings);
       const { system, messages } = buildLessonMessages({
         course,
         lesson,
         level: course?.level,
-        language: settings.language,
+        language: course?.language ?? settings.language,
       });
       const text = await gen.start(({ onText, signal }) =>
         provider.streamText({ system, messages, onText, signal, effort: 'high', maxTokens: MAX_TOKENS.lesson })

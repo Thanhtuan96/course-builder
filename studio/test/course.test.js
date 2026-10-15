@@ -8,7 +8,6 @@ import {
   progress,
   nextLesson,
   dayKey,
-  streak,
   slugify,
 } from '../src/lib/course.js';
 
@@ -80,15 +79,8 @@ describe('course helpers', () => {
   });
 });
 
-describe('streaks', () => {
-  it('counts consecutive days ending today or yesterday', () => {
-    const today = new Date('2026-10-15T12:00:00');
-    const activity = {
-      [dayKey(new Date('2026-10-15T12:00:00'))]: 1,
-      [dayKey(new Date('2026-10-14T12:00:00'))]: 2,
-      [dayKey(new Date('2026-10-13T12:00:00'))]: 1,
-      [dayKey(new Date('2026-10-11T12:00:00'))]: 1,
-    };
-    expect(streak(activity, today)).toBe(3);
+describe('day keys', () => {
+  it('formats a local calendar day', () => {
+    expect(dayKey(new Date('2026-10-15T12:00:00'))).toBe('2026-10-15');
   });
 });

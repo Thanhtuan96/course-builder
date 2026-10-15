@@ -5,6 +5,8 @@
  * repository exports/backups — the repository has no settings table at all, so keys cannot leak.
  */
 import { useCallback, useEffect, useState } from 'react';
+import { configIssue } from './ai/config.js';
+import { loadProviderStatus } from './ai/status.js';
 
 export const SETTINGS_KEY = 'professor-studio:settings';
 
@@ -117,12 +119,28 @@ function resolveGlobal(name, override) {
 }
 
 /**
+ * Whether the stored provider is ready to use: it must be configured (per `configIssue`) AND its
+ * last connection test must have succeeded (`lastTestOk`, persisted by `lib/ai/status.js`).
+ * @param {object|null} settings
+ * @param {Record<string, { ok: boolean }>} [status]
+ * @returns {boolean}
+ */
+export function providerIsReady(settings, status = loadProviderStatus()) {
+  const provider = settings?.provider;
+  if (!provider) return false;
+  if (configIssue(settings, provider) !== null) return false;
+  return settings.lastTestOk === true || status?.[provider]?.ok === true;
+}
+
+/**
  * Apply the CLI's one-command pairing: save `bridge`/`token` from the URL hash as the bridge
- * config, pick the "My local agent" provider on a fresh install, finish onboarding, then strip the
- * secrets from the address bar with `history.replaceState` so they are never bookmarked or shared.
+ * config, pick the "My local agent" provider when the stored provider is not ready, finish
+ * onboarding, then strip the secrets from the address bar with `history.replaceState` so they are
+ * never bookmarked or shared.
  *
- * Called once from `main.jsx` before render. Safe to call anywhere — returns null when there is
- * no pairing hash (or no browser-like environment).
+ * Called once from `main.jsx` before render, and again on `hashchange` (see
+ * `installPairingWatcher`) so an already-open tab navigated to a pairing URL switches too. Safe to
+ * call anywhere — returns null when there is no pairing hash (or no browser-like environment).
  *
  * @param {{ location?: object, history?: object }} [env] injected for tests
  * @returns {typeof DEFAULT_SETTINGS|null} the saved settings, or null when nothing was applied
@@ -139,8 +157,9 @@ export function applyPairingFromUrl(env = {}) {
   const patch = { bridge: {} };
   if (pairing.bridgeUrl) patch.bridge.bridgeUrl = pairing.bridgeUrl;
   if (pairing.token) patch.bridge.bridgeToken = pairing.token;
-  // Only choose the local agent for a learner who has not configured a provider yet.
-  if (!stored || !stored.provider) patch.provider = BRIDGE_PROVIDER;
+  // Choose the local agent unless the learner already has a ready provider: `course-professor
+  // studio` exists to hand them a working local setup, so an unconfigured/untested provider yields.
+  if (!providerIsReady(stored)) patch.provider = BRIDGE_PROVIDER;
   if (!stored || stored.onboardingDone !== true) patch.onboardingDone = true;
 
   const next = saveSettings(patch);
@@ -157,6 +176,23 @@ export function applyPairingFromUrl(env = {}) {
 
   return next;
 }
+
+/**
+ * Re-run pairing whenever the URL fragment changes, so a tab that was already open when the
+ * pairing URL is pasted still switches to the local agent. Returns an unsubscribe function.
+ * @param {{ window?: object, location?: object, history?: object }} [env]
+ * @returns {() => void}
+ */
+export function installPairingWatcher(env = {}) {
+  const win = resolveGlobal('window', env.window);
+  if (!win || typeof win.addEventListener !== 'function') return () => {};
+  const onHash = () => applyPairingFromUrl(env);
+  win.addEventListener('hashchange', onHash);
+  return () => win.removeEventListener?.('hashchange', onHash);
+}
+
+// In the browser, watch the hash so pairing works without a reload. No-op in Node/tests.
+if (typeof window !== 'undefined') installPairingWatcher();
 
 /** Remove every API key / token, keeping provider preferences. */
 export function clearSecrets() {

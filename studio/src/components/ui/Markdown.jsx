@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import {
   baseRemarkPlugins,
@@ -6,28 +6,48 @@ import {
   isMermaidClassName,
   hasMath,
   loadMathPlugins,
+  sanitizeMermaid,
 } from '../../lib/markdown.js';
+
+/** `mermaid.initialize` must run exactly once, before any `render` (a re-init resets state). */
+let mermaidPromise = null;
+function loadMermaid() {
+  if (!mermaidPromise) {
+    mermaidPromise = import('mermaid').then(({ default: mermaid }) => {
+      const dark = typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: dark ? 'dark' : 'default' });
+      return mermaid;
+    });
+  }
+  return mermaidPromise;
+}
+
+// Mermaid needs a unique, CSS-selector-safe id per render (no dots/colons) to avoid collisions
+// when several diagrams share a page or StrictMode mounts an effect twice.
+let mermaidSeq = 0;
+function nextMermaidId() {
+  mermaidSeq += 1;
+  return `mermaid-${mermaidSeq}-${Math.random().toString(36).slice(2)}`;
+}
 
 /**
  * Lazy Mermaid renderer: `mermaid` is only imported when a ```mermaid block is actually present,
- * so the main bundle stays small (Vite keeps it in a separate chunk). Render failures fall back
- * to showing the raw code block. `securityLevel: 'strict'` sanitises labels.
+ * so the main bundle stays small (Vite keeps it in a separate chunk). Render failures are logged
+ * and fall back to showing the raw code block. `securityLevel: 'strict'` sanitises labels.
  */
 function MermaidDiagram({ code }) {
   const [svg, setSvg] = useState('');
   const [failed, setFailed] = useState(false);
-  const idRef = useRef(`mermaid-${Math.random().toString(36).slice(2)}`);
 
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        const mermaid = (await import('mermaid')).default;
-        const dark = typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches;
-        mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: dark ? 'dark' : 'default' });
-        const { svg: rendered } = await mermaid.render(idRef.current, code);
+        const mermaid = await loadMermaid();
+        const { svg: rendered } = await mermaid.render(nextMermaidId(), sanitizeMermaid(code));
         if (alive) setSvg(rendered);
-      } catch {
+      } catch (err) {
+        console.warn('[mermaid]', err);
         if (alive) setFailed(true);
       }
     })();

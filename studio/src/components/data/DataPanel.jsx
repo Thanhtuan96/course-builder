@@ -12,22 +12,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Card } from '../ui/Card.jsx';
 import { Button } from '../ui/Button.jsx';
-import { exportAll, importAll, getAdapterInfo, listCourses, getCourse } from '../../lib/repo/index.js';
+import { exportAll, importAll, getAdapterInfo, listCourses } from '../../lib/repo/index.js';
 import { createIdbAdapter } from '../../lib/repo/idb-adapter.js';
 import { initAdapter } from '../../lib/repo/select-adapter.js';
-import { slugify, toCourseMarkdown } from '../../lib/course.js';
-
-function download(filename, text, type = 'application/json') {
-  const blob = new Blob([text], { type });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
+import { download, exportCourseMarkdown } from '../../lib/course-export.js';
 
 function countRows(dump) {
   const tables = dump?.tables || {};
@@ -170,9 +158,8 @@ export function DataPanel() {
   const onExportCourse = async (course) => {
     setBusy(`course:${course.id}`);
     try {
-      const full = (await getCourse(course.id)) || course;
-      download(`${slugify(full.title)}-COURSE.md`, toCourseMarkdown(full), 'text/markdown');
-      note(`Exported ${slugify(full.title)}-COURSE.md — continue it with professor:* commands.`);
+      const filename = await exportCourseMarkdown(course);
+      note(`Exported ${filename} — continue it with professor:* commands.`);
     } catch (err) {
       fail(err);
     } finally {
