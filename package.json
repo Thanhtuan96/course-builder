@@ -9,8 +9,9 @@
     },
     "scripts": {
         "build": "cd web/client && npm install && npm run build",
-        "start": "cd web && node server.js",
-        "test": "vitest",
+    "start": "cd web && node server.js",
+    "pretest": "npm --prefix web install --no-audit --no-fund --silent",
+    "test": "vitest",
         "prepublishOnly": "npm run build"
     },
     "files": [
