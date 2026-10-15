@@ -6,7 +6,7 @@
  * `quiz_seed` is stored as a JSON string on the lesson row so Phase 24 can render it without
  * calling a model.
  */
-import { createCourse, listCourses, addCards } from '../lib/repo/index.js';
+import { createCourse, listCourses, addCards, getCapstone, createCapstone } from '../lib/repo/index.js';
 
 export const DEMO_COURSE_ID = 'demo-how-to-learn';
 
@@ -106,6 +106,80 @@ Design your minimum viable session. Answer:
 
 Keep it embarrassingly small. You can always do more, never less.`;
 
+const CAPSTONE_BRIEF = `# 🏗️ Capstone: Your personal learning playbook
+
+**Ship your artifact.** This is not an exam — you are building one real, useful thing you can keep
+and hand to a friend.
+
+## What you'll ship
+
+A **one-page personal learning playbook** that captures how *you* will learn from now on: your
+recall ritual, your question habit, your mistake log, and your daily session — plus a short
+reflection on trying it for a few days.
+
+## What you're proving
+
+By shipping this, you demonstrate that you can:
+- Design and run active-recall practice that actually sticks.
+- Ask specific, testable, layered questions when you get stuck.
+- Turn a mistake into a named gap and a next experiment.
+- Commit to a minimum viable daily session and mark it honestly.
+
+## Scope
+
+### What to build
+A single page (Markdown, a doc, or a card you can print) with four clearly-labelled sections, and a
+reflection of roughly 150–300 words on what happened when you used it.
+
+### Core features (must have)
+- [ ] **Recall ritual** — which habit you'll use, and the cue that triggers it.
+- [ ] **Question habit** — three question patterns you will reuse (concept → pattern → edge case).
+- [ ] **Mistake log** — a template that separates goal, attempt and gap.
+- [ ] **Minimum viable session** — the smallest daily version, its trigger, and how you'll mark it.
+
+### Stretch goals
+- [ ] Use it for a week and add a short before/after note.
+- [ ] Turn two playbook lines into the flashcards you'll review.
+
+## Rules
+- Build this **entirely by yourself** — no asking the AI to write it for you.
+- You may use documentation, articles and note-taking tools freely.
+- You may use the tutor to talk through a **concept**, but not for hints or drafts.
+- No hints, no step lists, no code — this is your proof.
+
+## Definition of Done
+- [ ] All four sections are present and specific to you (not generic advice).
+- [ ] The playbook is short enough to actually use (about one page).
+- [ ] Your reflection names one thing that worked and one gap you noticed.
+- [ ] You can explain every line if asked.
+
+## Submit
+Share your playbook (paste it, link a doc, or describe it) and your reflection for review.`;
+
+const CAPSTONE_RUBRIC = [
+  { name: 'Recall ritual is concrete', solid: 'Names a specific active-recall habit AND the cue/time that triggers it, not just "I will revise more".' },
+  { name: 'Questions are specific and layered', solid: 'Three reusable question patterns that move from concept to pattern to edge case, with an example of each in use.' },
+  { name: 'Mistake log separates goal/attempt/gap', solid: 'A template that would genuinely turn a failure into a named gap and a smallest-next-experiment.' },
+  { name: 'Minimum viable session is realistic', solid: 'A session small enough for a bad day, with a trigger and a visible way to mark it done.' },
+  { name: 'Reflection shows honest use', solid: 'A short reflection that reports one thing that worked and one real gap — specific, not generic praise.' },
+];
+
+export const DEMO_CAPSTONE = {
+  kind: 'conceptual',
+  brief_md: CAPSTONE_BRIEF,
+  rubric: CAPSTONE_RUBRIC,
+  artifact: {
+    title: 'A personal learning playbook',
+    deliverable: 'A one-page learning playbook (recall ritual, question habit, mistake log, daily session) plus a short reflection on using it.',
+    definitionOfDone: [
+      'All four sections are present and specific to you.',
+      'The playbook is short enough to actually use.',
+      'The reflection names one thing that worked and one gap.',
+      'You could hand it to a friend and they could follow it.',
+    ],
+  },
+};
+
 export const DEMO_COURSE = {
   id: DEMO_COURSE_ID,
   title: 'How to learn anything with Professor',
@@ -114,6 +188,7 @@ export const DEMO_COURSE = {
   goal: 'Build a repeatable, evidence-based learning habit.',
   topics: ['learning', 'study skills', 'memory'],
   source: 'demo',
+  artifact: DEMO_CAPSTONE.artifact,
   lessons: [
     {
       title: 'How learning actually works',
@@ -295,9 +370,28 @@ export function seedDemoCourse() {
   return seeding;
 }
 
+/** Seed the bundled demo capstone once (idempotent — never overwrites an existing one). */
+async function ensureDemoCapstone(courseId) {
+  const existing = await getCapstone(courseId);
+  if (existing) return existing;
+  return createCapstone({
+    courseId,
+    kind: DEMO_CAPSTONE.kind,
+    brief_md: DEMO_CAPSTONE.brief_md,
+    rubric: DEMO_CAPSTONE.rubric,
+    artifact: DEMO_CAPSTONE.artifact,
+    externalId: `demo:${DEMO_COURSE_ID}:capstone`,
+  });
+}
+
 async function doSeed() {
   const existing = await listCourses();
-  if (existing.length > 0) return existing.find((c) => c.id === DEMO_COURSE_ID) || null;
+  const demo = existing.find((c) => c.id === DEMO_COURSE_ID) || null;
+  if (existing.length > 0) {
+    // A demo course from before Phase 33 still gets its (bundled, provider-free) capstone.
+    if (demo) await ensureDemoCapstone(demo.id);
+    return demo;
+  }
 
   const { flashcards = [], ...courseInput } = DEMO_COURSE;
   const course = await createCourse(courseInput);
@@ -307,5 +401,6 @@ async function doSeed() {
     const lesson = byPosition(card.lessonPosition);
     if (lesson) await addCards(course.id, lesson.id, [{ front: card.front, back: card.back }]);
   }
+  await ensureDemoCapstone(course.id);
   return course;
 }

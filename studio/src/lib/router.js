@@ -7,6 +7,7 @@
  *   #/new                           NewCourse
  *   #/course/:id                    Course
  *   #/course/:id/lesson/:lessonId   Lesson
+ *   #/course/:id/capstone           Capstone
  *   #/review                        Review
  *   #/settings                      Settings
  */
@@ -16,6 +17,7 @@ const ROUTES = [
   { name: 'home', pattern: /^\/?$/ },
   { name: 'new', pattern: /^\/new\/?$/ },
   { name: 'lesson', pattern: /^\/course\/([^/]+)\/lesson\/([^/]+)\/?$/, keys: ['id', 'lessonId'] },
+  { name: 'capstone', pattern: /^\/course\/([^/]+)\/capstone\/?$/, keys: ['id'] },
   { name: 'course', pattern: /^\/course\/([^/]+)\/?$/, keys: ['id'] },
   { name: 'review', pattern: /^\/review\/?$/ },
   { name: 'settings', pattern: /^\/settings\/?$/ },

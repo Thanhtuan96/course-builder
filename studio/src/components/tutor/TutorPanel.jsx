@@ -39,7 +39,7 @@ function providerReady(settings) {
   }
 }
 
-export function TutorPanel({ lesson, course }) {
+export function TutorPanel({ lesson, course, capstone = false, capstoneBrief = null }) {
   const [settings] = useSettings();
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
@@ -136,7 +136,7 @@ export function TutorPanel({ lesson, course }) {
       // "Check my answer" in a programming lesson: attach the learner's current code (if any) as
       // untrusted reference data. When there is none we keep today's behaviour — ask them to paste.
       let learnerCode = null;
-      if (mode === 'check_answer' && course?.kind === 'programming') {
+      if (!capstone && mode === 'check_answer' && course?.kind === 'programming') {
         try {
           learnerCode = await currentCodeBlock(lesson.id);
         } catch {
@@ -162,6 +162,8 @@ export function TutorPanel({ lesson, course }) {
             hintLevel: level,
             language: course?.language ?? settingsRef.current.language,
             learnerCode,
+            capstone,
+            capstoneBrief,
           });
           return provider.streamText({
             system,
@@ -181,7 +183,7 @@ export function TutorPanel({ lesson, course }) {
       const saved = await persistDraft();
       if (saved) applyMessages([...messagesRef.current.filter((m) => m.id !== saved.id), saved]);
     },
-    [appendChat, applyMessages, course, hint, lesson, persistDraft, start]
+    [appendChat, applyMessages, capstone, capstoneBrief, course, hint, lesson, persistDraft, start]
   );
 
   const handleSend = useCallback(() => {
@@ -239,10 +241,11 @@ export function TutorPanel({ lesson, course }) {
     <Card className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <h2 className="font-semibold">Tutor</h2>
+          <h2 className="font-semibold">{capstone ? 'Tutor · Capstone mode' : 'Tutor'}</h2>
           <p className="text-xs text-neutral-500">
-            Socratic help for “{lesson.title}”. The tutor explains ideas and guides the exercise — it never
-            does the work for you.
+            {capstone
+              ? 'Concepts only — no hints, no code, no answers. The implementation is all you.'
+              : `Socratic help for “${lesson.title}”. The tutor explains ideas and guides the exercise — it never does the work for you.`}
           </p>
         </div>
         {streaming && (
@@ -271,8 +274,12 @@ export function TutorPanel({ lesson, course }) {
         {!loaded && <p className="text-sm text-neutral-500">Loading history…</p>}
         {loaded && messages.length === 0 && !showDraft && (
           <EmptyState
-            title="Ask about this lesson"
-            description="Stuck on the exercise? Try a hint — the tutor will nudge you one step at a time."
+            title={capstone ? 'Discuss the concepts' : 'Ask about this lesson'}
+            description={
+              capstone
+                ? 'The capstone is your solo build. Use this chat to think through a concept — not for hints, steps or code.'
+                : 'Stuck on the exercise? Try a hint — the tutor will nudge you one step at a time.'
+            }
             className="border-0 bg-transparent"
           />
         )}
@@ -284,12 +291,19 @@ export function TutorPanel({ lesson, course }) {
 
       {showError && <ErrorNotice error={error} onDismiss={() => setDismissedError(true)} />}
 
-      <QuickActions
-        onAction={handleAction}
-        disabled={streaming}
-        hintLevel={hint.level}
-        pendingMode={pendingMode}
-      />
+      {capstone ? (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+          Capstone mode: the tutor will only discuss concepts. It will not give hints, steps, code or
+          answers — and it will refuse if you ask.
+        </p>
+      ) : (
+        <QuickActions
+          onAction={handleAction}
+          disabled={streaming}
+          hintLevel={hint.level}
+          pendingMode={pendingMode}
+        />
+      )}
 
       <div className="space-y-2">
         <label htmlFor={`tutor-input-${lesson.id}`} className="sr-only">
@@ -303,15 +317,21 @@ export function TutorPanel({ lesson, course }) {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={
-            pendingMode === 'check_answer'
-              ? 'Paste your attempt here, then press Enter — I’ll point out what’s right first.'
-              : 'Ask a question… (Enter to send, Shift+Enter for a new line)'
+            capstone
+              ? 'Ask about a concept… (no hints or code in capstone mode)'
+              : pendingMode === 'check_answer'
+                ? 'Paste your attempt here, then press Enter — I’ll point out what’s right first.'
+                : 'Ask a question… (Enter to send, Shift+Enter for a new line)'
           }
           className="w-full resize-y rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
         />
         <div className="flex items-center justify-between gap-2">
           <p className="text-xs text-neutral-500">
-            {pendingMode === 'check_answer' ? 'Paste your attempt and send it.' : 'You do the work; the tutor guides.'}
+            {capstone
+              ? 'Concepts only — the capstone is your solo build.'
+              : pendingMode === 'check_answer'
+                ? 'Paste your attempt and send it.'
+                : 'You do the work; the tutor guides.'}
           </p>
           <div className="flex gap-2">
             {streaming ? (

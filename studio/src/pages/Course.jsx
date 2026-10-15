@@ -5,14 +5,17 @@
  */
 import { useEffect, useState } from 'react';
 import { Link, navigate } from '../lib/router.js';
-import { getCourse, getLessonHistory, deleteCourse, onChange } from '../lib/repo/index.js';
+import { getCourse, getCapstone, getLessonHistory, deleteCourse, onChange } from '../lib/repo/index.js';
 import { progress, statusIcon, COURSE_KINDS } from '../lib/course.js';
+import { capstoneCopy, generateCapstoneForCourse } from '../lib/capstone.js';
 import { exportCourseMarkdown } from '../lib/course-export.js';
+import { useSettings } from '../lib/settings.js';
 import { Card } from '../components/ui/Card.jsx';
 import { Button } from '../components/ui/Button.jsx';
 import { Progress } from '../components/ui/Progress.jsx';
 import { Badge } from '../components/ui/Badge.jsx';
 import { EmptyState } from '../components/ui/EmptyState.jsx';
+import { CapstoneCard } from '../components/capstone/CapstoneCard.jsx';
 
 function formatDate(iso) {
   if (!iso) return '';
@@ -24,19 +27,26 @@ function formatDate(iso) {
 }
 
 export function Course({ id }) {
+  const [settings] = useSettings();
   const [course, setCourse] = useState(null);
+  const [capstone, setCapstone] = useState(null);
   const [loaded, setLoaded] = useState(false);
   const [reflections, setReflections] = useState({});
+  const [generating, setGenerating] = useState(false);
+  const [capstoneError, setCapstoneError] = useState(null);
 
   useEffect(() => {
     let alive = true;
-    const refresh = () =>
-      getCourse(id)
-        .then((c) => alive && setCourse(c))
-        .finally(() => alive && setLoaded(true));
-    refresh();
+    const refresh = async () => {
+      const c = await getCourse(id);
+      const cp = c ? await getCapstone(id) : null;
+      if (!alive) return;
+      setCourse(c);
+      setCapstone(cp);
+    };
+    refresh().finally(() => alive && setLoaded(true));
     const off = onChange((detail) => {
-      if (detail.table === 'courses' || detail.table === 'lessons' || detail.table === '*') refresh();
+      if (['courses', 'lessons', 'capstones', '*'].includes(detail.table)) refresh().catch(() => {});
     });
     return () => {
       alive = false;
@@ -86,6 +96,19 @@ export function Course({ id }) {
     }
   };
 
+  const generateCapstone = async () => {
+    setGenerating(true);
+    setCapstoneError(null);
+    try {
+      const created = await generateCapstoneForCourse({ course, artifact: capstone?.artifact, settings });
+      setCapstone(created);
+    } catch (err) {
+      setCapstoneError(err);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -94,6 +117,7 @@ export function Course({ id }) {
             <h1 className="text-xl font-semibold">{course.title}</h1>
             <Badge tone="neutral">{course.level}</Badge>
             {kindLabel && <Badge tone="accent">{kindLabel}</Badge>}
+            {course.status === 'completed' && <Badge tone="success">🎓 Complete</Badge>}
           </div>
           {course.goal && <p className="text-sm text-neutral-600 dark:text-neutral-300">Goal: {course.goal}</p>}
           {course.description && <p className="text-sm text-neutral-500">{course.description}</p>}
@@ -111,6 +135,16 @@ export function Course({ id }) {
           </Button>
         </div>
       </div>
+
+      <CapstoneCard
+        course={course}
+        capstone={capstone}
+        copy={capstoneCopy(course.language)}
+        generating={generating}
+        error={capstoneError}
+        onGenerate={generateCapstone}
+        onDismissError={() => setCapstoneError(null)}
+      />
 
       <div className="space-y-2">
         {course.lessons.map((lesson) => {
