@@ -23,10 +23,12 @@
 import express from 'express';
 import { spawn, execSync } from 'child_process';
 import { randomBytes, timingSafeEqual } from 'crypto';
-import { writeFileSync } from 'fs';
+import { writeFileSync, mkdtempSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { createStudioDb, StudioDbError } from './studio-db.js';
+import { createRunnerRouter } from './studio-runner.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -36,6 +38,10 @@ export const STUDIO_URL_HINT = 'http://localhost:5180';
 export const TOKEN_FILE = join(__dirname, '.studio-token');
 const MAX_MESSAGES = 60;
 const MAX_CHARS = 200_000;
+// Keep the SSE socket warm while a coding-agent CLI boots (Claude ≈11 s, OpenCode ≈28 s).
+const HEARTBEAT_MS = 15_000;
+// Permission map injected into OpenCode so the tutor cannot read/edit the learner's files.
+const OPENCODE_PERMISSION_DENY = { edit: 'deny', bash: 'deny', webfetch: 'deny' };
 
 /* ------------------------------------------------------------------ helpers */
 
@@ -112,6 +118,54 @@ export function clampMessages(messages = []) {
   return (Array.isArray(messages) ? messages : [])
     .slice(-MAX_MESSAGES)
     .map((m) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: String(m.content || '').slice(0, MAX_CHARS) }));
+}
+
+/* ------------------------------------------------------------------ process isolation */
+
+/**
+ * Create a throwaway working directory for agent CLIs. OpenCode/Cursor are full coding agents:
+ * run in the repo they would read project files and inflate the prompt (~37K input tokens for a
+ * one-word reply). A fresh empty dir keeps the tutor text-only and cheap.
+ * @param {(...a:any[])=>void} log
+ * @returns {string|undefined}
+ */
+function makeTempCwd(log) {
+  try {
+    return mkdtempSync(join(tmpdir(), 'professor-'));
+  } catch (err) {
+    log('[studio agent] could not create temp cwd:', err.message);
+    return undefined;
+  }
+}
+
+/** Remove a temp cwd created by makeTempCwd (idempotent). */
+function cleanupTempCwd(dir, log) {
+  if (!dir) return;
+  try {
+    rmSync(dir, { recursive: true, force: true });
+  } catch (err) {
+    log('[studio agent] could not remove temp cwd:', err.message);
+  }
+}
+
+/**
+ * Environment for the OpenCode CLI: deny edit/bash/webfetch so the tutor cannot touch the learner's
+ * files, merged with any OPENCODE_CONFIG_CONTENT the user already set.
+ * @returns {NodeJS.ProcessEnv}
+ */
+function opencodeEnv() {
+  const env = { ...process.env };
+  let config = {};
+  if (env.OPENCODE_CONFIG_CONTENT) {
+    try {
+      config = JSON.parse(env.OPENCODE_CONFIG_CONTENT) || {};
+    } catch {
+      config = {};
+    }
+  }
+  config.permission = { ...(config.permission || {}), ...OPENCODE_PERMISSION_DENY };
+  env.OPENCODE_CONFIG_CONTENT = JSON.stringify(config);
+  return env;
 }
 
 /* ------------------------------------------------------------------ agent runners */
@@ -196,7 +250,8 @@ function spawnCursor(ctx) {
   if (model) args.push('--model', model);
   args.push(prompt);
 
-  const proc = spawn('cursor-agent', args, { cwd: __dirname, stdio: ['ignore', 'pipe', 'pipe'] });
+  const cwd = makeTempCwd(log);
+  const proc = spawn('cursor-agent', args, { cwd: cwd || __dirname, stdio: ['ignore', 'pipe', 'pipe'] });
   let streamed = false;
   let lastAssistant = '';
   let resultText = '';
@@ -242,8 +297,12 @@ function spawnCursor(ctx) {
     log
   );
 
-  proc.on('error', (err) => finish({ message: `Cursor Agent failed to start: ${err.message}`, code: 'server' }));
+  proc.on('error', (err) => {
+    cleanupTempCwd(cwd, log);
+    finish({ message: `Cursor Agent failed to start: ${err.message}`, code: 'server' });
+  });
   proc.on('close', (code) => {
+    cleanupTempCwd(cwd, log);
     if (!streamed && resultText) onText(resultText);
     if (code !== 0 && !streamed && !resultText) {
       return finish({ message: `Cursor Agent exited with code ${code}`, code: 'server' });
@@ -253,13 +312,33 @@ function spawnCursor(ctx) {
   return { kill: () => proc.kill('SIGTERM') };
 }
 
+/**
+ * Extract assistant text from one OpenCode `run --format json` event.
+ *
+ * OpenCode emits JSON lines such as:
+ *   {"type":"text","part":{"type":"text","text":"hello"}}
+ *   {"type":"step_start",…} / {"type":"step_finish",…} / {"type":"tool_use",…}
+ * Only `type === "text"` carries assistant output; everything else is ignored.
+ *
+ * @param {any} event
+ * @returns {string|null}
+ */
+export function extractOpencodeText(event) {
+  if (!event || typeof event !== 'object') return null;
+  if (event.type === 'text' && event.part?.type === 'text' && typeof event.part.text === 'string') {
+    return event.part.text;
+  }
+  return null;
+}
+
 function spawnOpencode(ctx) {
   const { prompt, model, onText, onError, onDone, log } = ctx;
   const args = ['run', '--format', 'json'];
   if (model) args.push('--model', model);
   args.push(prompt);
 
-  const proc = spawn('opencode', args, { cwd: __dirname, stdio: ['ignore', 'pipe', 'pipe'] });
+  const cwd = makeTempCwd(log);
+  const proc = spawn('opencode', args, { cwd: cwd || __dirname, env: opencodeEnv(), stdio: ['ignore', 'pipe', 'pipe'] });
   let streamed = false;
   let finished = false;
   const finish = (err) => {
@@ -280,8 +359,8 @@ function spawnOpencode(ctx) {
       onText(`${line}\n`);
       return;
     }
-    const text = event.delta?.text || event.message?.content || event.content || event.text || event.result;
-    if (typeof text === 'string' && text) {
+    const text = extractOpencodeText(event);
+    if (text) {
       streamed = true;
       onText(text);
     }
@@ -296,8 +375,12 @@ function spawnOpencode(ctx) {
   });
   proc.stderr.on('data', (chunk) => log('[studio agent stderr]', chunk.toString().slice(0, 300)));
 
-  proc.on('error', (err) => finish({ message: `OpenCode failed to start: ${err.message}`, code: 'server' }));
+  proc.on('error', (err) => {
+    cleanupTempCwd(cwd, log);
+    finish({ message: `OpenCode failed to start: ${err.message}`, code: 'server' });
+  });
   proc.on('close', (code) => {
+    cleanupTempCwd(cwd, log);
     if (buffer.trim()) flushLine(buffer);
     if (code !== 0 && !streamed) return finish({ message: `OpenCode exited with code ${code}`, code: 'server' });
     finish();
@@ -405,6 +488,7 @@ function printBanner(token, origins, log) {
  * @param {boolean} [options.announce]      write token file + print banner (default: false)
  * @param {boolean} [options.allowNonLoopback] permit non-loopback clients (default: false)
  * @param {() => object} [options.capabilities] installer probe (default: detectAgents)
+ * @param {object} [options.runner] options forwarded to the Phase 29 runner router (studio-runner.js)
  * @param {(...a:any[])=>void} [options.log] logger
  * @returns {import('express').Router}
  */
@@ -465,6 +549,11 @@ export function createStudioRouter(options = {}) {
       .json({ ok: false, error: 'Missing or invalid X-Studio-Token', code: 'unauthorized' });
   });
 
+  /* -------------------------------------------------- local runner (Phase 29) */
+
+  // Mounted INSIDE the token/CORS guard above, so the runner inherits auth for free (HANDOFF-29 §1).
+  router.use('/run', createRunnerRouter(options.runner));
+
   /* -------------------------------------------------- bridge */
 
   router.get('/health', (req, res) => {
@@ -483,12 +572,23 @@ export function createStudioRouter(options = {}) {
     res.flushHeaders?.();
 
     let ended = false;
+    let heartbeat = null;
+    let firstToken = false;
+
+    const clearHeartbeat = () => {
+      if (heartbeat) {
+        clearInterval(heartbeat);
+        heartbeat = null;
+      }
+    };
     const send = (obj) => {
       if (!res.writableEnded) res.write(`data: ${JSON.stringify(obj)}\n\n`);
     };
+    // `done()` must end the response exactly once, whatever order errors/close arrive in.
     const done = () => {
       if (ended) return;
       ended = true;
+      clearHeartbeat();
       if (!res.writableEnded) {
         res.write('data: [DONE]\n\n');
         res.end();
@@ -521,32 +621,46 @@ export function createStudioRouter(options = {}) {
     const prompt = flattenConversation(system, messages, includeSystemInPrompt);
 
     let runner = null;
-    const finish = () => {
-      runner?.kill?.();
-      done();
-    };
     const onError = ({ message, code }) => send({ error: message, code: code || 'server' });
     const onText = (text) => {
-      if (typeof text === 'string' && text) send({ text });
+      if (typeof text === 'string' && text) {
+        firstToken = true;
+        send({ text });
+      }
     };
     const onDone = () => done();
+
+    // Kill the child process only when the CLIENT disconnects mid-stream.
+    // PITFALLS §8 / Node ≥16: `req.on('close')` fires as soon as express.json() has consumed the
+    // body — NOT on disconnect — so it SIGTERM'd every child immediately (exit code null) and left
+    // the response un-ended. Detect the real disconnect via the response, which is only "closed
+    // before we ended it" when the client went away.
+    res.on('close', () => {
+      clearHeartbeat();
+      if (!res.writableEnded) {
+        ended = true;
+        runner?.kill?.();
+      }
+    });
+
+    // Tell the client we accepted the request, then keep the socket warm while the agent boots
+    // (Claude ≈11 s, OpenCode ≈28 s): proxies and the browser otherwise time out.
+    send({ status: 'thinking' });
+    heartbeat = setInterval(() => {
+      if (res.writableEnded) {
+        clearHeartbeat();
+        return;
+      }
+      if (!firstToken) res.write(': ping\n\n');
+    }, HEARTBEAT_MS);
+    heartbeat.unref?.();
 
     try {
       runner = runners[chosen]({ system, prompt, model, messages, onText, onError, onDone, log });
     } catch (err) {
       onError({ message: `Failed to start ${chosen}: ${err.message}`, code: 'server' });
       done();
-      return;
     }
-
-    // Kill the child process if the client disconnects (PITFALLS §8).
-    req.on('close', () => {
-      if (!ended) {
-        runner?.kill?.();
-        ended = true;
-      }
-    });
-    res.on('close', finish);
   });
 
   /* -------------------------------------------------- database */
