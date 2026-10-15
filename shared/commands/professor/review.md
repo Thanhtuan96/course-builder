@@ -15,6 +15,7 @@ This command routes to the **Coach agent** which provides feedback through self-
 3. If exists, read that exercise file for context
 4. Note the current section number and title, and the course Kind (`**Kind**: ...`; missing → `programming`)
 5. Match feedback to the Kind — line-by-line code feedback only makes sense for `programming`; for `quantitative`/`conceptual`/`skill` review the reasoning, method, or argument instead of "code"
+6. When the learner asserts a fact, occasionally ask "Where did you get that? How could you verify it?" — never present an uncited claim as certain, and never invent a source to support theirs
 
 ## Route to Coach:
 
