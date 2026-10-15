@@ -1,11 +1,27 @@
 import { describe, it, expect } from 'vitest';
-import { remarkPlugins, rehypePlugins, isMermaidClassName } from '../src/lib/markdown.js';
+import {
+  baseRemarkPlugins,
+  baseRehypePlugins,
+  isMermaidClassName,
+  hasMath,
+} from '../src/lib/markdown.js';
 import { LEARNING_CORE_SECTIONS, PROFESSOR_PERSONA, wrapUntrusted, withLanguage, buildSystemPrompt } from '../src/lib/prompts/base.js';
 
 describe('markdown pipeline config', () => {
-  it('uses gfm + math and katex, and no raw HTML', () => {
-    expect(remarkPlugins).toHaveLength(2);
-    expect(rehypePlugins).toHaveLength(1);
+  it('loads gfm by default and keeps katex out of the base pipeline', () => {
+    expect(baseRemarkPlugins).toHaveLength(1); // remark-gfm only
+    expect(baseRehypePlugins).toHaveLength(0); // katex is dynamic
+  });
+
+  it('detects math delimiters but ignores code', () => {
+    expect(hasMath('inline $x^2$ here')).toBe(true);
+    expect(hasMath('block:\n$$\na = b\n$$')).toBe(true);
+    expect(hasMath('use \\(x+1\\) notation')).toBe(true);
+    expect(hasMath('\\[ y = mx + b \\]')).toBe(true);
+    expect(hasMath('plain text with no math')).toBe(false);
+    expect(hasMath('a price of $5 and $10 is fine')).toBe(false);
+    expect(hasMath('```js\nconst x = "$y$";\n```')).toBe(false);
+    expect(hasMath('inline `a $b$ c` code')).toBe(false);
   });
 
   it('detects mermaid fences', () => {

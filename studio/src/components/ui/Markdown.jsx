@@ -1,7 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import 'katex/dist/katex.min.css';
-import { remarkPlugins, rehypePlugins, isMermaidClassName } from '../../lib/markdown.js';
+import {
+  baseRemarkPlugins,
+  baseRehypePlugins,
+  isMermaidClassName,
+  hasMath,
+  loadMathPlugins,
+} from '../../lib/markdown.js';
 
 /**
  * Lazy Mermaid renderer: `mermaid` is only imported when a ```mermaid block is actually present,
@@ -58,9 +63,37 @@ function PreRenderer({ children }) {
 
 /**
  * Safe Markdown (LESSON-03): no rehype-raw, so raw HTML is escaped and `javascript:` URLs are
- * dropped by the default url transform. External links open in a new tab.
+ * dropped by the default url transform. External links open in a new tab. Math plugins + katex
+ * CSS are loaded on demand only when the source contains math.
  */
 export function Markdown({ children, className = '' }) {
+  const source = String(children || '');
+  const needsMath = useMemo(() => hasMath(source), [source]);
+  const [mathPlugins, setMathPlugins] = useState(null);
+
+  useEffect(() => {
+    if (!needsMath) {
+      setMathPlugins(null);
+      return undefined;
+    }
+    let alive = true;
+    loadMathPlugins()
+      .then((plugins) => alive && setMathPlugins(plugins))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [needsMath]);
+
+  const remarkPlugins = useMemo(
+    () => [...baseRemarkPlugins, ...(mathPlugins?.remarkPlugins || [])],
+    [mathPlugins]
+  );
+  const rehypePlugins = useMemo(
+    () => [...baseRehypePlugins, ...(mathPlugins?.rehypePlugins || [])],
+    [mathPlugins]
+  );
+
   return (
     <div className={`prose-lesson ${className}`}>
       <ReactMarkdown
@@ -72,7 +105,7 @@ export function Markdown({ children, className = '' }) {
           pre: PreRenderer,
         }}
       >
-        {String(children || '')}
+        {source}
       </ReactMarkdown>
     </div>
   );
