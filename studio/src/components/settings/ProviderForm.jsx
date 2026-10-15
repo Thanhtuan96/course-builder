@@ -4,7 +4,15 @@
  *   <ProviderFields />  — per-provider fields + model select + "Test connection"
  */
 import { useState } from 'react';
-import { PROVIDERS, getProvider, testConnection, ANTHROPIC_MODELS, OPENAI_PRESETS } from '../../lib/ai/index.js';
+import {
+  PROVIDERS,
+  getProvider,
+  testConnection,
+  ANTHROPIC_MODELS,
+  OPENAI_PRESETS,
+  BRIDGE_AGENTS,
+  DEFAULT_BRIDGE_AGENT,
+} from '../../lib/ai/index.js';
 import { recordProviderTest } from '../../lib/ai/status.js';
 import { Card } from '../ui/Card.jsx';
 import { Button } from '../ui/Button.jsx';
@@ -47,6 +55,8 @@ export function ProviderFields({ settings, update, compact = false }) {
   const [output, setOutput] = useState('');
   const [error, setError] = useState(null);
   const [models, setModels] = useState(null);
+  const [agentModels, setAgentModels] = useState(null);
+  const [loadingAgentModels, setLoadingAgentModels] = useState(false);
   const provider = settings.provider;
 
   // Any config edit invalidates the last successful test for this provider.
@@ -56,10 +66,32 @@ export function ProviderFields({ settings, update, compact = false }) {
   };
 
   const setProvider = (id) => {
-    const rememberedModel = settings[id]?.model || '';
-    update({ provider: id, model: rememberedModel });
+    update({ provider: id });
     setOutput('');
     setError(null);
+  };
+
+  const bridgeAgent = settings.bridge?.agent || DEFAULT_BRIDGE_AGENT;
+  const bridgeAgentMeta = BRIDGE_AGENTS.find((a) => a.id === bridgeAgent) || BRIDGE_AGENTS[0];
+  const storedAgentModel = settings.bridge?.models?.[bridgeAgent] || '';
+  const knownModel = agentModels ? agentModels.some((m) => m.id === storedAgentModel) : false;
+  const selectedAgentModel = knownModel ? storedAgentModel : '';
+  const customAgentModel = selectedAgentModel ? '' : storedAgentModel;
+
+  const setAgentModel = (value) => set({ bridge: { models: { [bridgeAgent]: value } } });
+
+  const loadAgentModels = async () => {
+    setLoadingAgentModels(true);
+    setError(null);
+    try {
+      const bridge = await getProvider({ ...settings, provider: 'bridge' });
+      const res = await bridge.listModels(bridgeAgent);
+      setAgentModels(res.models || []);
+    } catch (err) {
+      setError(err);
+    } finally {
+      setLoadingAgentModels(false);
+    }
   };
 
   const runTest = async () => {
@@ -109,8 +141,8 @@ export function ProviderFields({ settings, update, compact = false }) {
             <Select
               label="Model"
               name="anthropicModel"
-              value={settings.model || settings.anthropic.model}
-              onChange={(e) => set({ model: e.target.value, anthropic: { model: e.target.value } })}
+              value={settings.anthropic.model}
+              onChange={(e) => set({ anthropic: { model: e.target.value } })}
             >
               {ANTHROPIC_MODELS.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -130,8 +162,11 @@ export function ProviderFields({ settings, update, compact = false }) {
               onChange={(e) => {
                 const preset = OPENAI_PRESETS.find((p) => p.id === e.target.value);
                 set({
-                  openai: { preset: e.target.value, baseUrl: preset.baseUrl || settings.openai.baseUrl, model: preset.model || settings.openai.model },
-                  model: preset.model || settings.model,
+                  openai: {
+                    preset: e.target.value,
+                    baseUrl: preset.baseUrl || settings.openai.baseUrl,
+                    model: preset.model || settings.openai.model,
+                  },
                 });
               }}
             >
@@ -160,8 +195,8 @@ export function ProviderFields({ settings, update, compact = false }) {
             <Input
               label="Model"
               name="openaiModel"
-              value={settings.model || settings.openai.model}
-              onChange={(e) => set({ model: e.target.value, openai: { model: e.target.value } })}
+              value={settings.openai.model}
+              onChange={(e) => set({ openai: { model: e.target.value } })}
             />
           </>
         )}
@@ -179,8 +214,8 @@ export function ProviderFields({ settings, update, compact = false }) {
                 label="Model"
                 name="ollamaModel"
                 className="flex-1"
-                value={settings.model || settings.ollama.model}
-                onChange={(e) => set({ model: e.target.value, ollama: { model: e.target.value } })}
+                value={settings.ollama.model}
+                onChange={(e) => set({ ollama: { model: e.target.value } })}
               >
                 {models ? (
                   models.map((m) => (
@@ -189,7 +224,7 @@ export function ProviderFields({ settings, update, compact = false }) {
                     </option>
                   ))
                 ) : (
-                  <option value={settings.model || settings.ollama.model}>{settings.model || settings.ollama.model}</option>
+                  <option value={settings.ollama.model}>{settings.ollama.model}</option>
                 )}
               </Select>
               <Button variant="secondary" onClick={loadOllamaModels}>
@@ -216,16 +251,66 @@ export function ProviderFields({ settings, update, compact = false }) {
               value={settings.bridge.bridgeToken}
               onChange={(e) => set({ bridge: { bridgeToken: e.target.value } })}
             />
-            <Select
-              label="Agent"
-              name="bridgeAgent"
-              value={settings.bridge.agent || 'claude'}
-              onChange={(e) => set({ bridge: { agent: e.target.value } })}
-            >
-              <option value="claude">Claude Code</option>
-              <option value="opencode">OpenCode</option>
-              <option value="cursor">Cursor CLI</option>
-            </Select>
+            <div>
+              <Select
+                label="Agent"
+                name="bridgeAgent"
+                value={bridgeAgent}
+                onChange={(e) => {
+                  set({ bridge: { agent: e.target.value } });
+                  setAgentModels(null);
+                }}
+              >
+                {BRIDGE_AGENTS.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.label}
+                  </option>
+                ))}
+              </Select>
+              <p className="mt-1 text-xs text-neutral-500">{bridgeAgentMeta.tagline}</p>
+            </div>
+
+            {bridgeAgentMeta.supportsModelSelection ? (
+              <>
+                <div className="flex items-end gap-2">
+                  <Select
+                    label="Model"
+                    name="bridgeAgentModel"
+                    className="flex-1"
+                    value={selectedAgentModel}
+                    onChange={(e) => setAgentModel(e.target.value)}
+                  >
+                    <option value="">Default (let the agent choose)</option>
+                    {storedAgentModel && !selectedAgentModel && (
+                      <option value={storedAgentModel}>{storedAgentModel}</option>
+                    )}
+                    {(agentModels || []).map((m) =>
+                      m.id ? (
+                        <option key={m.id} value={m.id}>
+                          {m.label || m.id}
+                        </option>
+                      ) : null
+                    )}
+                  </Select>
+                  <Button variant="secondary" onClick={loadAgentModels} disabled={loadingAgentModels}>
+                    {loadingAgentModels && <Spinner />}
+                    Load models
+                  </Button>
+                </div>
+                <Input
+                  label="Custom model (optional)"
+                  name="bridgeAgentModelCustom"
+                  value={customAgentModel}
+                  onChange={(e) => setAgentModel(e.target.value)}
+                  placeholder={bridgeAgentMeta.dynamicModels ? 'provider/model' : 'model-id'}
+                  hint="Overrides the dropdown. Leave empty to use “Default”."
+                />
+              </>
+            ) : (
+              <p className="text-xs text-neutral-500">
+                {bridgeAgentMeta.label} doesn’t accept a model flag here — it uses your signed-in default.
+              </p>
+            )}
           </>
         )}
       </div>
@@ -248,6 +333,18 @@ export function ProviderFields({ settings, update, compact = false }) {
         <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-neutral-100 p-3 text-xs text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">
           {output || '…'}
         </pre>
+      )}
+
+      {provider === 'ollama' && (error?.code === 'cors' || error?.code === 'local_network_blocked') && (
+        <Button
+          variant="secondary"
+          onClick={() => {
+            update({ provider: 'bridge', bridge: { agent: 'ollama' } });
+            setError(null);
+          }}
+        >
+          Use Ollama through the local server
+        </Button>
       )}
 
       <ErrorNotice error={error} onDismiss={() => setError(null)} />
