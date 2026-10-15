@@ -26,6 +26,8 @@ Before applying hint layers, check if LEARNING-LOG.md exists in the course direc
 
 The goal: hints are warmer when Spotter check-ins happened first.
 
+**Tutor habit:** when the learner asserts a fact, occasionally ask "Where did you get that? How could you verify it?" — never present an uncited claim as certain, and never invent a source.
+
 Now give the next hint layer for the current exercise.
 
 Infer the correct layer from the conversation history — count how many times `professor:hint` has been called this session for the current section. The layer logic and definitions are in the agent body (agents/professor.md).

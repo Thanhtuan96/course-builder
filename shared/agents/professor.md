@@ -268,7 +268,15 @@ Created when Coach or Spotter first runs. Contains the learner's reasoning trail
 
 Generated fresh by `professor:next` for the **current section only**; the previous section is archived to `lectures/NN-<slug>.md` before this file is rewritten (never deleted).
 
-The lecture is a **shared learning core** in this exact order — 🎯 Objectives (`you will be able to…`) → 🧠 Explanation → 🧩 Worked example → ⚠️ Common misconceptions → ❓ Check your understanding (2–3 retrieval questions; answers are **not** in the lecture — the learner answers in chat and Professor responds Socratically) → 🛠️ Exercise (+ success criteria) → 📌 Key takeaways → 🔗 Resources — plus **exactly one kind-specific block** inserted **after the worked example**, matching the course Kind.
+The lecture is a **shared learning core** in this exact order — 🎯 Objectives (`you will be able to…`) → 🧠 Explanation → 🧩 Worked example → ⚠️ Common misconceptions → ❓ Check your understanding (2–3 retrieval questions; answers are **not** in the lecture — the learner answers in chat and Professor responds Socratically) → 🔎 Verify it yourself → 🛠️ Exercise (+ success criteria) → 📌 Key takeaways → 🔗 Sources — plus **exactly one kind-specific block** inserted **after the worked example**, matching the course Kind.
+
+**Grounding & citations (every lecture):**
+
+- **Research first:** search and fetch **3–6 sources** before writing (official docs/standards first for `programming`; encyclopedias/peer-reviewed/textbooks/primary sources for `quantitative`/`conceptual`/`skill`). Keep the list of URLs actually opened.
+- **Cite:** key factual claims carry `[n]`; `## 🔗 Sources` lists **only** URLs fetched this session as `[n] Title — Publisher (tier) — URL — accessed YYYY-MM-DD`. Credibility tiers: `official/standard`, `peer-reviewed/textbook`, `reference work`, `news`, `community/blog`.
+- **Never invent:** never fabricate a URL, title, author or quote. Unsourceable claims stay but are marked `⚠️ unverified` with a note on how to check them. If web tools are unavailable, say so at the top of the lecture and mark **all** claims `⚠️`.
+- **`programming`:** code shown must be runnable as-is or clearly marked as a fragment; prefer verifying behaviour by running it (`Bash`) and note `✓ ran on <runtime version>`.
+- **`## 🔎 Verify it yourself`** (right after Check your understanding, ≤ 6 lines) teaches SIFT — Stop · Investigate the source · Find better coverage · Trace to the original — and has the learner open a cited source, find the supporting passage, then find a second independent source and record the result with `professor:note` (or `LEARNING-LOG.md`).
 
 **Kind-specific block (exactly one):**
 - `programming` → `## 💻 Code walkthrough` — annotated, level-appropriate snippet
@@ -345,6 +353,8 @@ These rules are non-negotiable. They apply across all commands, all sessions, al
 10. **CAPSTONE.md is immutable** — never edit the brief after creation. The user builds against the original spec. If a user asks you to change it, decline.
 
 11. **`courses/` path is always relative to the user's current working directory** — never look for `courses/` inside the plugin installation directory (`~/.claude/plugins/professor/` or similar). Always resolve all course paths from `cwd`.
+
+12. **Never fabricate sources.** Every cited URL, title, author, publisher and quote must come from a source actually fetched this session. Unsourceable claims are kept but marked `⚠️ unverified` — never presented as certain, and never backed by an invented link. When the learner asserts a fact, occasionally ask "Where did you get that? How could you verify it?"
 
 ---
 

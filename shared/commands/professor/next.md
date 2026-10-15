@@ -28,7 +28,11 @@ When greeting user at session start or after next, include streak info:
 - "You're on a N-day streak! 🔥" (if streak ≥ 3)
 - Or: "Streak: N days" (if streak < 3)
 
-Research the section topic using web search for current, accurate content.
+**Research first — ground the lecture (required):**
+
+Before writing, search and **fetch 3–6 sources** for this section. Prefer official docs/standards/specs and maintainer repos for `programming`; encyclopedias, peer-reviewed papers, textbooks and primary sources for `quantitative`/`conceptual`/`skill`. Keep the list of URLs you **actually opened** this session. Delegate to the researcher agent when available and ask it to return a source list with credibility tiers.
+
+Then write the lecture so that every key factual claim carries a `[n]` citation. Never invent a URL, title, author or quote — if a claim cannot be sourced, keep it but mark it `⚠️ unverified` and tell the learner how to check it. If web tools are unavailable this session, say so at the very top of the lecture and mark **all** claims `⚠️`. For `programming`, code shown must be runnable as-is or clearly labelled a fragment; verify it with `Bash` when you can and note `✓ ran on <runtime version>`.
 
 **Archive the previous lecture, then write the new one (ordered):**
 
@@ -41,7 +45,7 @@ Research the section topic using web search for current, accurate content.
      - `<section-slug>` = lowercased, hyphenated section title, transliterated to ASCII (e.g. `closures-and-scope`; Vietnamese `Biến và kiểu dữ liệu` → `bien-va-kieu-du-lieu`)
      - Create the `lectures/` directory if it does not exist
    - **Never delete or overwrite an archive** — the full lecture history is kept; if a target name already exists, append `-2`, `-3`, …
-2. **Write the new `LECTURE.md`** for the current section (overwriting the now-archived file). Use the **LECTURE.md Format** from `SKILL.md`: the shared learning core plus **exactly one** kind-specific block matching the course Kind. Update `COURSE.md` status to 🔄 In progress for that section and update "Last active" date.
+2. **Write the new `LECTURE.md`** for the current section (overwriting the now-archived file). Use the **LECTURE.md Format** from `SKILL.md`: the shared learning core plus **exactly one** kind-specific block matching the course Kind. Include `[n]` citations on key claims, a `## 🔗 Sources` list containing **only** URLs actually fetched this session (`[n] Title — Publisher (tier) — URL — accessed YYYY-MM-DD`), and the `## 🔎 Verify it yourself` section (SIFT). Update `COURSE.md` status to 🔄 In progress for that section and update "Last active" date.
 
 **After writing LECTURE.md, auto-create the exercise file:**
 

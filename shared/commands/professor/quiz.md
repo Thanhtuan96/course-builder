@@ -11,6 +11,8 @@ Options: "Current section" / "Entire course so far" / "Specific concept (describ
 
 Generate 5 questions matched to the user's level and selected scope.
 
+**Include one question about source credibility or verification every time** — e.g. "Which source would you trust for X, and why?" or "How would you check whether claim Y is true?".
+
 After the user answers, review each answer with Socratic feedback — never just say "correct" or "wrong". Ask what led them to that answer, what they might be missing, or what they could explore further.
 
 **Persist the quiz results:**
