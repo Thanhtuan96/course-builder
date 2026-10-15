@@ -1,0 +1,128 @@
+import { useEffect, useState } from 'react';
+import { Link, useRoute } from '../lib/router.js';
+import { getAdapterInfo } from '../lib/repo/index.js';
+import { useSettings } from '../lib/settings.js';
+import { PROVIDERS } from '../lib/ai/index.js';
+import { DueBadge } from './practice/DueBadge.jsx';
+
+const DISMISS_KEY = 'professor-studio:durability-dismissed';
+
+function NavLink({ to, active, children }) {
+  return (
+    <Link
+      to={to}
+      className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+        active
+          ? 'bg-neutral-100 text-neutral-900 dark:bg-neutral-800 dark:text-white'
+          : 'text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white'
+      }`}
+    >
+      {children}
+    </Link>
+  );
+}
+
+export function Layout({ children }) {
+  const route = useRoute();
+  const [settings] = useSettings();
+  const [adapter, setAdapter] = useState(null);
+  const [dismissed, setDismissed] = useState(() =>
+    typeof localStorage !== 'undefined' ? localStorage.getItem(DISMISS_KEY) === '1' : false
+  );
+
+  useEffect(() => {
+    let alive = true;
+    getAdapterInfo()
+      .then((info) => alive && setAdapter(info))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const provider = PROVIDERS.find((p) => p.id === settings.provider);
+  const showDurability = adapter && !adapter.persistent && !dismissed;
+
+  const dismiss = () => {
+    setDismissed(true);
+    try {
+      localStorage.setItem(DISMISS_KEY, '1');
+    } catch {
+      /* ignore */
+    }
+  };
+
+  return (
+    <div className="flex min-h-full flex-col bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
+      <header className="sticky top-0 z-20 border-b border-neutral-200 bg-white/90 backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/90">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
+          <Link to="/" className="flex items-center gap-2">
+            <span className="grid h-7 w-7 place-items-center rounded-lg bg-indigo-600 text-sm font-bold text-white">P</span>
+            <span className="text-base font-semibold tracking-tight">Professor Studio</span>
+          </Link>
+
+          <nav className="hidden items-center gap-1 sm:flex">
+            <NavLink to="/" active={route.name === 'home'}>
+              Home
+            </NavLink>
+            <span className="flex items-center gap-1">
+              <NavLink to="/review" active={route.name === 'review'}>
+                Review
+              </NavLink>
+              <DueBadge />
+            </span>
+            <NavLink to="/settings" active={route.name === 'settings'}>
+              Settings
+            </NavLink>
+          </nav>
+
+          <Link
+            to="/settings"
+            title="Active AI source"
+            className="flex items-center gap-2 rounded-full border border-neutral-200 px-2.5 py-1 text-xs text-neutral-600 dark:border-neutral-700 dark:text-neutral-300"
+          >
+            <span className={`h-2 w-2 rounded-full ${settings.provider ? 'bg-green-500' : 'bg-neutral-400'}`} />
+            {provider ? provider.label : 'No provider'}
+          </Link>
+        </div>
+      </header>
+
+      {showDurability && (
+        <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+          <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
+            <span>
+              Your data is only in this browser — export a backup in{' '}
+              <Link to="/settings" className="underline">
+                Settings
+              </Link>
+              .
+            </span>
+            <button type="button" onClick={dismiss} className="shrink-0 text-xs opacity-70 hover:opacity-100">
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 pb-24 sm:pb-6">{children}</main>
+
+      <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-neutral-200 bg-white sm:hidden dark:border-neutral-800 dark:bg-neutral-950">
+        {[
+          { to: '/', label: 'Home', name: 'home' },
+          { to: '/review', label: 'Review', name: 'review' },
+          { to: '/settings', label: 'Settings', name: 'settings' },
+        ].map((item) => (
+          <Link
+            key={item.to}
+            to={item.to}
+            className={`flex flex-1 items-center justify-center gap-1 py-3 text-xs font-medium ${
+              route.name === item.name ? 'text-indigo-600 dark:text-indigo-400' : 'text-neutral-500'
+            }`}
+          >
+            {item.label}
+          </Link>
+        ))}
+      </nav>
+    </div>
+  );
+}
