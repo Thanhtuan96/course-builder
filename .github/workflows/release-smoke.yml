@@ -1,0 +1,41 @@
+name: Release smoke
+
+# Verifies that the npm tarball installs and runs end-to-end on the Studio floor (Node 22), and that
+# the lighter CLI commands still work on the documented minimum (Node 18). Run before every publish.
+
+on:
+  push:
+    branches:
+      - main
+      - feat/studio-local-first
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tarball-smoke:
+    name: Tarball smoke (Node 22)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build + pack + install + run (scripts/smoke-pack.mjs)
+        run: npm run smoke:pack
+
+  cli-floor:
+    name: CLI floor (Node 18 — --help / doctor)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: npm ci
+      - name: Help
+        run: node bin/cli.js --help
+      - name: Doctor
+        run: node bin/cli.js doctor
