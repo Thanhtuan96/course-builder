@@ -15,10 +15,14 @@ import {
   extractOpencodeText,
   extractGeminiText,
   extractAntigravityText,
+  antigravityStep,
+  antigravityErrorText,
+  antigravityArgs,
   opencodeErrorText,
   claudeErrorText,
   geminiErrorText,
   diagnoseAgentFailure,
+  describeNoOutput,
   parseOpencodeModels,
   parseAntigravityModels,
   parseCursorModels,
@@ -80,6 +84,65 @@ describe('bridge agent stream-json parsers', () => {
   it('antigravity extractor ignores tool steps and the result frame', () => {
     expect(extractAntigravityText({ event: 'step_update', step_update: { step_type: 'tool', text_delta: 'x' } })).toBeNull();
     expect(extractAntigravityText({ event: 'result', result: { response: 'x' } })).toBeNull();
+  });
+});
+
+describe('antigravity no-output regression (real tool-denied sequence)', () => {
+  /**
+   * The bridge prompt (flattened system+history) made agy spend the turn on a `run_command` tool
+   * that headless plan mode auto-denies: exit 0, NO text, a denied tool step in the stream. The
+   * bridge used to end silently. This mirrors runJsonCli's accumulation over the real fixture.
+   */
+  function replay(source) {
+    let text = '';
+    let lastStep = '';
+    let errorText = '';
+    for (const line of source.split('\n')) {
+      if (!line.trim()) continue;
+      const event = JSON.parse(line);
+      const t = extractAntigravityText(event);
+      if (t) text += t;
+      const step = antigravityStep(event);
+      if (step) lastStep = step;
+      const err = antigravityErrorText(event);
+      if (err) errorText = err;
+    }
+    return { text, lastStep, errorText };
+  }
+
+  it('produces no text but a tool error and a final tool step', () => {
+    const { text, lastStep, errorText } = replay(fixture('antigravity-tool-denied'));
+    expect(text).toBe('');
+    expect(lastStep).toBe('tool ERROR');
+    expect(errorText).toMatch(/denied permission/);
+  });
+
+  it('turns an empty exit-0 run into an actionable error (never silent)', () => {
+    const { lastStep, errorText } = replay(fixture('antigravity-tool-denied'));
+    const diag = describeNoOutput('antigravity', { stderr: errorText, exitCode: 0, lastStep });
+    expect(diag.message).toMatch(/produced no text|denied permission/);
+    expect(diag.hint).toBeTruthy();
+  });
+
+  it('falls back to the last step when even the stream carries no reason', () => {
+    const diag = describeNoOutput('antigravity', { stderr: '', exitCode: 0, lastStep: 'tool ERROR' });
+    expect(diag.message).toMatch(/last step: tool ERROR/);
+    expect(diag.hint).toBeTruthy();
+  });
+
+  it('guards the prompt with a plain-text instruction and keeps --mode plan', () => {
+    const args = antigravityArgs({ prompt: '[System]\nTutor\n\nUSER: hi' });
+    expect(args).toContain('--mode');
+    expect(args[args.indexOf('--mode') + 1]).toBe('plan');
+    const promptArg = args[args.indexOf('-p') + 1];
+    expect(promptArg).toMatch(/Respond in plain text only/);
+    expect(promptArg).toMatch(/Do not use any tools/);
+    expect(args).toContain('--output-format');
+  });
+
+  it('adds --model only when a model is selected', () => {
+    expect(antigravityArgs({ prompt: 'hi' })).not.toContain('--model');
+    expect(antigravityArgs({ prompt: 'hi', model: 'claude-opus-5-5-high' })).toContain('claude-opus-5-5-high');
   });
 });
 

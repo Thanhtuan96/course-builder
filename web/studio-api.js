@@ -402,6 +402,34 @@ export function diagnoseAgentFailure(agent, { stderr = '', exitCode } = {}) {
   return { message, code: 'server' };
 }
 
+/**
+ * Diagnosis for a run that produced no assistant text at all. A non-zero exit is diagnosed by
+ * `diagnoseAgentFailure`; an exit-0-without-text run (an agent that burned the turn on a denied
+ * tool, or returned an empty reply) is reported with the last observed step so it is never silent.
+ *
+ * @param {string} agent
+ * @param {{ stderr?: string, exitCode?: number|null, lastStep?: string }} info
+ * @returns {{ message: string, code: string, hint?: string }}
+ */
+export function describeNoOutput(agent, { stderr = '', exitCode, lastStep = '' } = {}) {
+  const label = AGENT_LABELS[agent] || agent;
+  const reason = firstMeaningfulStderr(stderr);
+  const diag = diagnoseAgentFailure(agent, { stderr, exitCode });
+  if (exitCode === 0) {
+    // Exit 0 but no text: override the misleading "exited with code 0" wording.
+    diag.message = reason
+      ? `${label} produced no text: ${reason}`
+      : `${label} finished without producing any text${lastStep ? ` (last step: ${lastStep})` : ''}.`;
+    if (!diag.hint) {
+      diag.code = 'server';
+      diag.hint = 'The agent stopped before answering — retry, or pick another agent in Settings.';
+    }
+  } else if (!reason && lastStep) {
+    diag.message = `${diag.message} (last step: ${lastStep})`;
+  }
+  return diag;
+}
+
 function isLoopback(addr) {
   if (!addr) return false;
   return (
@@ -550,6 +578,7 @@ function runJsonCli(ctx, spec) {
 
   let streamed = false;
   let resultText = '';
+  let lastStep = '';
   const stderrLines = [];
   const errorLines = [];
   let finished = false;
@@ -588,6 +617,8 @@ function runJsonCli(ctx, spec) {
       // not stderr — capture it so a non-zero exit is never reported without a reason.
       const errText = spec.errorText?.(event);
       if (errText) errorLines.push(errText);
+      const step = spec.step?.(event);
+      if (step) lastStep = step;
     },
   });
 
@@ -595,9 +626,11 @@ function runJsonCli(ctx, spec) {
   proc.on('close', (code) => {
     io.flush();
     if (!streamed && resultText) onText(resultText);
-    if (code !== 0 && !streamed && !resultText) {
+    // Any run that ends without text is a failure — even exit 0 (an agent that looped on denied
+    // tools, or returned an empty reply). Never leave the client with a silent empty stream.
+    if (!streamed && !resultText) {
       const stderr = [...errorLines, ...stderrLines].join('\n');
-      const diag = diagnoseAgentFailure(spec.agent, { stderr, exitCode: code });
+      const diag = describeNoOutput(spec.agent, { stderr, exitCode: code, lastStep });
       // A named model that fails opaquely is most often the culprit — point the user at the picker.
       if (!diag.hint && ctx.model) diag.hint = 'If you picked a model, try another (or Default) in Settings.';
       return finish(diag);
@@ -645,6 +678,34 @@ export function extractAntigravityText(event) {
     return su.text_delta;
   }
   return null;
+}
+
+/** Short "step_type state" label for the last Antigravity step (used in no-output diagnostics). */
+export function antigravityStep(event) {
+  const su = event?.event === 'step_update' ? event.step_update : null;
+  if (!su) return null;
+  return [su.step_type, su.state].filter(Boolean).join(' ') || null;
+}
+
+/** Antigravity reports a failed tool step (e.g. a headless permission denial) on that step. */
+export function antigravityErrorText(event) {
+  const su = event?.event === 'step_update' ? event.step_update : null;
+  if (!su || su.state !== 'ERROR') return null;
+  const tool = su.tool_info?.error?.message || su.tool_info?.error?.type;
+  return tool || su.error?.message || `${su.step_type || 'step'} failed`;
+}
+
+/**
+ * Antigravity prompt guard. With a flattened `[System]…USER:…` prompt, `--mode plan` makes agy try
+ * a command tool that headless mode auto-denies, so it exits 0 with NO text. The explicit
+ * plain-text instruction reliably suppresses tool use while `--mode plan` keeps the run read-only.
+ * @param {{ prompt: string, model?: string }} ctx
+ */
+export function antigravityArgs({ prompt, model }) {
+  const guarded = `${prompt}\n\nRespond in plain text only. Do not use any tools.`;
+  const args = ['-p', guarded, '--output-format', 'stream-json', '--mode', 'plan'];
+  if (model) args.push('--model', model);
+  return args;
 }
 
 /** Claude/Cursor emit a final `{"type":"result","result":"…"}` with the whole reply. */
@@ -783,19 +844,19 @@ function spawnGemini(ctx) {
 }
 
 function spawnAntigravity(ctx) {
-  const { prompt, model } = ctx;
-  // `--mode plan` is read-only. `--disable-slash-commands` cancels plan mode and `--sandbox`
-  // auto-denies the tools the model then tries to call, so neither is used.
-  const args = ['-p', prompt, '--output-format', 'stream-json', '--mode', 'plan'];
-  if (model) args.push('--model', model);
+  // `--mode plan` keeps the run read-only; `antigravityArgs` also appends the plain-text instruction
+  // that stops agy from burning the turn on a tool headless mode would auto-deny (see below).
+  // `--disable-slash-commands` cancels plan mode and `--sandbox` made no difference, so neither is used.
   return runJsonCli(ctx, {
     agent: 'antigravity',
     label: 'Antigravity',
     command: 'agy',
-    args: () => args,
+    args: () => antigravityArgs(ctx),
     tempCwd: true,
     extract: extractAntigravityText,
     finalText: antigravityResultText,
+    errorText: antigravityErrorText,
+    step: antigravityStep,
   });
 }
 
