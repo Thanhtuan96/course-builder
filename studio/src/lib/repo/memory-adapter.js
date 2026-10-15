@@ -101,6 +101,10 @@ export function createMemoryAdapter() {
     async info() {
       return { kind: 'memory', persistent: false };
     },
+    async clearAll() {
+      for (const t of TABLE_NAMES) stores[t].clear();
+      return { cleared: true };
+    },
   };
 }
 

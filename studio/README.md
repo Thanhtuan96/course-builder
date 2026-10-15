@@ -10,8 +10,9 @@ through a small bridge server that ships with the plugin.
 - **AI sources you can choose:** Anthropic (your key), any OpenAI-compatible endpoint
   (OpenAI / OpenRouter / Groq / LM Studio), Ollama (local), or **My local agent**
   (Claude Code / OpenCode / Cursor CLI).
-- **Storage:** IndexedDB by default; a **SQLite file on disk** (`~/.professor/professor.db`) when the
-  local server is running. Backups are plain JSON and never include API keys.
+- **Storage:** you choose where your data lives — the **browser (IndexedDB)** or a **SQLite file on
+  disk** (`~/.professor/professor.db`) via the local server. Studio writes only to the store you
+  picked and never mirrors data into the other one. Backups are plain JSON and never include API keys.
 
 ---
 
@@ -154,21 +155,32 @@ locally, or grant the browser permission and use a browser that supports it.
 
 ## Storage & data
 
-| Situation | Where your data lives |
-|-----------|-----------------------|
-| `npm run dev` / static deploy, no server | **IndexedDB** in this browser |
-| Local bridge server running + token set | **SQLite** at `${PROFESSOR_HOME:-~/.professor}/professor.db` |
+You pick **one** place for your learning data, and Studio writes only there:
 
-Studio auto-detects the bridge: if the URL + token are set in Settings and `/db/health` answers, it
-uses SQLite; otherwise IndexedDB. On a static deploy with no server it always uses IndexedDB. The CLI
-(`course-professor review` / `import`) always uses this SQLite file, so terminal and browser state
-stay in sync.
+| Option | Where it lives | Notes |
+|--------|----------------|-------|
+| **This browser** | IndexedDB in this browser | No setup; cleared if you clear site data; not shared with the CLI |
+| **SQLite file** | `${PROFESSOR_HOME:-~/.professor}/professor.db` via the local server | One file on disk, shared with the CLI — easy to back up; needs the server running |
 
-Settings → **Storage** shows which backend is active and whether storage is persistent, and offers:
+Choose it in **Settings → Where your learning data is saved** (also asked once during onboarding).
+The default is **SQLite when the CLI paired a local server**, otherwise the browser. Existing installs
+are migrated: Studio preselects the store that already holds your data, and asks once if both do.
+
+Studio **never auto-falls back**. If you chose SQLite and the local server isn't running, Studio shows
+a blocking **“Local server isn't running”** screen with **Retry** and **Switch to browser storage…** —
+nothing is read from or written to IndexedDB in that state.
+
+**Switching is safe.** Changing the setting opens a “Move N courses, M cards…?” confirmation. Studio
+copies via `exportAll()`/`importAll()`, verifies per-table counts, *then* switches. The old copy is
+kept until you press **Remove the old copy**. Cancelling changes nothing. API keys and settings are
+never moved (they live in `localStorage`, outside the repository).
+
+The **“Your data is only in this browser”** banner is shown only when the browser store is active, and
+can be dismissed for the session. DataPanel keeps offering:
 
 - **Export backup (JSON)** / **Restore backup** — move all your data to another browser. Keys are excluded.
-- **Import browser data into SQLite** — move your IndexedDB data into the SQLite file (counts are
-  verified), then optionally clear the browser copy.
+- **Import browser data into SQLite** — an alternative to switching that copies IndexedDB into the
+  SQLite file (counts verified), then optionally clears the browser copy.
 - **Export a course as COURSE.md** — a plugin-compatible file you can continue in Claude Code,
   OpenCode or Cursor with `professor:*` commands.
 

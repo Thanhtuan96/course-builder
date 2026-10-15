@@ -1,23 +1,17 @@
 /**
- * Settings page (final): provider config + test connection, key management, storage info,
+ * Settings page (final): provider config + test connection, key management, storage choice,
  * and the DataPanel mount point (Phase 26 replaces the stub in place).
  */
-import { useEffect, useState } from 'react';
 import { useSettings, clearSecrets } from '../lib/settings.js';
-import { getAdapterInfo } from '../lib/repo/index.js';
 import { Card } from '../components/ui/Card.jsx';
 import { Button } from '../components/ui/Button.jsx';
 import { Input, Select } from '../components/ui/Input.jsx';
 import { ProviderFields } from '../components/settings/ProviderForm.jsx';
+import { StorageSection } from '../components/data/StorageSection.jsx';
 import { DataPanel } from '../components/data/DataPanel.jsx';
 
 export function Settings() {
   const [settings, update] = useSettings();
-  const [adapter, setAdapter] = useState(null);
-
-  useEffect(() => {
-    getAdapterInfo().then(setAdapter).catch(() => {});
-  }, []);
 
   return (
     <div className="space-y-6">
@@ -65,29 +59,7 @@ export function Settings() {
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Storage</h2>
-        <Card className="space-y-1 text-sm">
-          {adapter ? (
-            <>
-              <p>
-                <span className="text-neutral-500">Storage:</span>{' '}
-                <span className="font-medium">
-                  {adapter.kind === 'indexeddb' ? 'IndexedDB (this browser)' : adapter.kind === 'memory' ? 'In-memory (not persistent)' : 'Remote server'}
-                </span>
-              </p>
-              <p>
-                <span className="text-neutral-500">Persistent:</span>{' '}
-                <span className="font-medium">{adapter.persistent ? 'granted' : 'best-effort'}</span>
-              </p>
-              {!adapter.persistent && (
-                <p className="text-amber-700 dark:text-amber-300">
-                  Your data can be cleared by the browser. Export a backup regularly.
-                </p>
-              )}
-            </>
-          ) : (
-            <p className="text-neutral-500">Checking storage…</p>
-          )}
-        </Card>
+        <StorageSection settings={settings} update={update} />
         <DataPanel />
       </section>
     </div>
