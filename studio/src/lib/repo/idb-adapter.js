@@ -13,8 +13,16 @@ import { TABLE_NAMES, SCHEMA_VERSION, tableSpec, assertIndexedField } from './sc
 import { createMemoryAdapter, validateDump, APP_ID } from './memory-adapter.js';
 
 const DB_NAME = 'professor-studio';
-const DB_VERSION = 2; // v1 was the seed db.js (courses/cards/meta); v2 is the normalized schema.
+// v1 = the seed db.js (courses/cards/meta); v2 = the normalized schema; v3 adds the CLI-import
+// `external_id` indexes. Bumping the version is what makes `onupgradeneeded` run for browsers that
+// already have an older database — otherwise the new indexes would never be created.
+export const DB_VERSION = 3;
 
+/**
+ * Bring an open (upgrading) database in line with schema.js: create missing stores AND add any
+ * missing index to stores that already exist. Runs inside the `onupgradeneeded` versionchange
+ * transaction, so it must handle both fresh databases and upgrades from any older version.
+ */
 function createStores(db, tx) {
   for (const table of TABLE_NAMES) {
     const spec = tableSpec(table);
@@ -22,6 +30,7 @@ function createStores(db, tx) {
     if (!db.objectStoreNames.contains(table)) {
       os = db.createObjectStore(table, { keyPath: spec.id });
     } else {
+      // Existing store: keep it and its rows, only backfill indexes added since it was created.
       os = tx.objectStore(table);
     }
     for (const field of spec.indexes) {

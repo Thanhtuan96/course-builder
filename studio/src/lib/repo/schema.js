@@ -17,18 +17,18 @@
 export const TABLES = {
   courses: {
     id: 'id',
-    fields: ['id', 'owner_id', 'title', 'description', 'level', 'kind', 'goal', 'topics_json', 'source', 'status', 'created_at', 'updated_at', 'deleted_at'],
-    indexes: [],
+    fields: ['id', 'owner_id', 'title', 'description', 'level', 'kind', 'goal', 'topics_json', 'source', 'status', 'external_id', 'created_at', 'updated_at', 'deleted_at'],
+    indexes: ['external_id'],
   },
   lessons: {
     id: 'id',
-    fields: ['id', 'owner_id', 'course_id', 'position', 'title', 'summary', 'status', 'completed_at', 'current_version_id', 'quiz_seed', 'created_at', 'updated_at', 'deleted_at'],
-    indexes: ['course_id', 'status'],
+    fields: ['id', 'owner_id', 'course_id', 'position', 'title', 'summary', 'status', 'completed_at', 'current_version_id', 'quiz_seed', 'external_id', 'created_at', 'updated_at', 'deleted_at'],
+    indexes: ['course_id', 'status', 'external_id'],
   },
   lesson_versions: {
     id: 'id',
-    fields: ['id', 'owner_id', 'lesson_id', 'version', 'content_md', 'model', 'provider', 'created_at', 'updated_at', 'deleted_at'],
-    indexes: ['lesson_id'],
+    fields: ['id', 'owner_id', 'lesson_id', 'version', 'content_md', 'model', 'provider', 'external_id', 'created_at', 'updated_at', 'deleted_at'],
+    indexes: ['lesson_id', 'external_id'],
   },
   quiz_attempts: {
     id: 'id',
@@ -37,8 +37,8 @@ export const TABLES = {
   },
   cards: {
     id: 'id',
-    fields: ['id', 'owner_id', 'course_id', 'lesson_id', 'front', 'back', 'ease', 'interval_days', 'reps', 'lapses', 'due_at', 'created_at', 'updated_at', 'deleted_at'],
-    indexes: ['course_id', 'lesson_id', 'due_at'],
+    fields: ['id', 'owner_id', 'course_id', 'lesson_id', 'front', 'back', 'ease', 'interval_days', 'reps', 'lapses', 'due_at', 'external_id', 'created_at', 'updated_at', 'deleted_at'],
+    indexes: ['course_id', 'lesson_id', 'due_at', 'external_id'],
   },
   reviews: {
     id: 'id',
