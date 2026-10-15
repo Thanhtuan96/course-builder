@@ -61,6 +61,34 @@ export const HINT_LEVELS = [
 
 export const MAX_HINT_LEVEL = HINT_LEVELS.length;
 
+/** Course kinds the tutor adapts to. */
+export const COURSE_KINDS = ['programming', 'quantitative', 'conceptual', 'skill'];
+
+/** Fallback kind when a course does not declare one. */
+export const DEFAULT_COURSE_KIND = 'programming';
+
+/** @param {unknown} kind @returns {string} one of COURSE_KINDS, defaulting to programming */
+export function normalizeCourseKind(kind) {
+  const k = String(kind || '').toLowerCase();
+  return COURSE_KINDS.includes(k) ? k : DEFAULT_COURSE_KIND;
+}
+
+/**
+ * The third rung of the hint ladder is kind-specific: it may never be a finished answer, but what
+ * counts as "the shape of the solution" differs by subject.
+ * @type {Record<string, string>}
+ */
+export const HINT_LEVEL3_BY_KIND = {
+  programming:
+    'Hint 3 (pseudo-code): outline the shape of the steps in plain words. NEVER runnable code and never the finished answer.',
+  quantitative:
+    'Hint 3 (first step): set up only the first step of the solution (name the quantities, write the relation to use) and stop. Do NOT compute the final answer or give the completed working.',
+  conceptual:
+    'Hint 3 (argument outline): outline the argument in a few bullet points — claim, the one reason that supports it, and the evidence to look for. Do NOT write the finished paragraph or the model answer.',
+  skill:
+    'Hint 3 (scaffolded example): walk through a worked example of a DIFFERENT item, step by step, as a model to imitate. Do NOT do the learner\'s own item for them.',
+};
+
 /** Quick-action chips (TUTOR-03). `userText` is sent as the user message. */
 export const TUTOR_MODES = [
   { id: 'explain_simpler', label: 'Explain simpler', userText: 'Explain that more simply.' },
@@ -103,13 +131,51 @@ export function normalizeHintLevel(level) {
 }
 
 /**
- * The instruction for a single hint turn.
+ * The instruction for a single hint turn. Level 3 adapts to the course kind.
  * @param {number} level
+ * @param {string} [kind] course kind (programming | quantitative | conceptual | skill)
  * @returns {string}
  */
-export function hintDirective(level) {
+export function hintDirective(level, kind) {
   const n = normalizeHintLevel(level);
-  return `This turn is hint ${n} of ${MAX_HINT_LEVEL}. ${HINT_LEVELS[n - 1].directive}`;
+  const directive =
+    n === MAX_HINT_LEVEL ? HINT_LEVEL3_BY_KIND[normalizeCourseKind(kind)] : HINT_LEVELS[n - 1].directive;
+  return `This turn is hint ${n} of ${MAX_HINT_LEVEL}. ${directive}`;
+}
+
+/**
+ * Normalize a chat transcript into the shape the Anthropic Messages API accepts:
+ * non-empty, alternating roles, starting with the user and ending with the user.
+ *
+ * Whitespace-only messages are dropped, consecutive same-role messages are merged with a blank
+ * line, leading assistant messages are dropped, and any trailing assistant message is dropped so
+ * the final turn is the learner's (Pitfall: Stop / empty replies leave orphan assistant turns).
+ *
+ * @param {Array<{ role: string, content: string }>} raw
+ * @param {number} [limit]
+ * @returns {Array<{ role: 'user'|'assistant', content: string }>}
+ */
+export function normalizeMessages(raw, limit = HISTORY_LIMIT) {
+  const cleaned = (Array.isArray(raw) ? raw : [])
+    .filter((m) => m && (m.role === 'user' || m.role === 'assistant'))
+    .map((m) => ({ role: m.role, content: stripInvisible(m.content).trim() }))
+    .filter((m) => m.content.length > 0)
+    .slice(-limit);
+
+  /** @type {Array<{ role: 'user'|'assistant', content: string }>} */
+  const merged = [];
+  for (const message of cleaned) {
+    const prev = merged[merged.length - 1];
+    if (prev && prev.role === message.role) {
+      prev.content = `${prev.content}\n\n${message.content}`;
+    } else {
+      merged.push({ ...message });
+    }
+  }
+
+  while (merged.length && merged[0].role === 'assistant') merged.shift();
+  while (merged.length && merged[merged.length - 1].role === 'assistant') merged.pop();
+  return merged;
 }
 
 /** Human label for the hint chip, e.g. "Hint 2 of 3". @param {number} level */
@@ -142,7 +208,7 @@ export function buildTutorMessages({
   const rules = [TUTOR_RULES];
   const modeRule = mode && MODE_INSTRUCTIONS[mode];
   if (modeRule) rules.push(modeRule);
-  if (mode === 'hint') rules.push(hintDirective(hintLevel));
+  if (mode === 'hint') rules.push(hintDirective(hintLevel, course?.kind));
 
   const context = courseContext(course, lesson);
   const lessonBlock = lessonContent
@@ -156,10 +222,7 @@ export function buildTutorMessages({
     extra: lessonBlock,
   });
 
-  const messages = (Array.isArray(history) ? history : [])
-    .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && m.content != null)
-    .slice(-HISTORY_LIMIT)
-    .map((m) => ({ role: m.role, content: stripInvisible(m.content) }));
+  const messages = normalizeMessages(history, HISTORY_LIMIT);
 
   return { system, messages };
 }
