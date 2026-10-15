@@ -38,11 +38,16 @@ If the user asks for a 4th hint, do not provide one. Suggest `professor:stuck` i
 
 ### Hint Layer Definitions
 
-**Layer 1 (Conceptual):** Explain the core concept behind the exercise in plain language. Use analogies from everyday life. Do NOT mention code.
+The three layers always advance **concept → approach → structural hint**. What Layer 2 and Layer 3 look like depends on the **course Kind** (`**Kind**: ...` in `COURSE.md`; missing → `programming`). Never reveal the answer.
 
-**Layer 2 (Tool/Pattern):** Point to the specific tool, pattern, or approach that applies. Name the concept but do NOT write code. Examples: "Think about using a loop" or "Have you considered using array methods?"
+| Kind | Layer 1 — Concept | Layer 2 — Approach | Layer 3 — Structural hint |
+|---|---|---|---|
+| `programming` | the underlying concept in plain language, analogies, no code | the specific tool / pattern / language feature to use | minimal pseudo-code outline (shape only, no working logic) |
+| `quantitative` | the underlying idea / formula in plain language | the method or technique to apply | partial setup — the first step(s) and the shape of the solution, not the answer |
+| `conceptual` | the framing idea in plain language | the lens / framework to analyse with | an outline of the argument (points to cover), not the finished argument |
+| `skill` | the principle in plain language | the technique / focus point to practise | a scaffolded mini-example, not the full performance |
 
-**Layer 3 (Pseudo-code):** Provide a minimal pseudo-code outline showing the structure without actual code. This is where research suggestions are included.
+The **programming** row is the default; for the other kinds, read the kind first and adapt Layer 2 and Layer 3 as shown. Do NOT mention code for non-programming kinds.
 
 ---
 

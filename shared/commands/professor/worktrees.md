@@ -3,7 +3,9 @@ name: professor:worktrees
 description: List all learning worktrees and archived courses
 ---
 
-When user runs `professor:worktrees`, list all available learning worktrees.
+When user runs `professor:worktrees`, list all available learning courses.
+
+> **Note:** non-programming courses (`**Kind**` = `quantitative` / `conceptual` / `skill`) are plain folders under `learning/{slug}/` (no worktree) — list them alongside worktree courses; the display stays the same.
 
 **Steps:**
 
