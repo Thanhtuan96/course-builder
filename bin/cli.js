@@ -813,7 +813,10 @@ switch (command) {
   case 'status':
   case 'next':
   case 'check':
-  case 'doctor': {
+  case 'doctor':
+  case 'studio':
+  case 'review':
+  case 'import': {
     const { run } = await import(`./commands/${command}.js`);
     await run({ args: args.slice(1), cwd: process.cwd(), chalk, style });
     break;
@@ -880,6 +883,9 @@ COMMANDS
   ${chalk.bold('next')} [slug]          Show the active lecture summary and how to continue
   ${chalk.bold('check')} [slug]         Run the active exercise's self-checks
   ${chalk.bold('doctor')}               Check the local environment (Node, git, agents, Ollama, port, DB)
+  ${chalk.bold('studio')}               Start local server + Studio, pair and open the browser
+  ${chalk.bold('review')} [--limit N]   Review due flashcards in the terminal (SM-2)
+  ${chalk.bold('import')} [slug|--all]  Import CLI courses into Studio's SQLite database
   ${chalk.bold('setup')} [agent]        Set up Professor for a specific agent
   ${chalk.bold('init')}                 Auto-detect and set up
   ${chalk.bold('list')}                 List supported agents
@@ -902,6 +908,11 @@ FLAGS
   --force           Bypass overwrite/removal confirmation prompts
   --all             Apply to all items (update --all)
   --cloud           For \`web\`, prefer cloud API flow and API key prompt
+  --port <n>        For \`studio\`, the Studio port (default 5180)
+  --api-port <n>    For \`studio\`, the local server port (default 3000)
+  --no-open         For \`studio\`, do not open the browser
+  --limit <n>       For \`review\`, max cards to review (default 20)
+  --dry-run         For \`import\`, print what would be imported without writing
 
 EXAMPLES
   npx course-professor status                  # See every course + overall streak
@@ -909,6 +920,11 @@ EXAMPLES
   npx course-professor next                    # What to work on, and how to continue
   npx course-professor check nextjs            # Run the active exercise's self-checks
   npx course-professor doctor                  # Diagnose your local setup
+  npx course-professor studio                  # One command: server + Studio + pairing
+  npx course-professor review                  # Review due flashcards in the terminal
+  npx course-professor import --all            # Import every CLI course into Studio
+  npx course-professor import react-hooks      # Import one course
+  npx course-professor import --all --dry-run  # Preview the import, write nothing
   npx course-professor init                    # Auto-detect and setup
   npx course-professor setup claude            # Setup for Claude Code (prompts for scope)
   npx course-professor setup claude --global   # Install globally
