@@ -29,3 +29,4 @@ Phase 32 integration pass. Each item names an owner and why it is not done here.
 - "Export COURSE.md" mounted on the Course page from the shared `lib/course-export.js` — was
   HANDOFF-23.
 - Root `void.config.ts` + `build:studio` + Pyodide CSP note — was HANDOFF-26 §6 / HANDOFF-29 §4.
+| 5 | `/api/studio/db/health` reports `schemaVersion: 1` although 4 migrations are applied — derive it from the applied migration count (found in Phase 37 smoke). | server owner | Cosmetic; smoke test uses migrationsApplied. |
