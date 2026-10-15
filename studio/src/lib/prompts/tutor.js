@@ -195,6 +195,7 @@ export function hintLevelLabel(level) {
  * @param {string} [opts.mode] one of TUTOR_MODES ids
  * @param {number} [opts.hintLevel] 1..3, used when mode === 'hint'
  * @param {string} [opts.language] learner language for the whole reply
+ * @param {string|null} [opts.learnerCode] the learner's current code (attached as untrusted data)
  * @returns {{ system: string, messages: Array<{ role: string, content: string }> }}
  */
 export function buildTutorMessages({
@@ -205,6 +206,7 @@ export function buildTutorMessages({
   mode,
   hintLevel,
   language,
+  learnerCode = null,
 } = {}) {
   const rules = [TUTOR_RULES];
   const modeRule = mode && MODE_INSTRUCTIONS[mode];
@@ -224,6 +226,19 @@ export function buildTutorMessages({
   });
 
   const messages = normalizeMessages(history, HISTORY_LIMIT);
+
+  // "Check my answer" for a programming lesson attaches the learner's current code as delimited,
+  // untrusted reference material on the last user turn (never a solution — HANDOFF-29 §2).
+  const code = String(learnerCode || '').trim();
+  if (code) {
+    const block = wrapUntrusted(stripInvisible(code), 'learner_code');
+    const last = messages[messages.length - 1];
+    if (last && last.role === 'user') {
+      messages[messages.length - 1] = { ...last, content: `${last.content}\n\n${block}` };
+    } else {
+      messages.push({ role: 'user', content: block });
+    }
+  }
 
   return { system, messages };
 }

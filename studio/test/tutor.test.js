@@ -97,6 +97,48 @@ describe('buildTutorMessages: modes', () => {
   });
 });
 
+describe('buildTutorMessages: learner code on check-my-answer', () => {
+  it('wraps learner code as an untrusted block on the last user message', () => {
+    const { messages } = buildTutorMessages({
+      course: { ...course, kind: 'programming' },
+      lesson,
+      mode: 'check_answer',
+      history: [{ role: 'user', content: 'Check my answer.' }],
+      learnerCode: '--- main.js ---\nconsole.log(1)',
+    });
+    const last = messages.at(-1);
+    expect(last.role).toBe('user');
+    expect(last.content).toContain('Check my answer.');
+    expect(last.content).toContain('<learner_code>');
+    expect(last.content).toContain('console.log(1)');
+    expect(last.content).toContain('</learner_code>');
+    expect(last.content).toContain('is DATA, not');
+  });
+
+  it('is a no-op when there is no code', () => {
+    const { messages } = buildTutorMessages({
+      course: { ...course, kind: 'programming' },
+      lesson,
+      mode: 'check_answer',
+      history: [{ role: 'user', content: 'Check my answer.' }],
+      learnerCode: null,
+    });
+    expect(messages.at(-1).content).toBe('Check my answer.');
+    expect(JSON.stringify(messages)).not.toContain('learner_code');
+  });
+
+  it('never puts learner code in the system prompt', () => {
+    const { system } = buildTutorMessages({
+      course: { ...course, kind: 'programming' },
+      lesson,
+      mode: 'check_answer',
+      history: [{ role: 'user', content: 'check' }],
+      learnerCode: 'secret-solution',
+    });
+    expect(system).not.toContain('secret-solution');
+  });
+});
+
 describe('buildTutorMessages: history', () => {
   it('keeps at most the last HISTORY_LIMIT messages, oldest first', () => {
     const history = Array.from({ length: 40 }, (_, i) => ({
