@@ -7,11 +7,14 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createServer } from 'http';
-import { mkdtempSync } from 'fs';
+import { mkdtempSync, writeFileSync, chmodSync, readFileSync } from 'fs';
 import { tmpdir } from 'os';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
-import { createStudioApp, listAgentModels, AGENT_BINARIES } from '../web/studio-api.js';
+import { createStudioApp, listAgentModels, AGENT_BINARIES, defaultAgentRunners } from '../web/studio-api.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 import { createStudioDb } from '../web/studio-db.js';
 
 const TOKEN = `agents-token-${Math.random().toString(36).slice(2)}`;
@@ -182,5 +185,39 @@ describe('listAgentModels direct', () => {
 
   it('covers all six agents', () => {
     expect(Object.keys(AGENT_BINARIES)).toHaveLength(6);
+  });
+});
+
+describe('antigravity runner reports a no-output run instead of ending silently', () => {
+  it('emits an error with a hint when agy exits 0 but streamed no text', async () => {
+    const fixture = readFileSync(join(__dirname, '..', 'studio', 'test', 'fixtures', 'agents', 'antigravity-tool-denied.jsonl'), 'utf-8');
+    const bin = mkdtempSync(join(tmpdir(), 'fake-agy-'));
+    const script = join(bin, 'agy');
+    writeFileSync(script, `#!/bin/sh\ncat <<'EOF'\n${fixture}EOF\necho 'jetski: no output produced — a tool required the "command" permission that headless mode cannot auto-approve.' 1>&2\nexit 0\n`);
+    chmodSync(script, 0o755);
+
+    const origPath = process.env.PATH;
+    process.env.PATH = `${bin}:${origPath}`;
+    try {
+      const ctx = { system: 's', prompt: '[System]\ns\n\nUSER: hi', messages: [], onText: () => {}, onError: () => {}, onDone: () => {}, log: () => {} };
+      let text = '';
+      let error = null;
+      await new Promise((resolve) => {
+        ctx.onText = (t) => {
+          text += t;
+        };
+        ctx.onError = (e) => {
+          error = e;
+        };
+        ctx.onDone = resolve;
+        defaultAgentRunners().antigravity(ctx);
+      });
+      expect(text).toBe('');
+      expect(error).toBeTruthy();
+      expect(error.hint).toBeTruthy();
+      expect(error.message).toMatch(/no text|denied permission/);
+    } finally {
+      process.env.PATH = origPath;
+    }
   });
 });
