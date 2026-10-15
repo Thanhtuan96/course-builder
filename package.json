@@ -9,6 +9,7 @@
     },
     "scripts": {
         "build": "cd web/client && npm install && npm run build",
+    "build:studio": "npm --prefix studio run build",
     "start": "cd web && node server.js",
     "pretest": "npm --prefix web install --no-audit --no-fund --silent",
     "test": "vitest",
