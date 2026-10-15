@@ -114,14 +114,16 @@ export function buildPipeline(language, entry, files, { allowBash = false } = {}
 }
 
 /**
+ * Probe for an executable on PATH. Never passes a `cwd`: on a fresh machine the workspaces root
+ * may not exist yet, and `spawnSync` with a missing `cwd` fails with ENOENT (which would report
+ * every toolchain as absent).
  * @param {string} cmd
- * @param {{ cwd?: string }} [opts]
  * @returns {boolean}
  */
-export function commandExists(cmd, { cwd } = {}) {
+export function commandExists(cmd) {
   const finder = process.platform === 'win32' ? 'where' : 'which';
   try {
-    const res = spawnSync(finder, [cmd], { cwd, stdio: 'ignore' });
+    const res = spawnSync(finder, [cmd], { stdio: 'ignore' });
     return res.status === 0;
   } catch {
     return false;
@@ -160,10 +162,9 @@ export function createRunnerRouter(options = {}) {
   router.use(express.json({ limit: '4mb' }));
 
   router.get('/toolchains', (_req, res) => {
-    const cwd = workspacesRoot;
     const result = {};
     for (const cmd of ['node', 'python3', 'go', 'javac', 'java', 'rustc', 'bash']) {
-      result[cmd] = commandExists(cmd, { cwd });
+      result[cmd] = commandExists(cmd);
     }
     res.json(result);
   });
@@ -219,6 +220,7 @@ async function handleRun(req, res, { workspacesRoot, allowBash }) {
 
   const courseDir = join(workspacesRoot, courseSlug);
   try {
+    await mkdir(workspacesRoot, { recursive: true });
     await mkdir(courseDir, { recursive: true });
     for (const file of files) {
       const target = resolve(courseDir, file.path);

@@ -18,11 +18,10 @@ router.use('/run', createRunnerRouter(options.runner)); // options.runner defaul
 Mounted in Phase 26b immediately after the pairing-token guard; covered by
 `test/studio-api.test.js` (`GET /api/studio/run/toolchains` → 401 without token, 200 with).
 
-> **Follow-up for the Phase 29 owner (not fixed in 26b — outside its file scope):** `/toolchains`
-> probes with `commandExists(cmd, { cwd: workspacesRoot })`, and `spawnSync` fails on a missing
-> cwd — so on a fresh machine (where `~/.professor/workspaces` does not exist yet) every toolchain
-> reports `false`. Create the root in `createRunnerRouter` (`mkdirSync(workspacesRoot, {recursive:true})`)
-> or drop the `cwd` from the probe.
+> **Fixed in Phase 26b:** `/toolchains` used to probe with `commandExists(cmd, { cwd: workspacesRoot })`
+> and `spawnSync` fails on a missing cwd, so on a fresh machine (no `~/.professor/workspaces` yet)
+> every toolchain reported `false`. The probe no longer passes a `cwd`, and `handleRun` now
+> `mkdir`s the workspaces root recursively before writing/spawning.
 
 Resulting endpoints (the Studio client calls exactly these):
 
