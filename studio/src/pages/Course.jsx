@@ -1,12 +1,13 @@
 /**
  * Course (COURSE-03) — header with level/kind/goal/progress, the lesson list with statuses and
  * Start/Continue actions, and completion date + reflection snippets for finished lessons.
- * The header action area is left open for the Phase 26 "Export COURSE.md" button.
+ * The header action area has "Export COURSE.md" (shared with the DataPanel) and Delete.
  */
 import { useEffect, useState } from 'react';
 import { Link, navigate } from '../lib/router.js';
 import { getCourse, getLessonHistory, deleteCourse, onChange } from '../lib/repo/index.js';
 import { progress, statusIcon, COURSE_KINDS } from '../lib/course.js';
+import { exportCourseMarkdown } from '../lib/course-export.js';
 import { Card } from '../components/ui/Card.jsx';
 import { Button } from '../components/ui/Button.jsx';
 import { Progress } from '../components/ui/Progress.jsx';
@@ -77,6 +78,14 @@ export function Course({ id }) {
     navigate('/');
   };
 
+  const exportMd = async () => {
+    try {
+      await exportCourseMarkdown(course);
+    } catch {
+      /* nothing destructive — a failed export leaves the course untouched */
+    }
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -94,7 +103,9 @@ export function Course({ id }) {
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {/* Phase 26 mounts the "Export COURSE.md" button here. */}
+          <Button variant="secondary" size="sm" onClick={exportMd}>
+            Export COURSE.md
+          </Button>
           <Button variant="danger" size="sm" onClick={remove}>
             Delete
           </Button>
