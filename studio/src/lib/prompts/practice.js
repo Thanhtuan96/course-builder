@@ -43,14 +43,15 @@ Example: [{"front":"Active recall","back":"Reproducing an idea from memory inste
 
 /**
  * Build the system + messages for quiz generation.
- * @param {{ course?: object, lesson?: object, content?: string }} input
+ * @param {{ course?: object, lesson?: object, content?: string, language?: string }} input
  */
-export function buildQuizMessages({ course, lesson, content = '' } = {}) {
+export function buildQuizMessages({ course, lesson, content = '', language } = {}) {
   return {
     system: buildSystemPrompt({
       rules: QUIZ_RULES,
       context: courseContext(course, lesson),
       extra: QUIZ_SHAPE,
+      language: language ?? course?.language,
     }),
     messages: [
       {
@@ -65,15 +66,16 @@ export function buildQuizMessages({ course, lesson, content = '' } = {}) {
 
 /**
  * Build the system + messages for flashcard generation.
- * @param {{ course?: object, lesson?: object, content?: string, count?: number }} input
+ * @param {{ course?: object, lesson?: object, content?: string, count?: number, language?: string }} input
  */
-export function buildFlashcardsMessages({ course, lesson, content = '', count = FLASHCARD_DEFAULT } = {}) {
+export function buildFlashcardsMessages({ course, lesson, content = '', count = FLASHCARD_DEFAULT, language } = {}) {
   const n = clampCount(count);
   return {
     system: buildSystemPrompt({
       rules: FLASHCARD_RULES,
       context: courseContext(course, lesson),
       extra: FLASHCARD_SHAPE,
+      language: language ?? course?.language,
     }),
     messages: [
       {

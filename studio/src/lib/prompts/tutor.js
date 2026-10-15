@@ -219,7 +219,7 @@ export function buildTutorMessages({
     : '';
 
   const system = buildSystemPrompt({
-    language,
+    language: language ?? course?.language,
     rules: rules.join('\n\n'),
     context,
     extra: lessonBlock,

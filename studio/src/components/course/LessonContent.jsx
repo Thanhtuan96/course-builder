@@ -71,7 +71,7 @@ export function LessonContent({ lesson, course }) {
         course,
         lesson,
         level: course?.level,
-        language: settings.language,
+        language: course?.language ?? settings.language,
       });
       const text = await gen.start(({ onText, signal }) =>
         provider.streamText({ system, messages, onText, signal, effort: 'high', maxTokens: MAX_TOKENS.lesson })

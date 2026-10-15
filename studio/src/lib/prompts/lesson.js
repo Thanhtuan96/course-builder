@@ -130,7 +130,7 @@ export function buildLessonMessages({ course, lesson, level, language, kind } = 
   const outline = buildLessonOutline({ kind: resolvedKind, level: resolvedLevel });
 
   const system = buildSystemPrompt({
-    language,
+    language: language ?? course?.language,
     rules: LESSON_RULES,
     context,
     extra: outline,

@@ -85,6 +85,7 @@ export function NewCourse() {
         description: syllabus.description || '',
         level,
         goal: goal.trim(),
+        language,
         kind: COURSE_KIND_IDS.includes(syllabus.kind) ? syllabus.kind : 'conceptual',
         source: input ? 'manual' : 'ai',
         lessons: syllabus.lessons

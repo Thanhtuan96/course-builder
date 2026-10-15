@@ -17,7 +17,7 @@
 export const TABLES = {
   courses: {
     id: 'id',
-    fields: ['id', 'owner_id', 'title', 'description', 'level', 'kind', 'goal', 'topics_json', 'source', 'status', 'external_id', 'created_at', 'updated_at', 'deleted_at'],
+    fields: ['id', 'owner_id', 'title', 'description', 'level', 'kind', 'goal', 'topics_json', 'source', 'status', 'language', 'external_id', 'created_at', 'updated_at', 'deleted_at'],
     indexes: ['external_id'],
   },
   lessons: {

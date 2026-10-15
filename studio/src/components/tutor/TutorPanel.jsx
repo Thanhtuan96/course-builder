@@ -160,7 +160,7 @@ export function TutorPanel({ lesson, course }) {
             history,
             mode: mode || undefined,
             hintLevel: level,
-            language: settingsRef.current.language,
+            language: course?.language ?? settingsRef.current.language,
             learnerCode,
           });
           return provider.streamText({

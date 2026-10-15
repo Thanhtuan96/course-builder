@@ -66,7 +66,12 @@ export function QuizPanel({ lesson, course, onAttemptSaved }) {
       );
       return;
     }
-    const { system, messages } = buildQuizMessages({ course, lesson, content: content.content_md });
+    const { system, messages } = buildQuizMessages({
+      course,
+      lesson,
+      content: content.content_md,
+      language: course?.language ?? settings.language,
+    });
     try {
       const provider = await getProvider(settings);
       const result = await start(({ signal }) => provider.generateJson({ system, messages, signal, validate: validateQuiz }));
