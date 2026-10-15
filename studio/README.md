@@ -28,7 +28,17 @@ under **Course** without any AI source.
 
 ### Use your own local agent (free, no API key)
 
-The bridge lets Studio use the subscription you already pay for (Claude Code / OpenCode / Cursor):
+The bridge lets Studio use the subscription you already pay for. Six agents are supported, each
+driven through its own CLI in a read-only, text-only way:
+
+| Agent | Binary | Model selection | Read-only isolation |
+|-------|--------|-----------------|---------------------|
+| Claude Code | `claude` | uses your signed-in default | `--print` + temp cwd |
+| OpenCode | `opencode` | `opencode models` (e.g. `opencode-go/deepseek-v4.1-flash`) | temp cwd + `OPENCODE_CONFIG_CONTENT` denies edit/bash/webfetch |
+| Cursor CLI | `agent` / `cursor-agent` | `agent models` when available | temp cwd |
+| Gemini CLI | `gemini` | curated list | `--approval-mode plan` + temp cwd |
+| Antigravity | `agy` | `agy models` | `--mode plan` + temp cwd |
+| Ollama | via the server | `/api/tags` | server-side passthrough (no `OLLAMA_ORIGINS` needed) |
 
 ```bash
 # from the repository root
@@ -49,10 +59,23 @@ In Studio go to **Settings → AI source → My local agent**, enter:
 
 - **Bridge URL:** `http://localhost:3000`
 - **Pairing token:** the value the server printed (also in `web/.studio-token`)
-- **Agent:** Claude Code, OpenCode or Cursor CLI
+- **Agent:** pick any of the six agents above
+- **Model:** *Default* (lets the agent choose and omits `--model`), a model from **Load models**, or
+  type a custom id. Each agent keeps its own model — choosing one never affects another provider.
 
 Then press **Test connection**. The server is bound to loopback only and rejects requests from
 other origins or without the token — see [Security & privacy](#security--privacy).
+
+**Never a silent failure.** If an agent is missing, unknown, or exits without producing text, the
+bridge streams `data: {"error":…,"code":…,"hint":…}` instead of an empty reply, and Studio shows the
+hint (e.g. Cursor → “Run `agent login` (or set CURSOR_API_KEY)”, Gemini → “Run `gemini` once to sign
+in”, Ollama → “Start the Ollama app or run `ollama serve`”, a bad model → “Pick a model in
+Settings”). `GET /api/studio/health` lists all six agents with `installed` and, where detectable,
+`loggedIn` / `reachable`. `GET /api/studio/agents/:agent/models` powers the model picker.
+
+**Ollama from the browser.** A deployed Studio page may hit CORS talking to your local Ollama. When
+that happens Studio shows the `OLLAMA_ORIGINS` hint *and* a one-click **“Use Ollama through the
+local server”** button that switches to the bridge (agent `ollama`), which needs no CORS setup.
 
 > Starting the bridge each time generates a **new** token. Paste it once when it changes.
 > Set `STUDIO_BRIDGE_TOKEN=…` to keep a fixed token.

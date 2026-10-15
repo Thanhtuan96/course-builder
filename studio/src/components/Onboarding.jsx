@@ -59,7 +59,7 @@ export function Onboarding() {
           {step === 1 && (
             <div className="space-y-3">
               <h2 className="font-semibold">Where should lessons come from?</h2>
-              <ProviderPicker provider={settings.provider} onPick={(id) => update({ provider: id, model: settings[id]?.model || '' })} />
+              <ProviderPicker provider={settings.provider} onPick={(id) => update({ provider: id })} />
             </div>
           )}
 

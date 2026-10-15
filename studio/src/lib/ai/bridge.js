@@ -6,9 +6,11 @@
  *
  * Contract (server side lands in Phase 26):
  *   GET  {bridgeUrl}/api/studio/health   header X-Studio-Token
- *        -> { ok, agents: { claude, opencode, cursor, ollama } }
+ *        -> { ok, agents: { claude, opencode, cursor, gemini, antigravity, ollama } }
+ *   GET  {bridgeUrl}/api/studio/agents/:agent/models  header X-Studio-Token
+ *        -> { ok, agent, models: [{ id, label? }], source }
  *   POST {bridgeUrl}/api/studio/complete body { system, messages, agent?, model? }
- *        -> SSE:  data: {"text":"…"} … data: {"error":"…","code":"…"} … data: [DONE]
+ *        -> SSE:  data: {"text":"…"} … data: {"error":"…","code":"…","hint":"…"} … data: [DONE]
  */
 import { parseSSE } from './sse.js';
 import { createGenerateJson, MAX_TOKENS } from './provider-utils.js';
@@ -60,7 +62,7 @@ export function createBridgeProvider({ bridgeUrl = DEFAULT_BRIDGE_URL, bridgeTok
       } catch {
         continue;
       }
-      if (json.error) throw new ProviderError(String(json.code || 'unknown'), json.error, RUN_HINT);
+      if (json.error) throw new ProviderError(String(json.code || 'unknown'), json.error, json.hint || RUN_HINT);
       if (typeof json.text === 'string') {
         full += json.text;
         onText?.(json.text);
@@ -73,6 +75,25 @@ export function createBridgeProvider({ bridgeUrl = DEFAULT_BRIDGE_URL, bridgeTok
     streamText,
     generateJson: createGenerateJson(streamText),
     label: 'Local agent',
+    /**
+     * Ask the server which models an agent offers. For CLI agents it runs the agent's own model
+     * command; for curated agents it returns a static list plus "Default".
+     * @param {string} agent
+     * @returns {Promise<{ ok: boolean, agent: string, models: { id: string, label: string }[], source: string, hint?: string }>}
+     */
+    async listModels(agent) {
+      const url = `${root}/api/studio/agents/${encodeURIComponent(agent)}/models`;
+      let res;
+      try {
+        res = await localFetch(url, { headers });
+      } catch (err) {
+        const mapped = classifyNetworkError(err, { url, what: 'the local agent bridge', notRunningHint: RUN_HINT });
+        if (mapped.code === 'not_running') mapped.hint = RUN_HINT;
+        throw mapped;
+      }
+      if (!res.ok) throw await mapHttpError(res, { what: 'the bridge' });
+      return res.json();
+    },
     /** @returns {Promise<{ ok: boolean, agents: Record<string, boolean> }>} */
     async health() {
       const url = `${root}/api/studio/health`;

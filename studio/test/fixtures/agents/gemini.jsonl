@@ -1,0 +1,6 @@
+MCP issues detected. Run /mcp list for status.
+{"type":"init","timestamp":"2026-01-01T00:00:00.000Z","session_id":"g1","model":"gemini-3.8-flash"}
+{"type":"message","timestamp":"2026-01-01T00:00:00.100Z","role":"user","content":"hi"}
+{"type":"message","timestamp":"2026-01-01T00:00:00.200Z","role":"assistant","content":"hel","delta":true}
+{"type":"message","timestamp":"2026-01-01T00:00:00.300Z","role":"assistant","content":"lo","delta":true}
+{"type":"result","timestamp":"2026-01-01T00:00:00.400Z","status":"success","stats":{}}

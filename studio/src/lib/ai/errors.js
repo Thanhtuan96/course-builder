@@ -9,11 +9,14 @@ export const ERROR_CODES = [
   'cors',
   'local_network_blocked',
   'rate_limit',
+  'billing',
   'refusal',
   'bad_json',
   'not_running',
   'aborted',
   'server',
+  'config',
+  'model_not_found',
   'unknown',
 ];
 
@@ -25,11 +28,14 @@ export const ERROR_HINTS = {
   local_network_blocked:
     'Your browser blocked access to a local server (Local Network Access). Allow the local-network permission prompt, or run Studio itself locally with `npm run dev`.',
   rate_limit: 'The provider is rate limiting you. Wait a moment, or switch to a local source.',
+  billing: 'The provider rejected the request for billing reasons (out of credit or unpaid). Top up your account, or switch to a local source.',
   refusal: 'The model declined to answer this request. Rephrase it, or try a different model.',
   bad_json: 'The model did not return valid JSON. Try again, or use a larger model.',
   not_running: 'The local server is not reachable. Start it and try again.',
   aborted: 'Stopped.',
   server: 'The local agent failed while running. Check its terminal output, then try again.',
+  config: 'That AI source or agent is not supported. Pick a valid agent in Settings.',
+  model_not_found: 'That model is not available. Pick a model in Settings.',
   unknown: 'Something went wrong talking to the provider.',
 };
 

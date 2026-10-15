@@ -7,20 +7,35 @@ import { parseSSE } from './sse.js';
 import { createGenerateJson, MAX_TOKENS } from './provider-utils.js';
 import { providerError, isAbortError } from './errors.js';
 import { localFetch, classifyNetworkError, mapHttpError } from './fetch-local.js';
-import { OPENAI_PRESETS } from './catalog.js';
+import { OPENAI_PRESETS, presetForBaseUrl } from './catalog.js';
 
 /** Suggested endpoints in Settings. */
 export const PRESETS = OPENAI_PRESETS;
 
+/** Default OpenRouter model when the user picks the preset without naming one. */
+export const OPENROUTER_DEFAULT_MODEL = 'openrouter/auto';
+
 /**
- * @param {{ baseUrl: string, apiKey?: string, model: string, headers?: Record<string,string> }} config
+ * Extra headers OpenRouter uses for attribution/rankings. Harmless for other endpoints, so we only
+ * attach them when the preset (or base URL) is OpenRouter.
+ * @param {string} baseUrl
  */
-export function createOpenAICompatibleProvider({ baseUrl, apiKey, model, headers = {} } = {}) {
+function attributionHeaders(baseUrl) {
+  if (presetForBaseUrl(baseUrl) !== 'openrouter') return {};
+  return { 'HTTP-Referer': 'https://github.com/Thanhtuan96/course-builder', 'X-Title': 'Professor Studio' };
+}
+
+/**
+ * @param {{ baseUrl: string, apiKey?: string, model?: string, preset?: string, headers?: Record<string,string> }} config
+ */
+export function createOpenAICompatibleProvider({ baseUrl, apiKey, model, preset, headers = {} } = {}) {
   const root = String(baseUrl || '').replace(/\/$/, '');
+  const presetId = preset || presetForBaseUrl(root);
+  const resolvedModel = model || (presetId === 'openrouter' ? OPENROUTER_DEFAULT_MODEL : model);
 
   async function streamText({ system, messages = [], signal, onText, maxTokens } = {}) {
     const body = {
-      model,
+      model: resolvedModel,
       messages: system ? [{ role: 'system', content: system }, ...messages] : messages,
       stream: true,
       ...(maxTokens ? { max_tokens: maxTokens } : {}),
@@ -34,6 +49,7 @@ export function createOpenAICompatibleProvider({ baseUrl, apiKey, model, headers
         headers: {
           'Content-Type': 'application/json',
           ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+          ...attributionHeaders(root),
           ...headers,
         },
         body: JSON.stringify(body),
