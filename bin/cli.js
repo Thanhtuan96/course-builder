@@ -806,6 +806,19 @@ switch (command) {
     process.exit(0);
   }
 
+  // ── Dev CLI fast-path (Phase 30) ─────────────────────────────────────────
+  // `status`, `next`, `check` and `doctor` live in bin/commands/* and keep
+  // cli.js thin — each case just delegates with the parsed args.
+
+  case 'status':
+  case 'next':
+  case 'check':
+  case 'doctor': {
+    const { run } = await import(`./commands/${command}.js`);
+    await run({ args: args.slice(1), cwd: process.cwd(), chalk, style });
+    break;
+  }
+
   case 'list':
     console.log('\nSupported agents:\n');
     SUPPORTED_AGENTS.forEach((agent, i) => {
@@ -863,6 +876,10 @@ Description:
   agent (Claude Code, Gemini, OpenCode, Cursor) or start the web UI.
 
 COMMANDS
+  ${chalk.bold('status')} [--json]      Show every course: progress, current section, due cards, streak
+  ${chalk.bold('next')} [slug]          Show the active lecture summary and how to continue
+  ${chalk.bold('check')} [slug]         Run the active exercise's self-checks
+  ${chalk.bold('doctor')}               Check the local environment (Node, git, agents, Ollama, port, DB)
   ${chalk.bold('setup')} [agent]        Set up Professor for a specific agent
   ${chalk.bold('init')}                 Auto-detect and set up
   ${chalk.bold('list')}                 List supported agents
@@ -887,6 +904,11 @@ FLAGS
   --cloud           For \`web\`, prefer cloud API flow and API key prompt
 
 EXAMPLES
+  npx course-professor status                  # See every course + overall streak
+  npx course-professor status --json           # Machine-readable status
+  npx course-professor next                    # What to work on, and how to continue
+  npx course-professor check nextjs            # Run the active exercise's self-checks
+  npx course-professor doctor                  # Diagnose your local setup
   npx course-professor init                    # Auto-detect and setup
   npx course-professor setup claude            # Setup for Claude Code (prompts for scope)
   npx course-professor setup claude --global   # Install globally

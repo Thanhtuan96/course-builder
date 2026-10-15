@@ -242,6 +242,27 @@ npx course-professor [command]
 - `--global` — all projects (default, prompts for scope)
 - `--force` — bypass confirmation prompts
 
+### Dev Fast-path
+
+Check progress, continue, and verify exercises without leaving the terminal:
+
+| Command | Description |
+|---|---|
+| `status [--json]` | Every course on disk: kind, progress, current section, due flashcards, streak |
+| `next [slug]` | Current lecture summary, objectives, exercise path and the agent command to continue |
+| `check [slug]` | Run the active exercise's self-checks with the right toolchain (never reveals solutions) |
+| `doctor` | Environment checklist (Node ≥18, git, agent CLIs, Ollama, port 3000, DB path) with fix hints |
+
+```bash
+npx course-professor status                  # see all courses + overall streak
+npx course-professor status --json           # machine-readable output for scripts
+npx course-professor next                    # what to work on, and how to continue
+npx course-professor check nextjs            # run the active exercise's self-checks
+npx course-professor doctor                  # diagnose your local setup
+```
+
+Add `--dir <path>` to `status`/`next`/`check` to read courses from a directory other than `learning/` and `courses/`.
+
 ### Web UI
 
 | Command | Description |

@@ -25,9 +25,18 @@ node bin/cli.js init                  # Auto-detect platform and setup
 node bin/cli.js setup claude          # Setup for Claude Code
 node bin/cli.js list                  # List supported agents
 
-# Tests (31 Vitest unit tests for CLI registry helpers)
+# Dev fast-path (reads learning/ then courses/)
+node bin/cli.js status                # Every course: progress, current section, due cards, streak
+node bin/cli.js status --json         # Machine-readable status
+node bin/cli.js next [slug]           # Current lecture summary + agent command to continue
+node bin/cli.js check [slug]          # Run the active exercise's self-checks
+node bin/cli.js doctor                # Environment checklist with fix hints
+
+# Tests (Vitest: registry helpers, course reader and CLI commands)
 npm test                              # Run all tests
 npx vitest run test/cli.test.js       # Run specific test file
+npx vitest run test/cli-course-reader.test.js  # COURSE.md/LECTURE.md/SCHEDULE.md parsers
+npx vitest run test/cli-commands.test.js        # status/next/check/doctor helpers
 npx vitest --reporter=verbose         # Verbose output
 
 # Web UI
