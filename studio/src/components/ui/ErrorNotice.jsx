@@ -9,10 +9,14 @@ import { useT } from '../../lib/i18n/index.js';
 export function ErrorNotice({ error, onDismiss, className = '' }) {
   const t = useT();
   if (!error) return null;
-  const message = error.message || String(error);
   const code = error.code;
+  const translated = code && ERROR_HINTS[code] ? t(`errors.${code}`) : null;
+  // A default ProviderError carries the English hint as BOTH message and hint — localise the message
+  // and drop the duplicate hint. A custom message/hint a caller supplied is shown untouched.
+  const messageIsDefault = translated && error.message === ERROR_HINTS[code];
+  const message = messageIsDefault ? translated : error.message || String(error);
   const isDefaultHint = error.hint && code && ERROR_HINTS[code] === error.hint;
-  const hint = isDefaultHint ? t(`errors.${code}`) : error.hint;
+  const hint = isDefaultHint ? (messageIsDefault ? '' : translated) : error.hint;
   return (
     <div
       role="alert"
