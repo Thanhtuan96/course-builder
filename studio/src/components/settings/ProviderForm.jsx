@@ -5,6 +5,7 @@
  */
 import { useState } from 'react';
 import { PROVIDERS, getProvider, testConnection, ANTHROPIC_MODELS, OPENAI_PRESETS } from '../../lib/ai/index.js';
+import { recordProviderTest } from '../../lib/ai/status.js';
 import { Card } from '../ui/Card.jsx';
 import { Button } from '../ui/Button.jsx';
 import { Input, Select } from '../ui/Input.jsx';
@@ -48,7 +49,11 @@ export function ProviderFields({ settings, update, compact = false }) {
   const [models, setModels] = useState(null);
   const provider = settings.provider;
 
-  const set = (patch) => update(patch);
+  // Any config edit invalidates the last successful test for this provider.
+  const set = (patch) => {
+    recordProviderTest(provider, false);
+    update(patch);
+  };
 
   const setProvider = (id) => {
     const rememberedModel = settings[id]?.model || '';
@@ -64,8 +69,10 @@ export function ProviderFields({ settings, update, compact = false }) {
     try {
       const text = await testConnection(settings, { onText: (t) => setOutput((prev) => prev + t) });
       setOutput(text);
+      recordProviderTest(provider, true);
     } catch (err) {
       setError(err);
+      recordProviderTest(provider, false);
       if (!output) setOutput('');
     } finally {
       setTesting(false);
@@ -75,7 +82,8 @@ export function ProviderFields({ settings, update, compact = false }) {
   const loadOllamaModels = async () => {
     setError(null);
     try {
-      const list = await getProvider({ ...settings, provider: 'ollama' }).listModels();
+      const ollama = await getProvider({ ...settings, provider: 'ollama' });
+      const list = await ollama.listModels();
       setModels(list);
     } catch (err) {
       setError(err);
