@@ -1,16 +1,260 @@
 /**
- * DataPanel — STUB (Phase 26 owns this file; replace in place, keep export name/props).
- * Mounted in Settings. Will host backup / restore / export UI.
+ * DataPanel — backup, restore and data portability (DATA-01, DATA-02, DATA-05), mounted in Settings.
+ *
+ *   • Storage status — SQLite file path (local server) or IndexedDB, and whether storage is persistent.
+ *   • Export backup (JSON) — the whole repository; never includes settings or API keys (they live in
+ *     localStorage, outside the repository, so they cannot leak into a backup).
+ *   • Restore backup — import a previously exported JSON file.
+ *   • Import browser data into SQLite — when the local server is in use, copy everything from the
+ *     IndexedDB copy into SQLite, verify the counts, then keep or clear the browser copy.
+ *   • Export COURSE.md — per course, a plugin-compatible file (`<slug>-COURSE.md`).
  */
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Card } from '../ui/Card.jsx';
+import { Button } from '../ui/Button.jsx';
+import { exportAll, importAll, getAdapterInfo, listCourses, getCourse } from '../../lib/repo/index.js';
+import { createIdbAdapter } from '../../lib/repo/idb-adapter.js';
+import { initAdapter } from '../../lib/repo/select-adapter.js';
+import { slugify, toCourseMarkdown } from '../../lib/course.js';
+
+function download(filename, text, type = 'application/json') {
+  const blob = new Blob([text], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function countRows(dump) {
+  const tables = dump?.tables || {};
+  return Object.values(tables).reduce((n, rows) => n + (Array.isArray(rows) ? rows.length : 0), 0);
+}
+
+function tableCounts(dump) {
+  const out = {};
+  for (const [table, rows] of Object.entries(dump?.tables || {})) out[table] = Array.isArray(rows) ? rows.length : 0;
+  return out;
+}
+
+const KIND_LABEL = {
+  remote: 'SQLite file (local server)',
+  indexeddb: 'IndexedDB (this browser)',
+  memory: 'In-memory (not persistent)',
+};
 
 export function DataPanel() {
+  const [adapter, setAdapter] = useState(null);
+  const [courses, setCourses] = useState([]);
+  const [busy, setBusy] = useState('');
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [importResult, setImportResult] = useState(null);
+  const fileRef = useRef(null);
+
+  const refresh = useCallback(async () => {
+    try {
+      const info = await getAdapterInfo();
+      setAdapter(info);
+    } catch {
+      /* leave as null */
+    }
+    try {
+      setCourses(await listCourses());
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    // Re-detect the backend (SQLite when the local server answers) before reading status.
+    initAdapter()
+      .catch(() => {})
+      .finally(() => alive && refresh());
+    return () => {
+      alive = false;
+    };
+  }, [refresh]);
+
+  const note = (text) => {
+    setMessage(text);
+    setError('');
+  };
+  const fail = (err) => {
+    setError(err?.message || String(err));
+    setMessage('');
+  };
+
+  const onExportBackup = async () => {
+    setBusy('export');
+    try {
+      const dump = await exportAll();
+      const stamp = new Date().toISOString().slice(0, 10);
+      download(`professor-studio-backup-${stamp}.json`, JSON.stringify(dump, null, 2));
+      note(`Backup exported (${countRows(dump)} records). API keys are never included.`);
+    } catch (err) {
+      fail(err);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const onRestore = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setBusy('restore');
+    try {
+      const dump = JSON.parse(await file.text());
+      const result = await importAll(dump);
+      await refresh();
+      note(`Restored ${result?.imported ?? countRows(dump)} records from ${file.name}.`);
+    } catch (err) {
+      fail(err);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const onImportBrowserData = async () => {
+    setBusy('import');
+    setImportResult(null);
+    try {
+      const idb = createIdbAdapter();
+      const source = await idb.exportAll();
+      const expected = tableCounts(source);
+      const sourceCount = countRows(source);
+      if (sourceCount === 0) {
+        note('No browser data found to import.');
+        return;
+      }
+      const result = await importAll(source);
+      const after = tableCounts(await exportAll());
+      const mismatches = Object.keys(expected).filter((t) => (after[t] || 0) < expected[t]);
+      setImportResult({ imported: result?.imported ?? sourceCount, total: sourceCount, mismatches });
+      await refresh();
+      if (mismatches.length) {
+        fail(new Error(`Imported with mismatched counts in: ${mismatches.join(', ')}`));
+      } else {
+        note(`Imported ${sourceCount} records from the browser into SQLite — counts verified.`);
+      }
+    } catch (err) {
+      fail(err);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const onClearBrowserCopy = async () => {
+    if (typeof window !== 'undefined' && !window.confirm('Delete the browser (IndexedDB) copy? SQLite is unaffected.')) {
+      return;
+    }
+    try {
+      await new Promise((resolve, reject) => {
+        const req = indexedDB.deleteDatabase('professor-studio');
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+        req.onblocked = () => resolve();
+      });
+      setImportResult(null);
+      note('Browser copy cleared. SQLite is unaffected.');
+    } catch (err) {
+      fail(err);
+    }
+  };
+
+  const onExportCourse = async (course) => {
+    setBusy(`course:${course.id}`);
+    try {
+      const full = (await getCourse(course.id)) || course;
+      download(`${slugify(full.title)}-COURSE.md`, toCourseMarkdown(full), 'text/markdown');
+      note(`Exported ${slugify(full.title)}-COURSE.md — continue it with professor:* commands.`);
+    } catch (err) {
+      fail(err);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const isRemote = adapter?.kind === 'remote';
+
   return (
-    <Card>
-      <p className="font-medium">Backup &amp; portability — coming soon</p>
-      <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
-        Export, restore and SQLite import arrive in the next update.
-      </p>
+    <Card className="space-y-4">
+      <div>
+        <p className="font-medium">Backup &amp; portability</p>
+        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
+          Your data is never uploaded. Backups contain courses, lessons and progress — never API keys.
+        </p>
+      </div>
+
+      <div className="rounded-lg bg-neutral-100 p-3 text-sm dark:bg-neutral-800">
+        <p>
+          <span className="text-neutral-500">Storage:</span>{' '}
+          <span className="font-medium">{adapter ? KIND_LABEL[adapter.kind] || adapter.kind : 'checking…'}</span>
+        </p>
+        {adapter?.path && <p className="mt-0.5 break-all text-xs text-neutral-500">{adapter.path}</p>}
+        <p>
+          <span className="text-neutral-500">Persistent:</span>{' '}
+          <span className="font-medium">{adapter ? (adapter.persistent ? 'granted' : 'best-effort') : '—'}</span>
+        </p>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <Button onClick={onExportBackup} disabled={busy === 'export'}>
+          Export backup (JSON)
+        </Button>
+        <Button variant="secondary" onClick={() => fileRef.current?.click()} disabled={busy === 'restore'}>
+          Restore backup
+        </Button>
+        <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={onRestore} />
+      </div>
+
+      <div className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
+        <p className="text-sm font-medium">Move browser data into SQLite</p>
+        <p className="mt-1 text-xs text-neutral-500">
+          {isRemote
+            ? 'Copy everything from this browser’s IndexedDB into the SQLite file, then keep or clear the browser copy.'
+            : 'Only available when the local server is running and its pairing token is set in Settings → My local agent.'}
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <Button size="sm" variant="secondary" onClick={onImportBrowserData} disabled={!isRemote || busy === 'import'}>
+            Import browser data into SQLite
+          </Button>
+          {importResult && (
+            <Button size="sm" variant="ghost" onClick={onClearBrowserCopy}>
+              Clear browser copy
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <p className="text-sm font-medium">Export a course as COURSE.md</p>
+        <p className="mt-1 text-xs text-neutral-500">
+          Plugin-compatible — continue the course with <code>professor:*</code> commands in Claude Code, OpenCode or Cursor.
+        </p>
+        {courses.length === 0 ? (
+          <p className="mt-2 text-xs text-neutral-500">No courses yet.</p>
+        ) : (
+          <ul className="mt-2 space-y-1">
+            {courses.map((course) => (
+              <li key={course.id} className="flex items-center justify-between gap-2 text-sm">
+                <span className="truncate">{course.title}</span>
+                <Button size="sm" variant="ghost" onClick={() => onExportCourse(course)} disabled={busy === `course:${course.id}`}>
+                  Export COURSE.md
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {message && <p className="text-sm text-green-700 dark:text-green-400">{message}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
     </Card>
   );
 }
