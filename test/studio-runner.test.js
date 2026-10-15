@@ -73,6 +73,57 @@ describe('local runner router: GET /toolchains', () => {
   });
 });
 
+/** Boot a router on an ephemeral port with a workspacesRoot that does not exist yet. */
+async function startWithMissingRoot() {
+  const missing = join(tmpdir(), `professor-missing-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const app = express();
+  app.use('/run', createRunnerRouter({ workspacesRoot: missing }));
+  const srv = app.listen(0, '127.0.0.1');
+  await new Promise((resolve) => srv.once('listening', resolve));
+  return { srv, missing, url: `http://127.0.0.1:${srv.address().port}` };
+}
+
+describe('local runner router: missing workspaces root (fresh machine)', () => {
+  it('reports node as present even when workspacesRoot does not exist yet', async () => {
+    const { srv, missing, url } = await startWithMissingRoot();
+    try {
+      const res = await fetch(`${url}/run/toolchains`);
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.node).toBe(true);
+    } finally {
+      await new Promise((resolve) => srv.close(resolve));
+      await rm(missing, { recursive: true, force: true });
+    }
+  });
+
+  it('creates the workspaces root recursively before running', async () => {
+    const { srv, missing, url } = await startWithMissingRoot();
+    try {
+      const res = await fetch(`${url}/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          courseSlug: 'fresh-course',
+          language: 'javascript',
+          entry: 'main.js',
+          files: { 'main.js': 'console.log("fresh");' },
+        }),
+      });
+      expect(res.status).toBe(200);
+      const text = await res.text();
+      expect(text).toContain('fresh');
+      expect(text).toContain('"exit":0');
+      // The run had to create the root (and the course dir) to write main.js.
+      const written = await readFile(join(missing, 'fresh-course', 'main.js'), 'utf8');
+      expect(written).toContain('fresh');
+    } finally {
+      await new Promise((resolve) => srv.close(resolve));
+      await rm(missing, { recursive: true, force: true });
+    }
+  });
+});
+
 describe('local runner router: POST /run', () => {
   it('runs node hello world and streams stdout + exit', async () => {
     const res = await postRun({

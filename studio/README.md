@@ -57,6 +57,17 @@ other origins or without the token — see [Security & privacy](#security--priva
 > Starting the bridge each time generates a **new** token. Paste it once when it changes.
 > Set `STUDIO_BRIDGE_TOKEN=…` to keep a fixed token.
 
+The bridge streams SSE: it emits `data: {"status":"thinking"}` when the request is accepted and a
+`: ping` comment every 15 s while the agent boots (Claude Code ≈11 s, OpenCode ≈28 s), so proxies
+and the browser tab do not time out before the first token.
+
+**Token cost & isolation.** OpenCode and Cursor CLI are full coding agents, not chat completions:
+launched in a repository they read the project and send a large fixed system prompt every turn
+(OpenCode alone is roughly **37K input tokens even for a one-word reply**). The bridge therefore
+runs them in a throwaway empty temp directory (deleted when the run ends) and, for OpenCode, sets
+`OPENCODE_CONFIG_CONTENT` to deny `edit`/`bash`/`webfetch` — so the tutor can only produce text and
+never touches your files. For the cheapest, fastest tutor calls prefer **Claude Code**.
+
 ### Use Ollama (free, local)
 
 1. `ollama serve` (and `ollama pull llama3.2` or any model you like).

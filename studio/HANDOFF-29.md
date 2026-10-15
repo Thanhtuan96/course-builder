@@ -4,7 +4,7 @@ Everything below is for the orchestrator (or the owner of the named file). Phase
 files it owns; the items here are integrations that touch files owned by other phases or the repo
 layer.
 
-## 1. Mount the local runner (owner: Phase 26 / `web/studio-api.js`)
+## 1. Mount the local runner (owner: Phase 26 / `web/studio-api.js`) — ✅ DONE (Phase 26b)
 
 `web/studio-runner.js` exports an Express Router. Mount it inside `web/studio-api.js` **inside the
 already-token-guarded/CORS-allowlisted router** (one line, no CORS/token of its own):
@@ -12,9 +12,16 @@ already-token-guarded/CORS-allowlisted router** (one line, no CORS/token of its 
 ```js
 import { createRunnerRouter } from './studio-runner.js';
 // ...
-router.use('/run', createRunnerRouter({ workspacesRoot }), // optional; defaults to ~/.professor/workspaces
-);
+router.use('/run', createRunnerRouter(options.runner)); // options.runner defaults to ~/.professor/workspaces
 ```
+
+Mounted in Phase 26b immediately after the pairing-token guard; covered by
+`test/studio-api.test.js` (`GET /api/studio/run/toolchains` → 401 without token, 200 with).
+
+> **Fixed in Phase 26b:** `/toolchains` used to probe with `commandExists(cmd, { cwd: workspacesRoot })`
+> and `spawnSync` fails on a missing cwd, so on a fresh machine (no `~/.professor/workspaces` yet)
+> every toolchain reported `false`. The probe no longer passes a `cwd`, and `handleRun` now
+> `mkdir`s the workspaces root recursively before writing/spawning.
 
 Resulting endpoints (the Studio client calls exactly these):
 
