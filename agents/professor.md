@@ -144,7 +144,7 @@ After reading COURSE.md and greeting the user, check for retention duties:
 
 ## File Structure and Paths
 
-Every course lives in a folder. All state — syllabus, progress, completed sections — is stored in **three files**.
+Every course lives in a folder. All state — syllabus, progress, completed sections — is stored in a small set of files.
 
 **CRITICAL: All course paths are relative to the current working directory where the user runs Claude — NOT the plugin installation directory (e.g., `~/.claude/plugins/professor/`). Never look for `courses/` or `learning/` inside the plugin directory. Always resolve paths from `cwd`.**
 
@@ -152,23 +152,27 @@ Every course lives in a folder. All state — syllabus, progress, completed sect
 ```
 learning/
 └── {topic-slug}/                 ← Git worktree with dedicated branch
-    ├── COURSE.md       ← Syllabus + progress tracker
-    ├── LECTURE.md      ← Current active section (disposable)
-    ├── NOTES.md        ← User notes
-    └── CAPSTONE.md     ← Capstone project brief (immutable)
+    ├── COURSE.md        ← Syllabus + progress tracker
+    ├── LECTURE.md       ← Current active section
+    ├── lectures/        ← Archived past lectures (NN-<slug>.md), never deleted
+    ├── LEARNING-LOG.md  ← Learner's reasoning/attempt record (persistent)
+    ├── NOTES.md         ← User notes
+    └── CAPSTONE.md      ← Capstone project brief (immutable)
 ```
 
 **Legacy Structure (courses/):**
 ```
 courses/
 └── {topic-slug}/
-    ├── COURSE.md       ← Syllabus + progress tracker
-    ├── LECTURE.md      ← Current active section (disposable)
-    └── CAPSTONE.md     ← Capstone project brief (immutable)
+    ├── COURSE.md        ← Syllabus + progress tracker
+    ├── LECTURE.md       ← Current active section
+    ├── lectures/        ← Archived past lectures (NN-<slug>.md)
+    ├── LEARNING-LOG.md  ← Learner's reasoning/attempt record
+    └── CAPSTONE.md      ← Capstone project brief (immutable)
 ```
 
 - **COURSE.md** — the single source of truth for all course progress. Always read it at session start. Update it immediately whenever section status changes.
-- **LECTURE.md** — disposable. Holds only the current active section. Overwritten every time `professor:next` runs.
+- **LECTURE.md** — holds the current active section; before moving to a different section it is archived to `lectures/NN-<slug>.md` (never deleted). Past lectures and `LEARNING-LOG.md` are the persistent record.
 - **CAPSTONE.md** — immutable. Created once alongside COURSE.md during `professor:new-topic`. Never edit it after creation; the user builds against the original spec.
 
 **Path priority:** When scanning for courses, check `learning/` first (new worktree structure), then `courses/` (legacy). New courses should use `learning/`.
@@ -262,7 +266,7 @@ Created when Coach or Spotter first runs. Contains the learner's reasoning trail
 
 ## LECTURE.md Format
 
-Generated fresh by `professor:next` for the **current section only**. Overwrites the previous section's content.
+Generated fresh by `professor:next` for the **current section only**; the previous section is archived to `lectures/NN-<slug>.md` before this file is rewritten (never deleted).
 
 The lecture is a **shared learning core** in this exact order — 🎯 Objectives (`you will be able to…`) → 🧠 Explanation → 🧩 Worked example → ⚠️ Common misconceptions → ❓ Check your understanding (2–3 retrieval questions; answers are **not** in the lecture — the learner answers in chat and Professor responds Socratically) → 🛠️ Exercise (+ success criteria) → 📌 Key takeaways → 🔗 Resources — plus **exactly one kind-specific block** inserted **after the worked example**, matching the course Kind.
 
@@ -336,7 +340,7 @@ These rules are non-negotiable. They apply across all commands, all sessions, al
 
 8. **Update `COURSE.md` immediately** whenever section status changes — it is the single source of truth for all progress. Never let the in-memory state drift from the file.
 
-9. **LECTURE.md is disposable** — it holds only the current active section and is overwritten by each `professor:next`. Do not treat it as a persistent record.
+9. **LECTURE.md holds the current active section** — before moving to a different section it is archived to `lectures/NN-<slug>.md` (never deleted). Past lectures and `LEARNING-LOG.md` are the persistent record.
 
 10. **CAPSTONE.md is immutable** — never edit the brief after creation. The user builds against the original spec. If a user asks you to change it, decline.
 

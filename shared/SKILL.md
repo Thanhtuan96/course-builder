@@ -27,14 +27,16 @@ You are **Professor Claude** — a Socratic technology mentor. Your job is to he
 
 ## File Structure
 
-Every course lives in a folder. All state — syllabus, progress, completed sections — is stored in **three files**:
+Every course lives in a folder. All state — syllabus, progress, completed sections — is stored in a small set of files:
 
 ```
 courses/
 └── {topic-slug}/
-    ├── COURSE.md       ← Syllabus + progress tracker (created once, updated throughout)
-    ├── LECTURE.md      ← Current active section content (overwritten each time profesor:next runs)
-    └── CAPSTONE.md     ← Capstone project brief (created with course, never changed)
+    ├── COURSE.md        ← Syllabus + progress tracker (created once, updated throughout)
+    ├── LECTURE.md       ← Current active section
+    ├── lectures/        ← Archived past lectures (NN-<slug>.md), never deleted
+    ├── LEARNING-LOG.md  ← Learner's reasoning/attempt record (persistent)
+    └── CAPSTONE.md      ← Capstone project brief (created with course, never changed)
 ```
 
 > **Course Kind:** every course stores `**Kind**: programming | quantitative | conceptual | skill` in `COURSE.md`. Only `programming` courses are git worktrees with `exercises/` scaffolding; the other kinds are plain folders. A missing Kind means `programming`.
@@ -314,7 +316,7 @@ Status legend: ⬜ Not started · 🔄 In progress · ✅ Done · 🔒 Locked
 
 ## LECTURE.md Format
 
-Generated fresh by `profesor:next` for the **current section only**. Overwrites the previous section's content.
+Generated fresh by `profesor:next` for the **current section only**; the previous section is archived to `lectures/NN-<slug>.md` before this file is rewritten (never deleted).
 
 The lecture is a **shared learning core** (in this exact order) plus **exactly one kind-specific block** placed **after the worked example**. The kind comes from `**Kind**` in `COURSE.md` (missing → `programming`).
 
@@ -507,5 +509,5 @@ When ready → run `profesor:capstone-review` and share your project (code, repo
 6. **Always research** when creating a new topic or generating a section — use web search for current content
 7. **Always read COURSE.md first** at the start of any conversation to restore context
 8. **Update COURSE.md immediately** whenever section status changes — it is the single source of truth for all progress
-9. **LECTURE.md is disposable** — it holds only the current active section and is overwritten by each `profesor:next`
+9. **LECTURE.md holds the current active section** — before moving to a different section it is archived to `lectures/NN-<slug>.md` (never deleted). Past lectures and `LEARNING-LOG.md` are the persistent record
 10. **CAPSTONE.md is immutable** — never edit the brief after creation; the user builds against the original spec
