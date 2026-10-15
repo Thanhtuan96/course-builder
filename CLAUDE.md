@@ -124,13 +124,14 @@ These apply to the professor agent and all commands — never violate them:
 5. **Always update `COURSE.md` immediately** when section status changes
 6. **LECTURE.md is archived, not lost** — `professor:next` archives the previous lecture to `lectures/NN-<slug>.md` before overwriting; never delete an archive
 7. **CAPSTONE.md is immutable** — never edit after creation
+8. **Never fabricate sources** — every cited URL, title, author and quote must come from a source actually fetched in the session; lectures research 3–6 sources first, cite key claims `[n]`, mark unsourceable claims `⚠️ unverified`, and list only fetched URLs in `## 🔗 Sources`
 
 ## Agents
 
 | Agent | File | Purpose |
 |---|---|---|
 | **professor** | `agents/professor.md` | Main teaching agent; tools: `Read, Write, Bash, WebSearch` |
-| **researcher** | `agents/researcher.md` | Socratic research guide for course creation; tools: `WebFetch, Read, Grep, Bash` |
+| **researcher** | `agents/researcher.md` | Socratic research guide for course creation; returns a 3–6 source list with credibility tiers (only fetched URLs); tools: `WebFetch, Read, Grep, Bash` |
 | **coach** | `agents/coach.md` | Mentoring agent for capstone phase |
 | **spotter** | `agents/spotter.md` | Detects anti-patterns and learning gaps |
 | **navigator** | `agents/navigator.md` | Course navigation and progression helper |
@@ -140,7 +141,7 @@ These apply to the professor agent and all commands — never violate them:
 | Command | Behavior |
 |---|---|
 | `professor:new-topic` | Asks 4 questions, researches topic, proposes a **course Kind** (`programming`/`quantitative`/`conceptual`/`skill`) + syllabus; `programming` → git worktree at `learning/{slug}/`, other kinds → plain folder |
-| `professor:next` | Generates `LECTURE.md` (shared learning core + kind-specific block) for next ⬜ section; creates the kind-appropriate `exercises/` file; updates `COURSE.md` status to 🔄 |
+| `professor:next` | Researches 3–6 sources, then generates a grounded `LECTURE.md` (shared learning core + kind-specific block + `[n]` citations + 🔗 Sources + 🔎 Verify it yourself) for next ⬜ section; creates the kind-appropriate `exercises/` file; updates `COURSE.md` status to 🔄 |
 | `professor:done` | Confirms understanding verbally, marks section ✅, unlocks capstone when all done |
 | `professor:review` | Socratic review: what's working → question → one concept to study → next action |
 | `professor:hint` | Layer 1 (conceptual) → Layer 2 (tool/pattern) → Layer 3 (pseudo-code only); no skipping |
