@@ -12,6 +12,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Configuration
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '127.0.0.1';
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const COURSES_DIR = process.env.COURSES_DIR || './courses';
 
@@ -1200,19 +1201,20 @@ if (NODE_ENV === 'production') {
   }
 }
 
-// Start server
-server.listen(PORT, () => {
+// Start server (loopback by default — the Studio bridge is local-only; set HOST to override)
+server.listen(PORT, HOST, () => {
   const url = NODE_ENV === 'production' 
     ? `http://localhost:${PORT}`
     : `http://localhost:${PORT} (with Vite dev server)`;
-    
+  const hostNote = process.env.HOST ? `\n║   Bound to HOST=${HOST} (exposed beyond loopback)  ║` : '';
+
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
 ║           📚 Professor Web UI - Running                       ║
 ║                                                               ║
 ║   URL: ${url}
 ║   Mode: ${NODE_ENV}
-║   Courses: ${COURSES_DIR}
+║   Courses: ${COURSES_DIR}${hostNote}
 ╚══════════════════════════════════════════════════════════════╝
   `.trim());
 });
