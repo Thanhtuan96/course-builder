@@ -10,6 +10,9 @@ export const SETTINGS_KEY = 'professor-studio:settings';
 
 export const DEFAULT_PROVIDER = 'anthropic';
 
+/** Provider id for "My local agent" (the CLI bridge). */
+export const BRIDGE_PROVIDER = 'bridge';
+
 export const DEFAULT_SETTINGS = {
   provider: DEFAULT_PROVIDER,
   model: '',
@@ -72,6 +75,86 @@ export function saveSettings(patch) {
   }
   for (const fn of listeners) fn(next);
   if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('professor:settings', { detail: next }));
+  return next;
+}
+
+/* --------------------------------------------------------------- pairing (CLI-05) */
+
+/** Raw stored settings object, or null when nothing has been saved yet. */
+function rawStoredSettings() {
+  if (typeof localStorage === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Read `bridge` + `token` out of a `#/settings?bridge=…&token=…` hash (the URL the CLI prints).
+ * Returns null when the fragment carries no pairing parameters.
+ * @param {string} [hash]
+ * @returns {{ bridgeUrl: string, token: string, path: string }|null}
+ */
+export function parsePairingHash(hash = '') {
+  const raw = String(hash || '').replace(/^#/, '');
+  const queryAt = raw.indexOf('?');
+  if (queryAt === -1) return null;
+  const params = new URLSearchParams(raw.slice(queryAt + 1));
+  const bridgeUrl = (params.get('bridge') || '').trim();
+  const token = (params.get('token') || '').trim();
+  if (!bridgeUrl && !token) return null;
+  const path = raw.slice(0, queryAt) || '/';
+  return { bridgeUrl, token, path: path.startsWith('/') ? path : `/${path}` };
+}
+
+function resolveGlobal(name, override) {
+  if (override) return override;
+  if (typeof window !== 'undefined' && window[name]) return window[name];
+  if (typeof globalThis !== 'undefined' && globalThis[name]) return globalThis[name];
+  return null;
+}
+
+/**
+ * Apply the CLI's one-command pairing: save `bridge`/`token` from the URL hash as the bridge
+ * config, pick the "My local agent" provider on a fresh install, finish onboarding, then strip the
+ * secrets from the address bar with `history.replaceState` so they are never bookmarked or shared.
+ *
+ * Called once from `main.jsx` before render. Safe to call anywhere — returns null when there is
+ * no pairing hash (or no browser-like environment).
+ *
+ * @param {{ location?: object, history?: object }} [env] injected for tests
+ * @returns {typeof DEFAULT_SETTINGS|null} the saved settings, or null when nothing was applied
+ */
+export function applyPairingFromUrl(env = {}) {
+  const loc = resolveGlobal('location', env.location);
+  const hist = resolveGlobal('history', env.history);
+  if (!loc) return null;
+
+  const pairing = parsePairingHash(loc.hash);
+  if (!pairing) return null;
+
+  const stored = rawStoredSettings();
+  const patch = { bridge: {} };
+  if (pairing.bridgeUrl) patch.bridge.bridgeUrl = pairing.bridgeUrl;
+  if (pairing.token) patch.bridge.bridgeToken = pairing.token;
+  // Only choose the local agent for a learner who has not configured a provider yet.
+  if (!stored || !stored.provider) patch.provider = BRIDGE_PROVIDER;
+  if (!stored || stored.onboardingDone !== true) patch.onboardingDone = true;
+
+  const next = saveSettings(patch);
+
+  if (hist && typeof hist.replaceState === 'function') {
+    const search = loc.search || '';
+    const hash = pairing.path === '/' ? '' : `#${pairing.path}`;
+    try {
+      hist.replaceState(null, '', `${loc.pathname || '/'}${search}${hash}`);
+    } catch {
+      /* some embedded webviews disallow replaceState — the settings are already saved */
+    }
+  }
+
   return next;
 }
 

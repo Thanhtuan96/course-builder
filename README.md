@@ -263,6 +263,29 @@ npx course-professor doctor                  # diagnose your local setup
 
 Add `--dir <path>` to `status`/`next`/`check` to read courses from a directory other than `learning/` and `courses/`.
 
+### Studio, Review & Import
+
+One command starts the whole local platform — the bridge server and the built Studio app — and pairs them for you. `review` and `import` use the same SQLite database (`~/.professor/professor.db`) and the same repository logic as Studio, so your data is identical everywhere.
+
+| Command | Description |
+|---|---|
+| `studio` | Install/build if needed, start the local server + Studio, print a pairing URL and open the browser |
+| `studio --port 5180 --api-port 3000` | Choose the Studio and server ports |
+| `studio --no-open` | Print the pairing URL without opening the browser |
+| `review [--limit 20]` | Review due flashcards in the terminal (Space flips, 1–4 grades, q quits) sharing SM-2 state with Studio |
+| `import [slug\|--all]` | Import CLI courses (`COURSE.md`, `lectures/`, `SCHEDULE.md`, `LEARNING-LOG.md`) into Studio's SQLite DB |
+| `import [slug\|--all] --dry-run` | Print what would be imported without writing |
+
+```bash
+npx course-professor studio                  # server + Studio + pairing, one command
+npx course-professor studio --no-open        # just print the pairing URL
+npx course-professor review                  # review due flashcards in the terminal
+npx course-professor import --all            # import every CLI course into Studio
+npx course-professor import nextjs --dry-run # preview one course's import
+```
+
+`import` is idempotent: re-running updates existing rows (matched by `source: 'cli'` + a stable `external_id`) instead of duplicating, and never overwrites graded cards or existing lecture versions.
+
 ### Web UI
 
 | Command | Description |
