@@ -13,7 +13,8 @@ This command routes to the **Coach agent** which provides feedback through self-
 1. Read `COURSE.md` (required at conversation start)
 2. Check for "Active exercise" field in COURSE.md
 3. If exists, read that exercise file for context
-4. Note the current section number and title
+4. Note the current section number and title, and the course Kind (`**Kind**: ...`; missing → `programming`)
+5. Match feedback to the Kind — line-by-line code feedback only makes sense for `programming`; for `quantitative`/`conceptual`/`skill` review the reasoning, method, or argument instead of "code"
 
 ## Route to Coach:
 

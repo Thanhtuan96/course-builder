@@ -53,7 +53,7 @@ bin/platforms/               <- Platform detection + install logic (_shared.js, 
 web/                         <- Express server + React frontend
 test/cli.test.js             <- Vitest tests for registry-helpers.js
 professor-skill/SKILL.md     <- Source-of-truth behavior spec for the professor agent
-learning/{slug}/             <- Primary: git worktree per course (created by professor:new-topic)
+learning/{slug}/             <- Primary: git worktree for programming courses, plain folder for other kinds
 courses/{slug}/              <- Legacy fallback: older courses
 .course_archive/{slug}/      <- Archived courses (created by professor:archive)
 ```
@@ -89,7 +89,12 @@ Platform modules (`bin/platforms/claude.js`, `gemini.js`, etc.) handle detection
 
 ## Course Storage: Worktrees vs Legacy
 
-New courses are created as **git worktrees** at `learning/{slug}/` with branch `learning/{slug}`. Older courses exist under `courses/{slug}/` (legacy). All commands check `learning/` first, then fall back to `courses/`. `professor:new-topic` requires the user to be inside a git repository.
+Every course records a **Kind** in `COURSE.md` (`**Kind**: programming | quantitative | conceptual | skill`, written under `**Level**`). `professor:new-topic` proposes the kind and the learner can change it. Commands treat a **missing Kind as `programming`** (backward compatible with existing courses).
+
+- **`programming` courses** are created as **git worktrees** at `learning/{slug}/` with branch `learning/{slug}` and `exercises/` scaffolding. `professor:new-topic` requires the user to be inside a git repository.
+- **`quantitative` / `conceptual` / `skill` courses** are created as **plain folders** at `learning/{slug}/` — no git requirement, no worktree, no framework scaffolding; `exercises/` is created lazily by `professor:next`.
+
+Older courses exist under `courses/{slug}/` (legacy). All commands check `learning/` first, then fall back to `courses/`.
 
 Each course directory contains:
 - `COURSE.md` — syllabus + progress tracker (single source of truth, always update immediately on status change)
@@ -125,8 +130,8 @@ These apply to the professor agent and all commands — never violate them:
 
 | Command | Behavior |
 |---|---|
-| `professor:new-topic` | Asks 4 questions, researches topic, proposes syllabus, creates git worktree at `learning/{slug}/` |
-| `professor:next` | Generates `LECTURE.md` for next ⬜ section; updates `COURSE.md` status to 🔄 |
+| `professor:new-topic` | Asks 4 questions, researches topic, proposes a **course Kind** (`programming`/`quantitative`/`conceptual`/`skill`) + syllabus; `programming` → git worktree at `learning/{slug}/`, other kinds → plain folder |
+| `professor:next` | Generates `LECTURE.md` (shared learning core + kind-specific block) for next ⬜ section; creates the kind-appropriate `exercises/` file; updates `COURSE.md` status to 🔄 |
 | `professor:done` | Confirms understanding verbally, marks section ✅, unlocks capstone when all done |
 | `professor:review` | Socratic review: what's working → question → one concept to study → next action |
 | `professor:hint` | Layer 1 (conceptual) → Layer 2 (tool/pattern) → Layer 3 (pseudo-code only); no skipping |
