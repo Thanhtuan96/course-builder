@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { configIssue } from './ai/config.js';
 import { loadProviderStatus } from './ai/status.js';
+import { DEFAULT_BRIDGE_AGENT, isAnthropicModelId, isValidAgentModel } from './ai/catalog.js';
 
 export const SETTINGS_KEY = 'professor-studio:settings';
 
@@ -15,9 +16,18 @@ export const DEFAULT_PROVIDER = 'anthropic';
 /** Provider id for "My local agent" (the CLI bridge). */
 export const BRIDGE_PROVIDER = 'bridge';
 
+/** One model slot per bridge agent — no more global `model` leaking between providers. */
+export const DEFAULT_BRIDGE_MODELS = {
+  claude: '',
+  opencode: '',
+  cursor: '',
+  gemini: '',
+  antigravity: '',
+  ollama: '',
+};
+
 export const DEFAULT_SETTINGS = {
   provider: DEFAULT_PROVIDER,
-  model: '',
   anthropic: { apiKey: '', model: 'claude-opus-5-5' },
   openai: {
     preset: 'openai',
@@ -26,7 +36,12 @@ export const DEFAULT_SETTINGS = {
     model: 'gpt-4o-mini',
   },
   ollama: { baseUrl: 'http://localhost:11434/v1', model: 'llama3.2' },
-  bridge: { bridgeUrl: 'http://localhost:3000', bridgeToken: '', agent: '' },
+  bridge: {
+    bridgeUrl: 'http://localhost:3000',
+    bridgeToken: '',
+    agent: DEFAULT_BRIDGE_AGENT,
+    models: { ...DEFAULT_BRIDGE_MODELS },
+  },
   learnerName: '',
   language: 'English',
   onboardingDone: false,
@@ -46,11 +61,43 @@ function deepMerge(base, patch) {
   return out;
 }
 
+/**
+ * Migrate the old single global `model` field (shared by every provider, which leaked e.g. an
+ * Anthropic model id into the bridge) into the provider it belongs to. The value moves into the
+ * provider only when it is valid there — otherwise it is dropped. The top-level `model` is always
+ * removed so no provider ever reads it again.
+ *
+ * @param {object} raw stored settings (parsed JSON)
+ * @returns {object} settings without a top-level `model`
+ */
+export function migrateSettings(raw) {
+  if (!raw || typeof raw !== 'object') return raw;
+  const next = { ...raw };
+  const legacy = typeof next.model === 'string' ? next.model.trim() : '';
+  delete next.model;
+  if (!legacy) return next;
+
+  const provider = next.provider || DEFAULT_PROVIDER;
+  if (provider === 'anthropic') {
+    if (isAnthropicModelId(legacy)) next.anthropic = { ...(next.anthropic || {}), model: legacy };
+  } else if (provider === 'openai') {
+    next.openai = { ...(next.openai || {}), model: legacy };
+  } else if (provider === 'ollama') {
+    next.ollama = { ...(next.ollama || {}), model: legacy };
+  } else if (provider === BRIDGE_PROVIDER) {
+    const agent = next.bridge?.agent || DEFAULT_BRIDGE_AGENT;
+    if (isValidAgentModel(agent, legacy)) {
+      next.bridge = { ...(next.bridge || {}), models: { ...(next.bridge?.models || {}), [agent]: legacy } };
+    }
+  }
+  return next;
+}
+
 function read() {
   if (typeof localStorage === 'undefined') return { ...DEFAULT_SETTINGS };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    return raw ? deepMerge(DEFAULT_SETTINGS, JSON.parse(raw)) : { ...DEFAULT_SETTINGS };
+    return raw ? deepMerge(DEFAULT_SETTINGS, migrateSettings(JSON.parse(raw))) : { ...DEFAULT_SETTINGS };
   } catch {
     return { ...DEFAULT_SETTINGS };
   }
@@ -67,7 +114,7 @@ export function loadSettings() {
  * @returns {typeof DEFAULT_SETTINGS}
  */
 export function saveSettings(patch) {
-  const next = deepMerge(read(), patch);
+  const next = migrateSettings(deepMerge(read(), patch));
   if (typeof localStorage !== 'undefined') {
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
@@ -227,7 +274,25 @@ export function useSettings() {
   return [settings, update];
 }
 
-/** The model id the active provider should use. */
+/**
+ * The model stored for one bridge agent ('' when "Default" — the bridge then omits `--model`).
+ * @param {object} settings
+ * @param {string} agent
+ */
+export function bridgeAgentModel(settings, agent) {
+  if (!agent) return '';
+  return settings?.bridge?.models?.[agent] || '';
+}
+
+/**
+ * The model id the active provider should use. Providers are fully independent: the bridge reads
+ * only the selected agent's slot, and the API providers read only their own `model`.
+ * @param {object} settings
+ */
 export function activeModel(settings) {
-  return settings.model || settings[settings.provider]?.model || '';
+  if (!settings) return '';
+  if (settings.provider === BRIDGE_PROVIDER) {
+    return bridgeAgentModel(settings, settings.bridge?.agent || DEFAULT_BRIDGE_AGENT);
+  }
+  return settings[settings.provider]?.model || '';
 }

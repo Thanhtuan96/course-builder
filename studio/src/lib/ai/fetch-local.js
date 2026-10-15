@@ -89,6 +89,13 @@ export async function mapHttpError(res, { what = 'provider' } = {}) {
   }
   const status = res.status;
   if (status === 401 || status === 403) return providerError('auth', `${what} rejected the credentials (${status}) ${body}`.trim());
+  if (status === 402) {
+    return providerError(
+      'billing',
+      `${what} requires payment or credits (402) ${body}`.trim(),
+      'Your account is out of credit or unpaid. Top it up, or switch to a local source.'
+    );
+  }
   if (status === 429) return providerError('rate_limit', `${what} rate limit reached (429) ${body}`.trim());
   if (status === 404) {
     return providerError('unknown', `${what} returned 404 — check the model name and base URL. ${body}`.trim());

@@ -17,11 +17,42 @@ import {
   OPENAI_PRESETS,
   OLLAMA_DEFAULT_BASE_URL,
   BRIDGE_DEFAULT_URL,
+  DEFAULT_BRIDGE_AGENT,
+  presetForBaseUrl,
 } from './catalog.js';
 
 export { MAX_TOKENS, ProviderError };
 export { ANTHROPIC_MODELS, OPENAI_PRESETS };
 export { configIssue, isConfigured } from './config.js';
+export { BRIDGE_AGENTS, BRIDGE_AGENT_IDS, DEFAULT_BRIDGE_AGENT } from './catalog.js';
+
+/**
+ * The model a provider should use, read ONLY from that provider's own slot. The top-level
+ * `settings.model` is never consulted — that legacy field leaked one provider's model into another
+ * (e.g. an Anthropic id reaching the OpenCode bridge). The bridge additionally scopes the model to
+ * the selected agent.
+ *
+ * @param {object} settings
+ * @param {string} provider
+ * @param {string} [agent] bridge agent id (defaults to `settings.bridge.agent`)
+ * @returns {string|undefined} the model id, or undefined to let the provider pick its default
+ */
+export function resolveProviderModel(settings = {}, provider = settings.provider, agent) {
+  switch (provider) {
+    case 'anthropic':
+      return settings.anthropic?.model || undefined;
+    case 'openai':
+      return settings.openai?.model || undefined;
+    case 'ollama':
+      return settings.ollama?.model || undefined;
+    case 'bridge': {
+      const chosen = agent || settings.bridge?.agent || DEFAULT_BRIDGE_AGENT;
+      return settings.bridge?.models?.[chosen] || undefined;
+    }
+    default:
+      return undefined;
+  }
+}
 
 /**
  * Metadata driving the Settings / Onboarding cards.
@@ -56,7 +87,7 @@ export const PROVIDERS = [
   {
     id: 'bridge',
     label: 'My local agent',
-    tagline: 'Use Claude Code, OpenCode or Cursor CLI.',
+    tagline: 'Use Claude Code, OpenCode, Cursor, Gemini, Antigravity or Ollama.',
     pros: 'Free with your existing subscription',
     cons: 'Needs the local server running',
     needsKey: false,
@@ -81,31 +112,34 @@ export async function getProvider(settings = {}) {
       const { createAnthropicProvider } = await import('./anthropic.js');
       return createAnthropicProvider({
         apiKey: settings.anthropic?.apiKey || '',
-        model: settings.model || settings.anthropic?.model,
+        model: resolveProviderModel(settings, 'anthropic'),
       });
     }
     case 'openai': {
       const { createOpenAICompatibleProvider } = await import('./openai-compatible.js');
+      const baseUrl = settings.openai?.baseUrl;
       return createOpenAICompatibleProvider({
-        baseUrl: settings.openai?.baseUrl,
+        baseUrl,
         apiKey: settings.openai?.apiKey || '',
-        model: settings.model || settings.openai?.model,
+        model: resolveProviderModel(settings, 'openai'),
+        preset: settings.openai?.preset || presetForBaseUrl(baseUrl),
       });
     }
     case 'ollama': {
       const { createOllamaProvider } = await import('./ollama.js');
       return createOllamaProvider({
         baseUrl: settings.ollama?.baseUrl || OLLAMA_DEFAULT_BASE_URL,
-        model: settings.model || settings.ollama?.model,
+        model: resolveProviderModel(settings, 'ollama'),
       });
     }
     case 'bridge': {
       const { createBridgeProvider } = await import('./bridge.js');
+      const agent = settings.bridge?.agent || DEFAULT_BRIDGE_AGENT;
       return createBridgeProvider({
         bridgeUrl: settings.bridge?.bridgeUrl || settings.bridgeUrl || BRIDGE_DEFAULT_URL,
         bridgeToken: settings.bridge?.bridgeToken || settings.bridgeToken,
-        agent: settings.bridge?.agent,
-        model: settings.model,
+        agent,
+        model: resolveProviderModel(settings, 'bridge', agent),
       });
     }
     default:
