@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateSyllabus, syllabusValidator, buildSyllabusMessages, MIN_LESSONS, MAX_LESSONS } from '../src/lib/prompts/course.js';
+import { validateSyllabus, syllabusValidator, buildSyllabusMessages, normalizeArtifact, MIN_LESSONS, MAX_LESSONS } from '../src/lib/prompts/course.js';
 
 const valid = {
   title: 'Kubernetes Networking',
@@ -59,6 +59,28 @@ describe('validateSyllabus', () => {
     expect(syllabusValidator(valid)).toBe(true);
     expect(typeof syllabusValidator({ title: 'x' })).toBe('string');
   });
+
+  it('normalises the artifact block and defaults it when missing', () => {
+    const res = validateSyllabus({
+      ...valid,
+      artifact: {
+        title: 'A deployed shortener',
+        deliverable: 'Ship a deployed mini-app + repo.',
+        definitionOfDone: ['Public demo link', '', 'README'],
+      },
+    });
+    expect(res.value.artifact).toEqual({
+      title: 'A deployed shortener',
+      deliverable: 'Ship a deployed mini-app + repo.',
+      definitionOfDone: ['Public demo link', 'README'],
+    });
+    expect(validateSyllabus(valid).value.artifact).toEqual({ title: '', deliverable: '', definitionOfDone: [] });
+  });
+
+  it('normalizeArtifact tolerates junk', () => {
+    expect(normalizeArtifact(null)).toEqual({ title: '', deliverable: '', definitionOfDone: [] });
+    expect(normalizeArtifact({ definitionOfDone: [1, 'ok', null, ' '] }).definitionOfDone).toEqual(['ok']);
+  });
 });
 
 describe('buildSyllabusMessages', () => {
@@ -69,6 +91,8 @@ describe('buildSyllabusMessages', () => {
     expect(joined).toContain('Advanced');
     expect(joined).toContain('Ship a CLI');
     expect(joined).toContain('"lessons"');
+    expect(joined).toContain('"artifact"');
+    expect(joined).toContain('definitionOfDone');
     expect(joined).toMatch(/programming, quantitative, conceptual, skill/);
     expect(messages[0].role).toBe('user');
   });

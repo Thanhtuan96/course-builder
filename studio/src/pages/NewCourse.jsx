@@ -13,6 +13,7 @@ import { getProvider, createGenerateJson } from '../lib/ai/index.js';
 import { useStream } from '../lib/ai/useStream.js';
 import { useSettings } from '../lib/settings.js';
 import { buildSyllabusMessages, syllabusValidator } from '../lib/prompts/course.js';
+import { generateCapstoneForCourse, capstoneCopy } from '../lib/capstone.js';
 import { Card } from '../components/ui/Card.jsx';
 import { Button } from '../components/ui/Button.jsx';
 import { Input, Textarea, Select } from '../components/ui/Input.jsx';
@@ -27,6 +28,7 @@ function makeSyllabus(topic, level, goal) {
     description: goal,
     kind: 'conceptual',
     kindReason: '',
+    artifact: { title: '', deliverable: '', definitionOfDone: [] },
     lessons: [{ title: topic || 'Lesson 1', summary: '' }],
   };
 }
@@ -42,6 +44,7 @@ export function NewCourse() {
   const [error, setError] = useState(null);
 
   const gen = useStream();
+  const copy = capstoneCopy(language);
 
   const propose = async () => {
     if (!topic.trim()) return;
@@ -60,6 +63,24 @@ export function NewCourse() {
   };
 
   const patchSyllabus = (patch) => setDraft((d) => ({ ...d, ...patch }));
+  const patchArtifact = (patch) =>
+    setDraft((d) => ({ ...d, artifact: { title: '', deliverable: '', definitionOfDone: [], ...(d.artifact || {}), ...patch } }));
+  const patchArtifactDone = (patch, index) =>
+    setDraft((d) => {
+      const current = d.artifact?.definitionOfDone || [];
+      const definitionOfDone = current.map((item, i) => (i === index ? patch(item) : item));
+      return { ...d, artifact: { ...d.artifact, definitionOfDone } };
+    });
+  const addArtifactDone = () =>
+    setDraft((d) => ({
+      ...d,
+      artifact: { ...d.artifact, definitionOfDone: [...(d.artifact?.definitionOfDone || []), ''] },
+    }));
+  const removeArtifactDone = (index) =>
+    setDraft((d) => ({
+      ...d,
+      artifact: { ...d.artifact, definitionOfDone: (d.artifact?.definitionOfDone || []).filter((_, i) => i !== index) },
+    }));
   const patchLesson = (index, patch) =>
     setDraft((d) => ({ ...d, lessons: d.lessons.map((l, i) => (i === index ? { ...l, ...patch } : l)) }));
   const moveLesson = (index, dir) =>
@@ -92,6 +113,17 @@ export function NewCourse() {
           .filter((l) => l.title.trim())
           .map((l) => ({ title: l.title.trim(), summary: l.summary || '' })),
       });
+
+      // The capstone is generated as a second JSON call at creation (CAP-01). If it fails the course
+      // is already saved, so the learner can retry from the Course page's "Generate capstone" action.
+      if (!input) {
+        try {
+          await generateCapstoneForCourse({ course, artifact: syllabus.artifact, settings });
+        } catch {
+          /* non-fatal — the Course page offers a one-off "Generate capstone" */
+        }
+      }
+
       navigate(`/course/${course.id}`);
     } catch (err) {
       setError(err);
@@ -212,6 +244,51 @@ export function NewCourse() {
             <p className="text-xs text-neutral-500">
               {COURSE_KINDS.find((k) => k.id === draft.kind)?.description}
             </p>
+          </Card>
+
+          <Card className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold">{copy.yourArtifact}</h2>
+              <button
+                type="button"
+                onClick={addArtifactDone}
+                className="text-xs text-neutral-500 underline hover:text-neutral-800 dark:hover:text-neutral-200"
+              >
+                Add to “{copy.definitionOfDone}”
+              </button>
+            </div>
+            <Input
+              label="Artifact title"
+              name="artifactTitle"
+              value={draft.artifact?.title || ''}
+              onChange={(e) => patchArtifact({ title: e.target.value })}
+              placeholder="e.g. A deployed URL shortener + repo"
+            />
+            <Textarea
+              label="What you'll ship"
+              name="artifactDeliverable"
+              rows={2}
+              value={draft.artifact?.deliverable || ''}
+              onChange={(e) => patchArtifact({ deliverable: e.target.value })}
+              placeholder="The ONE concrete, real thing this course builds toward."
+            />
+            <div className="space-y-2">
+              <p className="text-sm font-medium">{copy.definitionOfDone}</p>
+              {(draft.artifact?.definitionOfDone || []).map((item, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <Input
+                    name={`artifact-done-${index}`}
+                    className="flex-1"
+                    value={item}
+                    onChange={(e) => patchArtifactDone(() => e.target.value, index)}
+                    placeholder="A checkable finished-state bullet"
+                  />
+                  <Button variant="ghost" size="sm" aria-label="Remove item" onClick={() => removeArtifactDone(index)}>
+                    ✕
+                  </Button>
+                </div>
+              ))}
+            </div>
           </Card>
 
           <Card className="space-y-3">

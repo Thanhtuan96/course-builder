@@ -16,6 +16,7 @@ const Home = lazy(() => import('./pages/Home.jsx').then((m) => ({ default: m.Hom
 const NewCourse = lazy(() => import('./pages/NewCourse.jsx').then((m) => ({ default: m.NewCourse })));
 const Course = lazy(() => import('./pages/Course.jsx').then((m) => ({ default: m.Course })));
 const Lesson = lazy(() => import('./pages/Lesson.jsx').then((m) => ({ default: m.Lesson })));
+const Capstone = lazy(() => import('./pages/Capstone.jsx').then((m) => ({ default: m.Capstone })));
 const Review = lazy(() => import('./pages/Review.jsx').then((m) => ({ default: m.Review })));
 const Settings = lazy(() => import('./pages/Settings.jsx').then((m) => ({ default: m.Settings })));
 
@@ -43,6 +44,8 @@ function renderRoute(route) {
       return <Course id={route.params.id} />;
     case 'lesson':
       return <Lesson id={route.params.id} lessonId={route.params.lessonId} />;
+    case 'capstone':
+      return <Capstone id={route.params.id} />;
     case 'review':
       return <Review />;
     case 'settings':

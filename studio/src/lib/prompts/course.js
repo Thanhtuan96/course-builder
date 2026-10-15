@@ -17,6 +17,11 @@ export const SYLLABUS_SHAPE = `{
   "description": "one or two sentences",
   "kind": "programming | quantitative | conceptual | skill",
   "kindReason": "one short sentence explaining the kind",
+  "artifact": {
+    "title": "string",
+    "deliverable": "one sentence naming the ONE concrete thing the learner will ship",
+    "definitionOfDone": ["3 to 6 checkable finished-state bullets"]
+  },
   "lessons": [
     { "title": "string", "summary": "one line describing what this lesson teaches" }
   ]
@@ -35,7 +40,30 @@ Hard rules:
   * quantitative — math, statistics or data the learner computes.
   * conceptual — ideas, theory and mental models.
   * skill — a practical ability practised in repeated drills.
-- "kindReason" is one short sentence referring to the topic (e.g. "Detected: Conceptual — a history topic").`;
+- "kindReason" is one short sentence referring to the topic (e.g. "Detected: Conceptual — a history topic").
+- "artifact" names the ONE real, shippable deliverable the course builds toward (not an exam). Make it
+  concrete and portfolio-ready, e.g. a deployed mini-app + repo (programming), a 1,500-word analysis
+  memo with sources (conceptual), a data notebook + report on a public dataset (quantitative), or a
+  recorded performance (skill). "definitionOfDone" is 3–6 bullets describing the finished state —
+  each one checkable ("repo has a README and a working demo link", not "understand the topic").`;
+
+/**
+ * Tolerant normalisation of the syllabus `artifact` block. Missing/blank fields degrade gracefully
+ * so a small model returning a partial object never fails the whole proposal.
+ * @param {any} obj
+ * @returns {{ title: string, deliverable: string, definitionOfDone: string[] }}
+ */
+export function normalizeArtifact(obj) {
+  const source = obj && typeof obj === 'object' && !Array.isArray(obj) ? obj : {};
+  const definitionOfDone = (Array.isArray(source.definitionOfDone) ? source.definitionOfDone : [])
+    .map((item) => (typeof item === 'string' ? item.trim() : item && typeof item.title === 'string' ? item.title.trim() : ''))
+    .filter(Boolean);
+  return {
+    title: typeof source.title === 'string' ? source.title.trim() : '',
+    deliverable: typeof source.deliverable === 'string' ? source.deliverable.trim() : '',
+    definitionOfDone,
+  };
+}
 
 /**
  * Build the system + messages for the syllabus generation call.
@@ -103,6 +131,7 @@ export function validateSyllabus(obj) {
       description: typeof obj.description === 'string' ? obj.description.trim() : '',
       kind,
       kindReason: typeof obj.kindReason === 'string' ? obj.kindReason.trim() : '',
+      artifact: normalizeArtifact(obj.artifact),
       lessons,
     },
   };

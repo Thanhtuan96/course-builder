@@ -23,4 +23,12 @@ describe('TutorPanel render smoke', () => {
     expect(html.toLowerCase()).not.toContain('reveal solution');
     expect(html.toLowerCase()).not.toContain('show answer');
   });
+
+  it('renders capstone mode with a concept-only notice and no hint affordances', () => {
+    const html = renderToString(createElement(TutorPanel, { lesson, course, capstone: true, capstoneBrief: '# Brief' }));
+    expect(html).toContain('Capstone mode');
+    expect(html.toLowerCase()).not.toContain('give me a hint');
+    expect(html.toLowerCase()).not.toContain('check my answer');
+    expect(html.toLowerCase()).not.toContain('reveal solution');
+  });
 });

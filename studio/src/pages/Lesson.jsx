@@ -4,7 +4,16 @@
  */
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Link, navigate } from '../lib/router.js';
-import { getCourse, updateLesson, saveReflection, logActivity, onChange } from '../lib/repo/index.js';
+import {
+  getCourse,
+  getCapstone,
+  getLatestCapstoneSubmission,
+  updateLesson,
+  saveReflection,
+  logActivity,
+  onChange,
+} from '../lib/repo/index.js';
+import { capstoneUnlocked } from '../lib/capstone.js';
 import { Badge } from '../components/ui/Badge.jsx';
 import { Button } from '../components/ui/Button.jsx';
 import { Card } from '../components/ui/Card.jsx';
@@ -73,6 +82,7 @@ export function Lesson({ id, lessonId }) {
   const [loaded, setLoaded] = useState(false);
   const [tab, setTab] = useState('practice');
   const [reflecting, setReflecting] = useState(false);
+  const [capstoneActive, setCapstoneActive] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -95,6 +105,26 @@ export function Lesson({ id, lessonId }) {
   useEffect(() => {
     if (lesson && lesson.status === 'todo') updateLesson(lesson.id, { status: 'active' });
   }, [lesson?.id, lesson?.status]);
+
+  // CAP-02: once the capstone is unlocked (all lessons done) and not yet completed, the tutor is
+  // in capstone mode course-wide — concept discussion only, no hints/code/answers.
+  useEffect(() => {
+    let alive = true;
+    if (!course || course.status === 'completed' || !capstoneUnlocked(course)) {
+      setCapstoneActive(false);
+      return () => {
+        alive = false;
+      };
+    }
+    (async () => {
+      const capstone = await getCapstone(course.id).catch(() => null);
+      const latest = capstone ? await getLatestCapstoneSubmission(capstone.id).catch(() => null) : null;
+      if (alive) setCapstoneActive(Boolean(capstone) && latest?.verdict !== 'course_complete');
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [course]);
 
   if (!loaded) return <p className="text-sm text-neutral-500">Loading…</p>;
   if (!course || !lesson) {
@@ -154,7 +184,7 @@ export function Lesson({ id, lessonId }) {
       </div>
 
       {tab === 'practice' && <LessonPractice lesson={lesson} course={course} />}
-      {tab === 'tutor' && <TutorPanel lesson={lesson} course={course} />}
+      {tab === 'tutor' && <TutorPanel lesson={lesson} course={course} capstone={capstoneActive} />}
       {tab === 'workspace' && course.kind === 'programming' && (
         <Suspense fallback={<p className="text-sm text-neutral-500">Loading workspace…</p>}>
           <CodeWorkspace lesson={lesson} course={course} />

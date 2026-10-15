@@ -100,6 +100,7 @@ export function Home() {
                   {course.title}
                 </Link>
                 <div className="flex shrink-0 items-center gap-1">
+                  {course.status === 'completed' && <Badge tone="success">🎓</Badge>}
                   <Badge tone="neutral">{course.level}</Badge>
                   {course.source === 'demo' && <Badge tone="accent">demo</Badge>}
                 </div>

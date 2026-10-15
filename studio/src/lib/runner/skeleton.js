@@ -8,6 +8,7 @@
  * the learner should land on the thing they are asked to do.
  */
 import { defaultEntry, guessCourseLanguage, languageForPath, normalizeLanguage } from './languages.js';
+import { isExerciseHeading } from '../prompts/lesson.js';
 
 /**
  * @typedef {{ path: string, content: string, language: string|null }} SeedFile
@@ -54,7 +55,7 @@ export function findExerciseSection(markdown) {
       }
       continue;
     }
-    if (/^exercise\b/i.test(match[2])) {
+    if (isExerciseHeading(match[2])) {
       start = match.index;
       level = match[1].length;
       bodyStart = match.index + match[0].length;

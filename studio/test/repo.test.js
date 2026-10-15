@@ -178,6 +178,63 @@ describe('repo: code workspace', () => {
   });
 });
 
+describe('repo: capstone (Phase 33)', () => {
+  it('createCapstone is immutable and decodes the JSON columns', async () => {
+    const course = await repo.createCourse({ title: 'Cap', kind: 'programming', lessons: [{ title: 'L' }] });
+    const created = await repo.createCapstone({
+      courseId: course.id,
+      kind: 'programming',
+      brief_md: 'ship it',
+      rubric: [{ name: 'Correctness', solid: 'works' }],
+      tests: { language: 'javascript', entry: 't.js', files: { 't.js': 'check("x", () => true)' } },
+      artifact: { title: 'App', deliverable: 'deploy', definitionOfDone: ['demo link'] },
+    });
+    expect(created.owner_id).toBe('local');
+    expect(created.rubric[0].name).toBe('Correctness');
+    expect(created.tests.entry).toBe('t.js');
+    expect(created.artifact.title).toBe('App');
+    expect(created.hiddenAnswers).toBeNull();
+
+    const again = await repo.createCapstone({ courseId: course.id, brief_md: 'OVERWRITE?' });
+    expect(again.id).toBe(created.id);
+    expect(again.brief_md).toBe('ship it');
+    expect(await repo.getCapstone(course.id)).toMatchObject({ id: created.id, brief_md: 'ship it' });
+  });
+
+  it('stores quantitative hidden answers without exposing them to the learner model', async () => {
+    const course = await repo.createCourse({ title: 'Stats', kind: 'quantitative', lessons: [{ title: 'L' }] });
+    const capstone = await repo.createCapstone({ courseId: course.id, kind: 'quantitative', brief_md: 'p', hiddenAnswers: ['42', '7'] });
+    expect(capstone.hiddenAnswers).toEqual(['42', '7']);
+  });
+
+  it('appends submissions with increasing attempts and supports idempotent external ids', async () => {
+    const course = await repo.createCourse({ title: 'Subs', lessons: [{ title: 'L' }] });
+    const capstone = await repo.createCapstone({ courseId: course.id, brief_md: 'p', rubric: [] });
+    const a = await repo.createCapstoneSubmission({ capstoneId: capstone.id, content_md: 'one' });
+    const b = await repo.createCapstoneSubmission({ capstoneId: capstone.id, content_md: 'two', verdict: 'needs_work' });
+    expect(a.attempt).toBe(1);
+    expect(b.attempt).toBe(2);
+
+    const imported = await repo.createCapstoneSubmission({ capstoneId: capstone.id, content_md: 'cli', externalId: 'cli:x:completion' });
+    const importedAgain = await repo.createCapstoneSubmission({ capstoneId: capstone.id, content_md: 'cli', externalId: 'cli:x:completion' });
+    expect(importedAgain.id).toBe(imported.id);
+
+    const list = await repo.listCapstoneSubmissions(capstone.id);
+    expect(list.map((s) => s.attempt)).toEqual([1, 2, 3]);
+    expect((await repo.getLatestCapstoneSubmission(capstone.id)).id).toBe(imported.id);
+  });
+
+  it('listCourseWorkspaceFiles aggregates every lesson file by path', async () => {
+    const course = await repo.createCourse({ title: 'WS', kind: 'programming', lessons: [{ title: 'L1' }, { title: 'L2' }] });
+    await repo.saveWorkspaceFile({ courseId: course.id, lessonId: course.lessons[0].id, path: 'main.js', content: 'a' });
+    await repo.saveWorkspaceFile({ courseId: course.id, lessonId: course.lessons[1].id, path: 'util.js', content: 'b' });
+    await repo.saveWorkspaceFile({ courseId: course.id, lessonId: course.lessons[1].id, path: 'main.js', content: 'c' });
+    const files = await repo.listCourseWorkspaceFiles(course.id);
+    expect(files.find((f) => f.path === 'main.js').content).toBe('c');
+    expect(files.map((f) => f.path).sort()).toEqual(['main.js', 'util.js']);
+  });
+});
+
 describe('repo: listCards', () => {
   it('lists cards soonest-due-first, scoped by course/lesson and excluding deleted', async () => {
     const a = await repo.createCourse({ title: 'A', lessons: [{ title: 'L1' }] });
