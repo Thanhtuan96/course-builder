@@ -4,7 +4,7 @@
  */
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
-import { findCourses, parseLecture, readCourse } from '../course-reader.js';
+import { findCourses, parseLecture, readCourse, resolveExercise } from '../course-reader.js';
 import { detectAgents } from './doctor.js';
 import { style } from '../registry-helpers.js';
 
@@ -44,19 +44,6 @@ export function resolveActiveCourse(courses, slug) {
   const pool = active.length ? active : courses;
   const byRecency = (a, b) => (b.lastActive || '').localeCompare(a.lastActive || '');
   return [...pool].sort(byRecency)[0] || null;
-}
-
-function deriveExercise(course) {
-  if (course.activeExercise) return course.activeExercise;
-  if (!course.currentSection) return null;
-  const n = String(course.currentSection.n).padStart(2, '0');
-  const slug = course.currentSection.title.toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-  const extByKind = {
-    programming: 'js', quantitative: 'md', conceptual: 'md', skill: 'md',
-  };
-  const ext = extByKind[course.kind] || 'md';
-  return `exercises/${n}-${slug}.${ext}`;
 }
 
 /**
@@ -116,9 +103,10 @@ export async function run({ args = [], cwd = process.cwd() } = {}) {
     console.log('');
   }
 
-  const exercise = deriveExercise(chosen);
-  if (exercise) {
-    console.log(`  🛠️  Exercise: ${exercise}`);
+  const exercise = resolveExercise(chosen, { lecture });
+  if (exercise.path) {
+    const pending = exercise.exists ? '' : '  (not created yet — run professor:next)';
+    console.log(`  🛠️  Exercise: ${exercise.path}${pending}`);
     if (lecture?.successCriteria?.length) {
       console.log('      Success criteria:');
       for (const criterion of lecture.successCriteria) console.log(`        - [ ] ${criterion}`);

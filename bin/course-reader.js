@@ -290,6 +290,15 @@ function firstParagraph(body) {
   return paragraph.length ? paragraph.join(' ') : null;
 }
 
+const EXERCISE_PATH_RE = /exercises\/[A-Za-z0-9._-]+\.[A-Za-z0-9]+/;
+
+/** Find the first `exercises/<file>.<ext>` path in a chunk of Markdown. */
+function findExercisePath(text) {
+  if (!text) return null;
+  const m = text.match(EXERCISE_PATH_RE);
+  return m ? m[0] : null;
+}
+
 /**
  * Parse the active LECTURE.md.
  * @param {string} content
@@ -326,7 +335,11 @@ export function parseLecture(content) {
     exerciseTask = quote ? stripMarkdown(quote.replace(/^\s*>\s*/, '')) : null;
   }
 
-  return { sectionNumber, title, objectives, explanation, successCriteria, exerciseTask };
+  const exercisePath = findExercisePath(exerciseBody) || findExercisePath(content);
+
+  return {
+    sectionNumber, title, objectives, explanation, successCriteria, exerciseTask, exercisePath,
+  };
 }
 
 // ─── LEARNING-LOG.md ──────────────────────────────────────────────────────────
@@ -391,6 +404,84 @@ export function parseSchedule(content) {
     cards.push({ front, due: normalizeDate(cells[header.dueIdx]) });
   }
   return cards;
+}
+
+// ─── Exercise resolution ──────────────────────────────────────────────────────
+
+const EXERCISE_EXT_BY_KIND = {
+  programming: 'js', quantitative: 'md', conceptual: 'md', skill: 'md',
+};
+
+/** Lowercase + hyphenate a section title into an ASCII-ish file slug. */
+export function slugify(text) {
+  return String(text || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/** Synthetic exercise path for the current section (`exercises/NN-slug.ext`). */
+function deriveExercisePath(course) {
+  if (!course.currentSection) return null;
+  const n = String(course.currentSection.n).padStart(2, '0');
+  const slug = slugify(course.currentSection.title);
+  const ext = EXERCISE_EXT_BY_KIND[course.kind] || 'md';
+  return `exercises/${n}-${slug}.${ext}`;
+}
+
+/** Newest `exercises/NN-*` file for the current section, if one exists on disk. */
+function newestSectionExercise(course) {
+  const exercisesDir = join(course.dir, 'exercises');
+  if (!existsSync(exercisesDir)) return null;
+  let files;
+  try {
+    files = readdirSync(exercisesDir).filter((f) => !f.startsWith('.'));
+  } catch { return null; }
+
+  if (!files.length) return null;
+  if (course.currentSection?.n) {
+    const prefix = String(course.currentSection.n).padStart(2, '0');
+    const matching = files.filter((f) => f.startsWith(`${prefix}-`));
+    if (matching.length) files = matching;
+  }
+
+  const latest = files.map((f) => {
+    try { return { f, m: statSync(join(exercisesDir, f)).mtimeMs }; } catch { return null; }
+  }).filter(Boolean).sort((a, b) => b.m - a.m)[0];
+
+  return latest ? `exercises/${latest.f}` : null;
+}
+
+/**
+ * Resolve one exercise path for a course. Shared by `next` and `check` so both
+ * always agree. Order:
+ *   1. the COURSE.md `**Active exercise**` field
+ *   2. an `exercises/<file>` path written in LECTURE.md
+ *   3. the newest `exercises/NN-*` file matching the current section number
+ *   4. a synthetic `exercises/NN-slug.ext` path (not yet on disk)
+ * @param {object} course readCourse output
+ * @param {{ lecture?: object|null }} [opts]
+ * @returns {{ path: string|null, source: string|null, exists: boolean }}
+ */
+export function resolveExercise(course, { lecture = null } = {}) {
+  const declared = [];
+  if (course.activeExercise) declared.push({ path: course.activeExercise, source: 'course' });
+  if (lecture?.exercisePath) declared.push({ path: lecture.exercisePath, source: 'lecture' });
+
+  for (const candidate of declared) {
+    if (existsSync(join(course.dir, candidate.path))) {
+      return { ...candidate, exists: true };
+    }
+  }
+
+  const matching = newestSectionExercise(course);
+  if (matching) return { path: matching, source: 'matching', exists: true };
+
+  if (declared.length) return { ...declared[0], exists: false };
+
+  const derived = deriveExercisePath(course);
+  if (derived) return { path: derived, source: 'derived', exists: false };
+  return { path: null, source: null, exists: false };
 }
 
 // ─── Course discovery ─────────────────────────────────────────────────────────

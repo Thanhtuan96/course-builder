@@ -1,7 +1,7 @@
 /**
  * @vitest-environment node
  */
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
@@ -9,7 +9,7 @@ import { tmpdir } from 'os';
 import { readCourse } from '../bin/course-reader.js';
 import { buildStatusReport } from '../bin/commands/status.js';
 import { resolveActiveCourse } from '../bin/commands/next.js';
-import { parseCheckOutput, resolveRunner } from '../bin/commands/check.js';
+import { parseCheckOutput, resolveRunner, run as runCheck } from '../bin/commands/check.js';
 import { evaluateNodeVersion, summarizeChecks, whichPath } from '../bin/commands/doctor.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -215,5 +215,37 @@ describe('check command discovery', () => {
     const dir = mkTemp();
     mkdirSync(join(dir, 'courses'), { recursive: true });
     expect(readCourse).toBeTypeOf('function');
+  });
+
+  it('reports a resolved-but-missing exercise clearly with exit code 1', async () => {
+    const dir = mkTemp();
+    mkdirSync(join(dir, 'learning', 'test-course'), { recursive: true });
+    writeFileSync(join(dir, 'learning', 'test-course', 'COURSE.md'), [
+      '# Test Course',
+      '**Kind**: programming',
+      '',
+      '## Sections',
+      '',
+      '| # | Section | Status |',
+      '|---|---------|--------|',
+      '| 1 | Intro | 🔄 In progress |',
+      '',
+      '**Active exercise**: exercises/09-missing.js',
+    ].join('\n'));
+
+    const logs = [];
+    const spy = vi.spyOn(console, 'log').mockImplementation((...a) => logs.push(a.join(' ')));
+    const prevExit = process.exitCode;
+    process.exitCode = 0;
+    try {
+      await runCheck({ args: [], cwd: dir });
+      expect(process.exitCode).toBe(1);
+    } finally {
+      spy.mockRestore();
+      process.exitCode = prevExit;
+    }
+    const output = logs.join('\n');
+    expect(output).toContain('Exercise not found: exercises/09-missing.js');
+    expect(output).toMatch(/Run professor:next to create it/);
   });
 });

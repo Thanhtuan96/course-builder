@@ -1,9 +1,11 @@
 /**
  * @vitest-environment node
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
+import { tmpdir } from 'os';
 import {
   computeStreak,
   extractDates,
@@ -14,11 +16,50 @@ import {
   parseSchedule,
   parseSections,
   readCourse,
+  resolveExercise,
   todayISO,
 } from '../bin/course-reader.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FIXTURES = join(__dirname, 'fixtures', 'courses');
+
+const tempDirs = [];
+afterEach(() => {
+  for (const dir of tempDirs) {
+    try { rmSync(dir, { recursive: true, force: true }); } catch {}
+  }
+  tempDirs.length = 0;
+});
+
+function mkTemp() {
+  const dir = mkdtempSync(join(tmpdir(), 'cp-reader-'));
+  tempDirs.push(dir);
+  return dir;
+}
+
+const BASE_COURSE = [
+  '# Test Course',
+  '**Kind**: programming',
+  '',
+  '## Sections',
+  '',
+  '| # | Section | Status |',
+  '|---|---------|--------|',
+  '| 1 | Intro | 🔄 In progress |',
+  '| 2 | Deep Dive | ⬜ Not started |',
+].join('\n');
+
+function writeCourse(files = {}) {
+  const dir = mkTemp();
+  writeFileSync(join(dir, 'COURSE.md'), files['COURSE.md'] || BASE_COURSE);
+  for (const [rel, content] of Object.entries(files)) {
+    if (rel === 'COURSE.md') continue;
+    const full = join(dir, rel);
+    mkdirSync(dirname(full), { recursive: true });
+    writeFileSync(full, content);
+  }
+  return dir;
+}
 
 // ─── findCourses ──────────────────────────────────────────────────────────────
 
@@ -204,8 +245,85 @@ describe('parseLecture', () => {
     expect(lecture.successCriteria).toEqual(['Criterion A', 'Criterion B']);
   });
 
+  it('extracts an exercise path written in the lecture', () => {
+    const withPath = `${md}\n> Work in exercises/01-second-steps.md\n`;
+    expect(parseLecture(withPath).exercisePath).toBe('exercises/01-second-steps.md');
+  });
+
+  it('returns an exercisePath only when a real file path is present', () => {
+    expect(parseLecture(md).exercisePath).toBeNull();
+  });
+
   it('returns null for empty input', () => {
     expect(parseLecture('')).toBeNull();
+  });
+});
+
+// ─── resolveExercise ──────────────────────────────────────────────────────────
+
+describe('resolveExercise', () => {
+  it('uses the COURSE.md Active exercise field when the file exists', () => {
+    const dir = writeCourse({
+      'COURSE.md': `${BASE_COURSE}\n\n**Active exercise**: exercises/01-intro.js\n`,
+      'exercises/01-intro.js': '// skeleton\n',
+    });
+    const course = readCourse(dir, { slug: 'test' });
+    expect(resolveExercise(course)).toEqual({
+      path: 'exercises/01-intro.js', source: 'course', exists: true,
+    });
+  });
+
+  it('uses the exercise path from LECTURE.md when COURSE.md has none', () => {
+    const dir = writeCourse({
+      'LECTURE.md': '# Section 1: Intro\n\n## 🛠️ Exercise\n> File: exercises/01-intro.js\n',
+      'exercises/01-intro.js': '// skeleton\n',
+    });
+    const course = readCourse(dir, { slug: 'test' });
+    const lecture = parseLecture('## 🛠️ Exercise\n> File: exercises/01-intro.js');
+    expect(resolveExercise(course, { lecture })).toEqual({
+      path: 'exercises/01-intro.js', source: 'lecture', exists: true,
+    });
+  });
+
+  it('falls back to the newest exercises/NN-* matching the current section', () => {
+    const dir = writeCourse({
+      'COURSE.md': `${BASE_COURSE}\n\n**Active exercise**: exercises/99-missing.js\n`,
+      'exercises/01-intro.js': '// older\n',
+      'exercises/01-other.js': '// newer\n',
+    });
+    const course = readCourse(dir, { slug: 'test' });
+    const resolved = resolveExercise(course);
+    expect(resolved.source).toBe('matching');
+    expect(resolved.exists).toBe(true);
+    expect(resolved.path).toMatch(/^exercises\/01-/);
+  });
+
+  it('returns the declared path with exists=false when nothing is on disk', () => {
+    const dir = writeCourse({
+      'COURSE.md': `${BASE_COURSE}\n\n**Active exercise**: exercises/09-missing.js\n`,
+    });
+    const course = readCourse(dir, { slug: 'test' });
+    expect(resolveExercise(course)).toEqual({
+      path: 'exercises/09-missing.js', source: 'course', exists: false,
+    });
+  });
+
+  it('derives a synthetic path when there is nothing declared', () => {
+    const dir = writeCourse();
+    const course = readCourse(dir, { slug: 'test' });
+    expect(resolveExercise(course)).toEqual({
+      path: 'exercises/01-intro.js', source: 'derived', exists: false,
+    });
+  });
+
+  it('resolves the same path for next and check on a real fixture', () => {
+    const course = readCourse(join(FIXTURES, 'flavour-table'), { slug: 'flavour-table' });
+    const lecture = parseLecture(
+      '## 🛠️ Exercise\n> Success criteria\n> - [ ] A\n'
+    );
+    const resolved = resolveExercise(course, { lecture });
+    expect(resolved.path).toBe('exercises/02-second-steps.md');
+    expect(resolved.exists).toBe(false);
   });
 });
 

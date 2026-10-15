@@ -2,11 +2,13 @@
  * `course-professor check [slug]` — run the active exercise's self-checks
  * with the right toolchain. Shows pass/fail per check, never solutions.
  */
-import { appendFileSync, existsSync, readFileSync, readdirSync, statSync } from 'fs';
+import { appendFileSync, existsSync, readFileSync, statSync } from 'fs';
 import { join, extname } from 'path';
 import { spawn } from 'child_process';
 import inquirer from 'inquirer';
-import { findCourses, readCourse, todayISO } from '../course-reader.js';
+import {
+  findCourses, parseLecture, readCourse, resolveExercise, todayISO,
+} from '../course-reader.js';
 import { resolveActiveCourse } from './next.js';
 import { style } from '../registry-helpers.js';
 
@@ -135,30 +137,6 @@ function whichPath(cmd) {
   return null;
 }
 
-function findExercise(course) {
-  const exercisesDir = join(course.dir, 'exercises');
-  if (course.activeExercise) {
-    const active = join(course.dir, course.activeExercise);
-    if (existsSync(active)) return active;
-  }
-  if (!existsSync(exercisesDir)) return null;
-  let files;
-  try {
-    files = readdirSync(exercisesDir).filter((f) => !f.startsWith('.'));
-  } catch { return null; }
-
-  if (course.currentSection?.n) {
-    const prefix = String(course.currentSection.n).padStart(2, '0');
-    const match = files.find((f) => f.startsWith(`${prefix}-`));
-    if (match) return join(exercisesDir, match);
-  }
-
-  const latest = files.map((f) => {
-    try { return { f, m: statSync(join(exercisesDir, f)).mtimeMs }; } catch { return null; }
-  }).filter(Boolean).sort((a, b) => b.m - a.m)[0];
-  return latest ? join(exercisesDir, latest.f) : null;
-}
-
 function checklistFrom(filePath, lecture) {
   if (filePath && existsSync(filePath)) {
     const text = readFileSync(filePath, 'utf-8');
@@ -248,23 +226,30 @@ export async function run({ args = [], cwd = process.cwd() } = {}) {
     return;
   }
 
-  const exerciseFile = findExercise(course);
-  if (!exerciseFile) {
+  const lecturePath = join(course.dir, 'LECTURE.md');
+  const lecture = existsSync(lecturePath) ? parseLecture(readFileSync(lecturePath, 'utf-8')) : null;
+
+  const exercise = resolveExercise(course, { lecture });
+  if (!exercise.path) {
     const hint = `No active exercise for "${course.slug}". Run professor:next first.`;
     console.log(style('info', hint));
     process.exitCode = 1;
     return;
   }
+  if (!exercise.exists) {
+    console.log('');
+    console.log(style('error', `Exercise not found: ${exercise.path}`));
+    console.log(`    Expected at: ${join(course.dir, exercise.path)}`);
+    console.log('    Run professor:next to create it.');
+    console.log('');
+    process.exitCode = 1;
+    return;
+  }
 
-  const lecturePath = join(course.dir, 'LECTURE.md');
-  const { parseLecture } = await import('../course-reader.js');
-  const lecture = existsSync(lecturePath) ? parseLecture(readFileSync(lecturePath, 'utf-8')) : null;
-
+  const exerciseFile = join(course.dir, exercise.path);
   const runner = resolveRunner(exerciseFile);
-  const inCourse = exerciseFile.startsWith(course.dir);
-  const rel = inCourse ? exerciseFile.slice(course.dir.length + 1) : exerciseFile;
   console.log('');
-  console.log(style('info', `Check: ${course.slug} → ${rel}`));
+  console.log(style('info', `Check: ${course.slug} → ${exercise.path}`));
 
   if (runner.kind === 'rubric') {
     await runRubric({ course, exerciseFile, lecture });
