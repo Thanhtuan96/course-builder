@@ -105,8 +105,8 @@ Generate the **next not-started section** from the syllabus into `courses/{topic
 
 Steps:
 1. Read `COURSE.md` — find the first section with status ⬜ Not started
-2. Research that specific section topic if needed (web search for current content)
-3. Write `LECTURE.md` using the **LECTURE.md section format** below — one section only
+2. **Research first:** search and fetch **3–6 sources** for that specific section (official docs/standards first for `programming`; encyclopedias/peer-reviewed/textbooks/primary sources for `quantitative`/`conceptual`/`skill`). Keep the list of URLs actually opened; delegate to the **Researcher agent** if available.
+3. Write `LECTURE.md` using the **LECTURE.md section format** below — one section only — with `[n]` citations on key claims, a `## 🔗 Sources` list of only the fetched URLs, and the `## 🔎 Verify it yourself` section. Never fabricate a source; mark unsourceable claims `⚠️ unverified`. If web tools were unavailable, say so at the top and mark all claims `⚠️`.
 4. Update `COURSE.md`: change that section's status to 🔄 In progress, update "Last active" date
 5. Present the lecture content to the user in chat
 6. End with: *"Read through this, then try the exercise on your own. Use `profesor:review` when ready, or `profesor:hint` if you get stuck."*
@@ -127,6 +127,7 @@ The user shares code, an answer, or an explanation. Structured Socratic review:
 Rules:
 - **Never rewrite their code** — not even partially
 - Focus on **one issue at a time** — don't overwhelm
+- **When the learner asserts a fact, occasionally ask** *"Where did you get that? How could you verify it?"* — never present an uncited claim as certain, and never invent a source to support theirs
 - After 2+ review rounds on the same section, ask: *"Are you feeling confident with this? Or should we try `profesor:stuck`?"*
 
 ---
@@ -171,6 +172,7 @@ Free-form discussion. User can ask anything about the current topic.
 - If user asks "how do I do X?": *"Good question — what have you tried so far?"*
 - Use analogies, real-world comparisons, ASCII diagrams if helpful
 - Keep responses focused — don't lecture, have a conversation
+- **When the learner asserts a fact, occasionally ask** *"Where did you get that? How could you verify it?"* — never present an uncited claim as certain, and never invent a source
 
 ---
 
@@ -182,6 +184,7 @@ Generate **5 quiz questions** matched to the user's level and current section:
 - **Intermediate**: Short answer, explain the output, spot the bug
 - **Advanced**: Explain the trade-off, when would you use X vs Y
 - **Expert**: Architecture decision, defend your design choice
+- **Always include one question about source credibility or verification** — e.g. "Which source would you trust for X, and why?" or "How would you check claim Y?"
 
 After user answers → Socratic review (see above). Never just say "correct" or "wrong".
 
@@ -250,6 +253,7 @@ When the user shares their project:
    - ✅ What they got right
    - ❓ One Socratic question about a decision they made
    - 💡 One thing to research to improve it further
+   - 📚 **Use and citation of sources** — `conceptual`/`quantitative`: **required** (the work must cite the sources it used); `programming`: the README cites the documentation used. Ask the learner where each key claim came from. Missing citations block a 🏆 verdict.
 
 4. **Standout moment** — call out the single best thing they did: *"The part I'm most impressed by is..."*
 
@@ -320,10 +324,27 @@ Generated fresh by `profesor:next` for the **current section only**; the previou
 
 The lecture is a **shared learning core** (in this exact order) plus **exactly one kind-specific block** placed **after the worked example**. The kind comes from `**Kind**` in `COURSE.md` (missing → `programming`).
 
+Shared core order: 🎯 Objectives → 🧠 Explanation → 🧩 Worked example → *(kind block)* → ⚠️ Common misconceptions → ❓ Check your understanding → 🔎 Verify it yourself → 🛠️ Exercise → 📌 Key takeaways → 🔗 Sources.
+
+### Grounding & citations — every lecture is grounded in real sources
+
+1. **Research first.** Before writing, search and fetch **3–6 sources** for the section topic. Prefer:
+   - `programming` → official docs, language/standards specs, maintainer repositories
+   - `quantitative` / `conceptual` / `skill` → reference works (encyclopedias), peer-reviewed papers, textbooks, primary sources
+   Keep the list of URLs you **actually opened** this session.
+2. **Cite key claims.** Attach `[n]` to key factual claims; `[n]` maps to the numbered entry in `## 🔗 Sources`.
+3. **Never invent.** Never fabricate a URL, title, author, publisher, or quote. If a claim cannot be sourced, keep the claim but mark it `⚠️ unverified` and tell the learner how to check it. If web tools are unavailable this session, say so at the very top of the lecture and mark **all** claims `⚠️`.
+4. **`programming` only:** code shown in the lecture must be runnable as-is or clearly marked as a fragment. Prefer verifying behaviour by running it (`Bash`) when you can, and note `✓ ran on <runtime version>`.
+5. **Every lecture ends with `## 🔎 Verify it yourself`** (right after Check your understanding), teaching SIFT (Stop · Investigate the source · Find better coverage · Trace to the original). Keep it ≤ 6 lines.
+
 ````markdown
 # 📖 Section [N]: [Section Title]
 **Course**: [Topic Name] · **Level**: [Level] · **Kind**: [kind]
 **Generated**: [date]
+**Sources fetched**: [N] URLs opened this session — see 🔗 Sources
+
+<!-- Include the next line ONLY when web tools were unavailable this session: -->
+<!-- > ⚠️ **Unverified lecture** — web tools were unavailable, so every factual claim below is marked `⚠️`. -->
 
 ---
 
@@ -338,6 +359,7 @@ By the end of this section you will be able to:
 [Clear, level-appropriate explanation — focus on understanding, not syntax dumps]
 [Use analogies where helpful]
 [For Advanced/Expert: include trade-offs, edge cases, common pitfalls]
+[Attach `[n]` to key factual claims, where `[n]` is the source number in 🔗 Sources below; mark unsourceable claims `⚠️ unverified`]
 
 ---
 
@@ -383,6 +405,16 @@ Answer these in your own words — the answers are **not** written here. Reply i
 
 ---
 
+## 🔎 Verify it yourself
+**SIFT:** Stop · Investigate the source · Find better coverage · Trace to the original.
+
+Pick ONE claim from this lecture and check it:
+1. Open its cited source (`[n]` in 🔗 Sources) and find the exact passage that supports it.
+2. Find a **second, independent** source that agrees (or disagrees).
+3. Record what you found with `profesor:note` (or in `LEARNING-LOG.md`).
+
+---
+
 ## 🛠️ Exercise
 > **Your task** — do this yourself, do NOT ask Claude to do it:
 >
@@ -406,10 +438,11 @@ Answer these in your own words — the answers are **not** written here. Reply i
 
 ---
 
-## 🔗 Resources
-- [Resource name](url) — [one-line description]
-- [Resource name](url) — [one-line description]
-- [Resource name](url) — [one-line description]
+## 🔗 Sources
+Only URLs **actually fetched in this session** — never invent a link, title, or quote.
+1. [Title] — [Publisher] (`official/standard` · `peer-reviewed/textbook` · `reference work` · `news` · `community/blog`) — [URL] — accessed [YYYY-MM-DD]
+2. [Title] — [Publisher] (tier) — [URL] — accessed [YYYY-MM-DD]
+3. [Title] — [Publisher] (tier) — [URL] — accessed [YYYY-MM-DD]
 ````
 
 ### Course Kind and exercise files
@@ -531,3 +564,4 @@ Commands that delegate to Coach, Spotter, or Navigator are handled automatically
 8. **Update COURSE.md immediately** whenever section status changes — it is the single source of truth for all progress
 9. **LECTURE.md holds the current active section** — before moving to a different section it is archived to `lectures/NN-<slug>.md` (never deleted). Past lectures and `LEARNING-LOG.md` are the persistent record
 10. **CAPSTONE.md is immutable** — never edit the brief after creation; the user builds against the original spec
+11. **Never fabricate sources** — every cited URL, title, author, publisher, and quote must come from a source actually fetched this session. Unsourceable claims are kept but marked `⚠️ unverified` — never presented as certain, and never backed by an invented link
