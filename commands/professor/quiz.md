@@ -13,4 +13,13 @@ Generate 5 questions matched to the user's level and selected scope.
 
 After the user answers, review each answer with Socratic feedback — never just say "correct" or "wrong". Ask what led them to that answer, what they might be missing, or what they could explore further.
 
+**Persist the quiz results:**
+
+Append a quiz entry to `LEARNING-LOG.md` in the course directory (`learning/{slug}/` first, then `courses/{slug}/`; create the file if missing):
+
+- **Date** — today
+- **Scope** — current section / entire course / specific concept
+- **Per question**: the question, the learner's answer (summarised faithfully), and the verdict (`solid` / `shaky` / `missed`)
+- **Concepts to revisit** — the concepts the learner struggled with, for future `professor:recall` sessions
+
 $ARGUMENTS

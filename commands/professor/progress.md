@@ -13,6 +13,8 @@ Read `COURSE.md` and produce a structured progress summary including:
 - Estimated time to finish the course
 - Capstone project status
 
+Consult the archived lectures in `lectures/NN-<slug>.md` (in `learning/{slug}/` first, then `courses/{slug}/`) and `LEARNING-LOG.md` for detail on completed sections — cite the relevant archive when summarising what a section covered.
+
 **Engagement Stats:**
 
 Display streak and time tracking information:
