@@ -181,6 +181,32 @@ for the cloud/SaaS plan.
 
 ---
 
+## Capstone: ship your artifact
+
+Every course names **one real deliverable** — its artifact — with an explicit **Definition of Done**,
+shown as **“Your artifact”** on the New-course screen (editable before you start) and on the Course
+page. A capstone brief, a 4–6 criterion **rubric** and the kind-shaped extras are generated once at
+course creation and stored **immutably** (`capstones`), so you always build against the original spec.
+
+- **Unlock (CAP-02):** the Course page shows a 🔒 Capstone card with lesson progress. It unlocks only
+  when **every lesson is done**, then **Start capstone** opens `#/course/:id/capstone`.
+- **Capstone mode:** on the capstone page the tutor switches to *concept discussion only*. It refuses
+  hints, step lists, code and answers — the artifact is your solo build.
+- **Submissions (CAP-03):** submit text/markdown, an optional repo link, and (for programming) a
+  snapshot of your **Workspace files**. Attempts are unlimited and **never overwritten** — every
+  attempt and its review is kept (`capstone_submissions`).
+- **Review (CAP-04):** programming submissions first run the capstone's own self-check tests through
+  the code runner (pass/fail per check); a failing test caps the verdict at **Needs work**. The review
+  gives a verdict (**Course Complete** / **Needs work**), per-criterion feedback and one next action —
+  never a rewritten solution.
+- **Completion (CAP-05):** a **Course Complete** verdict shows the completion page and an
+  **Export COMPLETION.md** button (plugin-compatible, with the artifact so it is portfolio-ready). The
+  course list shows a 🎓 badge. `course-professor import` brings CLI `CAPSTONE.md` and `COMPLETION.md`
+  into Studio (idempotent via `external_id`).
+
+Built-in demo: the bundled “How to learn anything” course ships a conceptual capstone and its artifact
+with **no provider needed** — finish the four lessons to unlock it.
+
 ## Scripts
 
 ```bash
@@ -207,6 +233,7 @@ studio/
 ├── src/lib/repo/            # storage layer: idb / memory / remote adapters + schema mirror
 ├── src/lib/ai/              # provider adapters (anthropic, openai, ollama, bridge) + SSE
 ├── src/components/data/     # backup / restore / COURSE.md export (Settings)
+├── src/components/capstone/ # capstone card, rubric, submission form, review + completion panels
 ├── docs/DEPLOY.md           # deploy steps
 └── docs/SAAS-ROADMAP.md     # Cloudflare/D1 SaaS plan
 web/
