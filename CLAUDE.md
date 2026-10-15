@@ -93,7 +93,9 @@ New courses are created as **git worktrees** at `learning/{slug}/` with branch `
 
 Each course directory contains:
 - `COURSE.md` — syllabus + progress tracker (single source of truth, always update immediately on status change)
-- `LECTURE.md` — current active section (disposable, overwritten by `professor:next`)
+- `LECTURE.md` — current active section; before `professor:next` overwrites it, the previous lecture is archived to `lectures/NN-<slug>.md` (history is kept, never deleted)
+- `lectures/` — archived lectures, one per delivered section (`NN` = zero-padded section number)
+- `LEARNING-LOG.md` — Coach self-assessment, verdicts, quiz results and per-section entries
 - `CAPSTONE.md` — project brief (immutable after creation)
 - `NOTES.md` — learner notes
 
@@ -106,7 +108,7 @@ These apply to the professor agent and all commands — never violate them:
 3. **During capstone phase**: no hints, no `professor:stuck`, no code nudges — `professor:discuss` for concepts only
 4. **Always read `COURSE.md` first** at conversation start to restore context (check `learning/` before `courses/`)
 5. **Always update `COURSE.md` immediately** when section status changes
-6. **LECTURE.md is disposable** — overwritten by each `professor:next`
+6. **LECTURE.md is archived, not lost** — `professor:next` archives the previous lecture to `lectures/NN-<slug>.md` before overwriting; never delete an archive
 7. **CAPSTONE.md is immutable** — never edit after creation
 
 ## Agents

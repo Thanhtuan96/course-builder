@@ -66,9 +66,11 @@
 
 ---
 
-## Archive previous LECTURE.md before `profesor:next` overwrites it
+## ✅ Archive previous LECTURE.md before `professor:next` overwrites it (Phase 27)
 
-**What:** Before the server writes a new `LECTURE.md` during `profesor:next`, rename/move the previous content to an archive location (e.g. `courses/{slug}/lectures/LECTURE-01-section-name.md`). Keep the last 3–5 archives; delete older ones automatically.
+**Status:** ✅ Done — implemented in Phase 27 (v3.0). The "keep last 3–5" cap was rejected; full history is retained.
+
+**What:** Before the server writes a new `LECTURE.md` during `professor:next`, move the previous content to an archive location (`learning/{slug}/lectures/NN-<section-slug>.md`, or the legacy `courses/{slug}/lectures/`). Archives are never deleted — learners get the full lecture history.
 
 **Why:** The skill states `LECTURE.md is disposable — overwritten by each profesor:next`, but this means completed lecture content is silently lost. Learners often want to revisit earlier sections for review. Archive gives them that without complicating the core syllabus tracker.
 
