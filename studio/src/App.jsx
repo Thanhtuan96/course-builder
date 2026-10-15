@@ -1,19 +1,23 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useRoute } from './lib/router.js';
 import { useSettings } from './lib/settings.js';
 import { initAdapter } from './lib/repo/select-adapter.js';
 import { seedDemoCourse } from './data/demo-course.js';
 import { Layout } from './components/Layout.jsx';
 import { Onboarding } from './components/Onboarding.jsx';
-import { Home } from './pages/Home.jsx';
-import { NewCourse } from './pages/NewCourse.jsx';
-import { Course } from './pages/Course.jsx';
-import { Lesson } from './pages/Lesson.jsx';
-import { Review } from './pages/Review.jsx';
-import { Settings } from './pages/Settings.jsx';
 import { EmptyState } from './components/ui/EmptyState.jsx';
 import { Link } from './lib/router.js';
 import { Button } from './components/ui/Button.jsx';
+
+// Route pages are code-split so the first paint only ships Home + the shell (brief §10 budget:
+// main chunk < 150 KB gzip). CodeMirror, the runner, markdown/katex and Settings' DataPanel all
+// stay out of the entry chunk until their route is opened.
+const Home = lazy(() => import('./pages/Home.jsx').then((m) => ({ default: m.Home })));
+const NewCourse = lazy(() => import('./pages/NewCourse.jsx').then((m) => ({ default: m.NewCourse })));
+const Course = lazy(() => import('./pages/Course.jsx').then((m) => ({ default: m.Course })));
+const Lesson = lazy(() => import('./pages/Lesson.jsx').then((m) => ({ default: m.Lesson })));
+const Review = lazy(() => import('./pages/Review.jsx').then((m) => ({ default: m.Review })));
+const Settings = lazy(() => import('./pages/Settings.jsx').then((m) => ({ default: m.Settings })));
 
 function NotFound() {
   return (
@@ -81,5 +85,13 @@ export default function App() {
 
   if (!settings.onboardingDone) return <Onboarding />;
 
-  return <Layout>{renderRoute(route)}</Layout>;
+  return (
+    <Layout>
+      <Suspense
+        fallback={<div className="grid min-h-full place-items-center text-sm text-neutral-500">Loading…</div>}
+      >
+        {renderRoute(route)}
+      </Suspense>
+    </Layout>
+  );
 }

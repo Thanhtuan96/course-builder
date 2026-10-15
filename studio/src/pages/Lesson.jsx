@@ -2,7 +2,7 @@
  * Lesson page (final). Layout: breadcrumb + status, lesson content, Practice/Tutor tabs, and a
  * "Mark done" reflection dialog.
  */
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Link, navigate } from '../lib/router.js';
 import { getCourse, updateLesson, saveReflection, logActivity, onChange } from '../lib/repo/index.js';
 import { Badge } from '../components/ui/Badge.jsx';
@@ -13,7 +13,12 @@ import { EmptyState } from '../components/ui/EmptyState.jsx';
 import { LessonContent } from '../components/course/LessonContent.jsx';
 import { LessonPractice } from '../components/practice/LessonPractice.jsx';
 import { TutorPanel } from '../components/tutor/TutorPanel.jsx';
-import { CodeWorkspace } from '../components/workspace/CodeWorkspace.jsx';
+
+// CodeMirror, the language grammars and sql.js are heavy — only load the workspace for a
+// programming course, and only when its tab is opened (brief §10, keeps the main chunk small).
+const CodeWorkspace = lazy(() =>
+  import('../components/workspace/CodeWorkspace.jsx').then((m) => ({ default: m.CodeWorkspace }))
+);
 
 const STATUS_TONE = { done: 'success', active: 'accent', todo: 'neutral' };
 
@@ -150,7 +155,11 @@ export function Lesson({ id, lessonId }) {
 
       {tab === 'practice' && <LessonPractice lesson={lesson} course={course} />}
       {tab === 'tutor' && <TutorPanel lesson={lesson} course={course} />}
-      {tab === 'workspace' && course.kind === 'programming' && <CodeWorkspace lesson={lesson} course={course} />}
+      {tab === 'workspace' && course.kind === 'programming' && (
+        <Suspense fallback={<p className="text-sm text-neutral-500">Loading workspace…</p>}>
+          <CodeWorkspace lesson={lesson} course={course} />
+        </Suspense>
+      )}
 
       {reflecting && (
         <ReflectionDialog
