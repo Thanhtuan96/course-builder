@@ -5,6 +5,7 @@ import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { spawn, execSync } from 'child_process';
+import { archiveLecture } from './lecture-archive.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -112,6 +113,14 @@ function saveCourseFile(slug, file, content) {
   }
   
   try {
+    // Archive the existing lecture, but only when moving to a different section
+    // (in-place edits of the active lecture must not create duplicates).
+    if (sanitizedFile === 'LECTURE.md' && existsSync(filePath)) {
+      const result = archiveLecture(courseDir, content);
+      if (result.archived) {
+        console.log(`🗂️  Archived previous lecture → courses/${slug}/${result.path}`);
+      }
+    }
     writeFileSync(filePath, content, 'utf-8');
     return { success: true };
   } catch (e) {

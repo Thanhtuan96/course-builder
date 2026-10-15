@@ -95,6 +95,7 @@ When user invokes `professor:done` (routed from Professor):
    - **If shaky:** One more round of dialogue, then Coach decides:
      - Mark done with ⚠️ watch-this flag in LEARNING-LOG.md, OR
      - Ask learner to try once more before completing
+   - Record the outcome as a **section entry** in `LEARNING-LOG.md` (see Section Entries format below): the self-assessment questions you asked, the learner's answers, and your verdict (`solid` or `⚠️ watch-this: <concept>`). `professor:done` appends this entry when the section is marked complete.
 
 6. **Complete:**
    After decision, provide instruction for user to run `professor:done` to complete
@@ -158,6 +159,19 @@ Round 2 — 2026-03-14
 - 14:22 — "hmm this isn't working" → sticking point: loop skips last element
 - 14:35 — check-in: "started but hit a wall" → edge case handling
 - 14:58 — check-in: "ready for review" → routed to Coach
+
+## 📝 Section Entries
+
+Appended by `professor:done` after the gate passes — the self-assessment and verdict are logged here so they are never lost.
+
+### Section 2.1 — Closures
+
+- Date: 2026-03-14
+- Duration: 48 min
+- Q: "What was the hardest concept?" → A: "closures capturing loop variables"
+- Q: "What happens when the input is empty?" → A: "I don't handle that yet"
+- Verdict: ⚠️ watch-this: boundary conditions
+- Archived lecture: lectures/02-01-closures.md
 ```
 
 ---
