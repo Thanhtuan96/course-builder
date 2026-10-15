@@ -13,6 +13,7 @@ export const ERROR_CODES = [
   'bad_json',
   'not_running',
   'aborted',
+  'server',
   'unknown',
 ];
 
@@ -28,6 +29,7 @@ export const ERROR_HINTS = {
   bad_json: 'The model did not return valid JSON. Try again, or use a larger model.',
   not_running: 'The local server is not reachable. Start it and try again.',
   aborted: 'Stopped.',
+  server: 'The local agent failed while running. Check its terminal output, then try again.',
   unknown: 'Something went wrong talking to the provider.',
 };
 
