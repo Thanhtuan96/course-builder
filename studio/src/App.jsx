@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRoute } from './lib/router.js';
 import { useSettings } from './lib/settings.js';
+import { initAdapter } from './lib/repo/select-adapter.js';
 import { seedDemoCourse } from './data/demo-course.js';
 import { Layout } from './components/Layout.jsx';
 import { Onboarding } from './components/Onboarding.jsx';
@@ -54,9 +55,21 @@ export default function App() {
 
   useEffect(() => {
     let alive = true;
-    seedDemoCourse()
-      .catch(() => {})
-      .finally(() => alive && setReady(true));
+    // Probe the local bridge once at startup so Studio uses SQLite when it is configured;
+    // `initAdapter` falls back to IndexedDB on its own when the probe fails (HANDOFF-26 §1).
+    (async () => {
+      try {
+        await initAdapter();
+      } catch {
+        /* falls back to IndexedDB */
+      }
+      try {
+        await seedDemoCourse();
+      } catch {
+        /* ignore seeding failures — the app still loads */
+      }
+      if (alive) setReady(true);
+    })();
     return () => {
       alive = false;
     };
