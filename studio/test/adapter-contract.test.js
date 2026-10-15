@@ -95,7 +95,7 @@ export function runAdapterContract(makeAdapter) {
 
     it('info reports a kind and persistent flag', async () => {
       const info = await adapter.info();
-      expect(info.kind).toBe(label === 'memory' ? 'memory' : 'indexeddb');
+      expect(info.kind).toBe(makeAdapter.kind || (label === 'memory' ? 'memory' : 'indexeddb'));
       expect(typeof info.persistent).toBe('boolean');
     });
   });

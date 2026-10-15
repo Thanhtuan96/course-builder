@@ -6,6 +6,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { spawn, execSync } from 'child_process';
 import { archiveLecture } from './lecture-archive.js';
+import studioRouter from './studio-api.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -21,6 +22,7 @@ const app = express();
 const server = createServer(app);
 
 // Middleware
+app.use('/api/studio', studioRouter);
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
