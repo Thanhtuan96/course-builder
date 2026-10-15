@@ -1,0 +1,5 @@
+{"type":"system","subtype":"init","session_id":"c1","model":"gpt-5"}
+{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"hi"}},"session_id":"c1"}
+{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":" there"}},"session_id":"c1"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"hi there"}]},"session_id":"c1"}
+{"type":"result","subtype":"success","result":"hi there","is_error":false}
