@@ -4,6 +4,7 @@ import {
   baseRehypePlugins,
   isMermaidClassName,
   hasMath,
+  sanitizeMermaid,
 } from '../src/lib/markdown.js';
 import { LEARNING_CORE_SECTIONS, PROFESSOR_PERSONA, wrapUntrusted, withLanguage, buildSystemPrompt } from '../src/lib/prompts/base.js';
 
@@ -29,6 +30,34 @@ describe('markdown pipeline config', () => {
     expect(isMermaidClassName('foo language-mermaid bar')).toBe(true);
     expect(isMermaidClassName('language-js')).toBe(false);
     expect(isMermaidClassName('')).toBe(false);
+  });
+});
+
+describe('sanitizeMermaid', () => {
+  const BLOCK = [
+    'flowchart TD',
+    '    A[French conquest 1884\\nIndochinese Union 1887] --> B[Colonial exploitation\\ntaxes, monopolies, plantations]',
+    '    B --> C[Hardship for peasants\\nnew social groups appear]',
+    '    A --> D[Cần Vương fails\\nold methods no longer work]',
+    '    C --> E[New patriotic ideas]',
+    '    D --> E',
+    '    E --> F[Phan Bội Châu\\nĐông Du\\narmed struggle + foreign help]',
+  ].join('\n');
+
+  it('converts literal \\n in labels to <br/> and quotes the affected labels', () => {
+    const out = sanitizeMermaid(BLOCK);
+    expect(out).not.toContain('\\n');
+    expect(out).toContain('A["French conquest 1884<br/>Indochinese Union 1887"]');
+    expect(out).toContain('B["Colonial exploitation<br/>taxes, monopolies, plantations"]');
+    expect(out).toContain('F["Phan Bội Châu<br/>Đông Du<br/>armed struggle + foreign help"]');
+    // Labels without a break are left alone.
+    expect(out).toContain('C --> E[New patriotic ideas]');
+  });
+
+  it('is idempotent and leaves already-quoted labels untouched', () => {
+    const once = sanitizeMermaid(BLOCK);
+    expect(sanitizeMermaid(once)).toBe(once);
+    expect(sanitizeMermaid('A["a<br/>b"] --> B[c]')).toBe('A["a<br/>b"] --> B[c]');
   });
 });
 
