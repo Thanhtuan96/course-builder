@@ -2,7 +2,7 @@
  * @vitest-environment node
  */
 import { describe, it, expect, afterEach } from 'vitest';
-import { cpSync, mkdirSync, mkdtempSync, rmSync } from 'fs';
+import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { tmpdir } from 'os';
@@ -55,6 +55,34 @@ describe('planCourseImport', () => {
     expect(plan.cards[1].due_at).toBe('2026-11-01T00:00:00.000Z');
     expect(plan.logs).toHaveLength(1);
     expect(plan.logs[0]).toMatchObject({ kind: 'reflection', lessonId: 'cli-lesson-flavour-table-1' });
+  });
+});
+
+describe('planCourseImport log mapping', () => {
+  it('routes scored entries to quiz attempts, matched sections to reflections, and the rest to notes', () => {
+    const dir = mkTemp();
+    writeFileSync(join(dir, 'COURSE.md'), '# Course: Synthetic\n**Goal**: Ship something real\n');
+    const course = {
+      slug: 'synthetic',
+      dir,
+      title: 'Synthetic',
+      level: 'Beginner',
+      kind: 'programming',
+      sections: [{ n: '1', title: 'Alpha', status: 'done', completedAt: '2026-10-01' }],
+      currentSection: { n: '1', title: 'Alpha', status: 'done' },
+      cards: [],
+      log: [
+        { date: '2026-10-02', section: 'Alpha', verdict: 'scored 4/5' },
+        { date: '2026-10-03', section: 'Section 1 — Alpha', verdict: 'solid' },
+        { date: '2026-10-04', section: 'Unknown topic', verdict: 'reviewed' },
+      ],
+    };
+    const plan = planCourseImport(course);
+    expect(plan.course.goal).toBe('Ship something real');
+    expect(plan.logs.map((l) => l.kind)).toEqual(['quiz', 'reflection', 'note']);
+    expect(plan.logs[0]).toMatchObject({ score: 4, total: 5, lessonId: 'cli-lesson-synthetic-1' });
+    expect(plan.logs[1].lessonId).toBe('cli-lesson-synthetic-1');
+    expect(plan.logs[2].lessonId).toBeNull();
   });
 });
 
