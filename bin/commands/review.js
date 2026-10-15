@@ -8,7 +8,7 @@
  * TTY: front → Space/Enter flips → 1 again · 2 hard · 3 good · 4 easy · q to quit, with a summary.
  * Non-TTY: prints the due count and exits (safe for scripts/CI).
  */
-import { installStudioStore } from '../studio-store.js';
+import { requireStudioNode } from '../node-version.js';
 import { useAdapter, listDueCards, gradeCard, logActivity } from '../../studio/src/lib/repo/index.js';
 
 export const DEFAULT_LIMIT = 20;
@@ -61,11 +61,14 @@ export function emptyStateMessage(due) {
  * @param {number} [ctx.now]
  */
 export async function run(ctx = {}) {
+  requireStudioNode(ctx.nodeVersion);
   const { args = [], chalk, style = (t, m) => m, tty, now = Date.now() } = ctx;
   const { limit } = parseReviewArgs(args);
 
   const ownStore = !ctx.store;
-  const store = ctx.store || (await installStudioStore());
+  // `studio-store` (→ `web/studio-db.js`) imports `node:sqlite`, which only exists on Node 22.5+.
+  // Import it lazily so the version guard above runs first and prints a helpful message.
+  const store = ctx.store || (await (await import('../studio-store.js')).installStudioStore());
   useAdapter(store);
   const interactive = tty ?? Boolean(process.stdin.isTTY && process.stdout.isTTY);
 

@@ -22,7 +22,8 @@ Most AI coding assistants will write code for you the moment you ask. Professor 
 ## Requirements
 
 - **AI agent** — Claude Code, Gemini CLI, OpenCode, or Cursor.
-- **Node.js** — required for hook scripts (Node.js 18 or newer recommended).
+- **Node.js** — **18+** for setup and the registry commands; **22.5+** for Professor Studio, `review`
+  and `import` (they use the built-in `node:sqlite` module). Check with `npx course-professor doctor`.
 - **Git** — required for git worktree-based courses.
 - **Notion or Obsidian** — only needed if you want to use the `professor:export` command. See setup sections below.
 
@@ -44,6 +45,28 @@ npx course-professor setup cursor    # Cursor
 npx course-professor setup opencode  # OpenCode
 npx course-professor setup gemini    # Gemini CLI
 ```
+
+To try the **Professor Studio beta** (v1.6, published on the `next` dist-tag):
+
+```bash
+npx course-professor@next studio     # starts the local server + Studio and pairs them
+```
+
+Studio needs **Node 22.5+**. `npx` always runs the latest published version, so no install step is
+required — see [Upgrade & uninstall](#upgrade--uninstall) to manage a global install instead.
+
+### Upgrade & uninstall
+
+```bash
+npx course-professor@latest --version   # run the newest stable without installing
+npm i -g course-professor@latest        # install/upgrade globally
+npm i -g course-professor@next          # install the Studio beta
+npm uninstall -g course-professor       # remove a global install
+```
+
+Your courses (`learning/`, `courses/`) and Studio's database (`~/.professor/professor.db`) live
+outside the package and are **not** removed on uninstall — delete them manually if you want a clean
+slate. `npx` users can clear the cached package with `npm cache clean --force`.
 
 ### Option 2: Manual Install
 

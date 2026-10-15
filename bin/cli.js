@@ -15,6 +15,7 @@ import {
 import { existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync, statSync, mkdtempSync } from 'fs';
 import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 import os from 'os';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
@@ -22,6 +23,16 @@ import ora from 'ora';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SUPPORTED_AGENTS = ['claude', 'gemini', 'opencode', 'cursor'];
+
+/** True when `pkg` resolves from `dir` (or an ancestor `node_modules`, e.g. the package root). */
+function canResolveFrom(dir, pkg) {
+  try {
+    createRequire(join(dir, 'index.js')).resolve(pkg);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 // ─── Agent / setup helpers ────────────────────────────────────────────────────
 
@@ -137,14 +148,22 @@ switch (command) {
       }
     }
 
-    if (!existsSync(join(webDir, 'node_modules'))) {
+    // `express`/`cors` are root dependencies, so an installed package needs no nested install.
+    if (!canResolveFrom(webDir, 'express') && !existsSync(join(webDir, 'node_modules'))) {
       const spinner = ora('Installing web dependencies…').start();
       try {
         execSync('npm install', { cwd: webDir, stdio: 'pipe' });
         spinner.succeed('Web dependencies installed.');
-      } catch {
+      } catch (err) {
         spinner.fail('Web dependencies failed.');
-        console.error(style('error', `Check your network and try: cd ${webDir} && npm install`));
+        const message = String(err?.message || err);
+        if (err?.code === 'EACCES' || /EACCES|permission denied|read-only/i.test(message)) {
+          console.error(style('error',
+            'Cannot install web dependencies: the package directory is read-only (npx cache). ' +
+            'Install globally (`npm i -g course-professor`) or run from a git clone.'));
+        } else {
+          console.error(style('error', `Check your network and try: cd ${webDir} && npm install`));
+        }
         process.exit(1);
       }
     }
@@ -883,9 +902,9 @@ COMMANDS
   ${chalk.bold('next')} [slug]          Show the active lecture summary and how to continue
   ${chalk.bold('check')} [slug]         Run the active exercise's self-checks
   ${chalk.bold('doctor')}               Check the local environment (Node, git, agents, Ollama, port, DB)
-  ${chalk.bold('studio')}               Start local server + Studio, pair and open the browser
-  ${chalk.bold('review')} [--limit N]   Review due flashcards in the terminal (SM-2)
-  ${chalk.bold('import')} [slug|--all]  Import CLI courses into Studio's SQLite database
+  ${chalk.bold('studio')}               Start local server + Studio, pair and open the browser (Node 22.5+)
+  ${chalk.bold('review')} [--limit N]   Review due flashcards in the terminal (SM-2) (Node 22.5+)
+  ${chalk.bold('import')} [slug|--all]  Import CLI courses into Studio's SQLite database (Node 22.5+)
   ${chalk.bold('setup')} [agent]        Set up Professor for a specific agent
   ${chalk.bold('init')}                 Auto-detect and set up
   ${chalk.bold('list')}                 List supported agents

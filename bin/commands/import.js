@@ -17,7 +17,7 @@
 import { existsSync, readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { findCourses, readCourse } from '../course-reader.js';
-import { installStudioStore } from '../studio-store.js';
+import { requireStudioNode } from '../node-version.js';
 import { newCardState } from '../../studio/src/lib/srs.js';
 import {
   useAdapter,
@@ -461,6 +461,7 @@ export function formatLogNote(log) {
  * @param {{ args?: string[], cwd?: string, chalk?: object, style?: Function, store?: object }} [ctx]
  */
 export async function run(ctx = {}) {
+  requireStudioNode(ctx.nodeVersion);
   const { args = [], cwd = process.cwd(), chalk, style = (t, m) => m } = ctx;
   const dryRun = args.includes('--dry-run');
   const slug = args.find((a) => !a.startsWith('--')) || null;
@@ -483,7 +484,9 @@ export async function run(ctx = {}) {
   }
 
   const ownStore = !ctx.store;
-  const store = ctx.store || (await installStudioStore());
+  // `studio-store` (→ `web/studio-db.js`) imports `node:sqlite`, which only exists on Node 22.5+.
+  // Import it lazily so the version guard above runs first and prints a helpful message.
+  const store = ctx.store || (await (await import('../studio-store.js')).installStudioStore());
   useAdapter(store);
 
   const totals = emptyStats();
