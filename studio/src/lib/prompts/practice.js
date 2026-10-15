@@ -98,7 +98,8 @@ function isNonEmptyString(value) {
 }
 
 /**
- * Validate one quiz item. The demo seed uses `answer`; generated quizzes use `answerIndex`.
+ * Validate one quiz item. Generated quizzes use `answerIndex`; the normaliser still tolerates a
+ * legacy `answer` key on older demo seeds.
  * @param {any} item
  * @returns {true|string}
  */
@@ -166,7 +167,7 @@ function asArray(raw, key) {
 
 /**
  * Coerce one raw quiz item to `{ question, options, answerIndex, explanation }`, or null if it is
- * structurally unusable. Tolerates the demo seed's `answer` key.
+ * structurally unusable. Tolerates a legacy `answer` key from older seeds.
  * @param {any} raw
  */
 export function normalizeQuizItem(raw) {
