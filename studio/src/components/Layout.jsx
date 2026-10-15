@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useRoute } from '../lib/router.js';
-import { getAdapterInfo } from '../lib/repo/index.js';
-import { useSettings } from '../lib/settings.js';
+import { useSettings, STORAGE_BROWSER } from '../lib/settings.js';
 import { PROVIDERS } from '../lib/ai/index.js';
 import { useProviderStatus, providerReadiness } from '../lib/ai/status.js';
 import { DueBadge } from './practice/DueBadge.jsx';
 
+// The "only in this browser" banner is dismissed per session (STORE-04) — a new tab/session shows it
+// again so a browser-only learner is never left thinking their data is safely stored elsewhere.
 const DISMISS_KEY = 'professor-studio:durability-dismissed';
 
 function NavLink({ to, active, children }) {
@@ -27,29 +28,20 @@ export function Layout({ children }) {
   const route = useRoute();
   const [settings] = useSettings();
   const providerStatus = useProviderStatus();
-  const [adapter, setAdapter] = useState(null);
   const [dismissed, setDismissed] = useState(() =>
-    typeof localStorage !== 'undefined' ? localStorage.getItem(DISMISS_KEY) === '1' : false
+    typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(DISMISS_KEY) === '1' : false
   );
-
-  useEffect(() => {
-    let alive = true;
-    getAdapterInfo()
-      .then((info) => alive && setAdapter(info))
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, []);
 
   const provider = PROVIDERS.find((p) => p.id === settings.provider);
   const readiness = providerReadiness(settings, providerStatus);
-  const showDurability = adapter && !adapter.persistent && !dismissed;
+  // STORE-04: the banner is about browser-only storage, so it shows only when the learner chose the
+  // browser — never when data lives in the SQLite file.
+  const showDurability = settings.storage === STORAGE_BROWSER && !dismissed;
 
   const dismiss = () => {
     setDismissed(true);
     try {
-      localStorage.setItem(DISMISS_KEY, '1');
+      sessionStorage.setItem(DISMISS_KEY, '1');
     } catch {
       /* ignore */
     }

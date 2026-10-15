@@ -1,27 +1,54 @@
 /**
  * First-run onboarding (SHELL-05) — skippable at every step.
- * 1) Welcome + privacy  2) Pick AI source  3) Configure + test  4) Done / try the demo.
+ * 1) Welcome + privacy  2) Where data is saved  3) Pick AI source  4) Configure + test  5) Done.
  */
-import { useState } from 'react';
-import { useSettings } from '../lib/settings.js';
+import { useEffect, useState } from 'react';
+import { useSettings, STORAGE_KINDS } from '../lib/settings.js';
 import { navigate } from '../lib/router.js';
 import { DEMO_COURSE_ID } from '../data/demo-course.js';
+import { probeSqlite, defaultStorageKind } from '../lib/repo/select-adapter.js';
+import { createIdbAdapter } from '../lib/repo/idb-adapter.js';
 import { Card } from './ui/Card.jsx';
 import { Button } from './ui/Button.jsx';
+import { StorageChoice } from './data/StorageChoice.jsx';
 import { ProviderPicker, ProviderFields } from './settings/ProviderForm.jsx';
 
-const STEP_TITLES = ['Welcome', 'Choose an AI source', 'Connect', 'You are ready'];
+const STEP_TITLES = ['Welcome', 'Where data is saved', 'Choose an AI source', 'Connect', 'You are ready'];
+const LAST_STEP = STEP_TITLES.length - 1;
 
 export function Onboarding() {
   const [settings, update] = useSettings();
   const [step, setStep] = useState(0);
+  const [sqliteStatus, setSqliteStatus] = useState(null);
+  const [browserStatus, setBrowserStatus] = useState(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const [sqlite, browser] = await Promise.all([
+        probeSqlite(settings),
+        createIdbAdapter().info().catch(() => null),
+      ]);
+      if (!alive) return;
+      setSqliteStatus(sqlite);
+      setBrowserStatus(browser);
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings.bridge?.bridgeUrl, settings.bridge?.bridgeToken]);
+
+  // Pre-save the default (SQLite when the CLI paired a bridge, else browser) so the app installs the
+  // right adapter even if the learner skips the storage step.
+  const storageValue = STORAGE_KINDS.includes(settings.storage) ? settings.storage : defaultStorageKind(settings);
 
   const finish = (to) => {
-    update({ onboardingDone: true });
+    update({ onboardingDone: true, storage: storageValue });
     navigate(to);
   };
 
-  const next = () => setStep((s) => Math.min(3, s + 1));
+  const next = () => setStep((s) => Math.min(LAST_STEP, s + 1));
   const back = () => setStep((s) => Math.max(0, s - 1));
 
   return (
@@ -34,7 +61,7 @@ export function Onboarding() {
           </div>
           <div className="flex items-center gap-2 text-xs text-neutral-500">
             <span>
-              Step {step + 1} of 4 · {STEP_TITLES[step]}
+              Step {step + 1} of {STEP_TITLES.length} · {STEP_TITLES[step]}
             </span>
             <button type="button" onClick={() => finish('/')} className="underline">
               Skip
@@ -58,19 +85,34 @@ export function Onboarding() {
 
           {step === 1 && (
             <div className="space-y-3">
+              <h2 className="font-semibold">Where should your learning data be saved?</h2>
+              <p className="text-sm text-neutral-600 dark:text-neutral-300">
+                You can change this later in Settings — Studio will offer to move your data for you.
+              </p>
+              <StorageChoice
+                value={storageValue}
+                onSelect={(storage) => update({ storage })}
+                sqliteStatus={sqliteStatus}
+                browserStatus={browserStatus}
+              />
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-3">
               <h2 className="font-semibold">Where should lessons come from?</h2>
               <ProviderPicker provider={settings.provider} onPick={(id) => update({ provider: id })} />
             </div>
           )}
 
-          {step === 2 && (
+          {step === 3 && (
             <div className="space-y-3">
               <h2 className="font-semibold">Connect and test</h2>
               <ProviderFields settings={settings} update={update} compact />
             </div>
           )}
 
-          {step === 3 && (
+          {step === LAST_STEP && (
             <div className="space-y-3">
               <h2 className="font-semibold">You are all set</h2>
               <p className="text-sm text-neutral-600 dark:text-neutral-300">
@@ -84,7 +126,7 @@ export function Onboarding() {
               {step === 0 ? 'Skip' : 'Back'}
             </Button>
             <div className="flex gap-2">
-              {step === 3 ? (
+              {step === LAST_STEP ? (
                 <>
                   <Button variant="secondary" onClick={() => finish(`/course/${DEMO_COURSE_ID}`)}>
                     Try the demo course

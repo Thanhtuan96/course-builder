@@ -14,7 +14,6 @@ import { Card } from '../ui/Card.jsx';
 import { Button } from '../ui/Button.jsx';
 import { exportAll, importAll, getAdapterInfo, listCourses } from '../../lib/repo/index.js';
 import { createIdbAdapter } from '../../lib/repo/idb-adapter.js';
-import { initAdapter } from '../../lib/repo/select-adapter.js';
 import { download, exportCourseMarkdown } from '../../lib/course-export.js';
 
 function countRows(dump) {
@@ -59,10 +58,10 @@ export function DataPanel() {
 
   useEffect(() => {
     let alive = true;
-    // Re-detect the backend (SQLite when the local server answers) before reading status.
-    initAdapter()
-      .catch(() => {})
-      .finally(() => alive && refresh());
+    // Read the status of the already-chosen store; StorageSection owns switching between stores.
+    refresh().finally(() => {
+      if (!alive) return;
+    });
     return () => {
       alive = false;
     };
