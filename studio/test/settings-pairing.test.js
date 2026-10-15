@@ -7,7 +7,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   applyPairingFromUrl,
+  installPairingWatcher,
   parsePairingHash,
+  providerIsReady,
   loadSettings,
   saveSettings,
   SETTINGS_KEY,
@@ -57,6 +59,16 @@ describe('parsePairingHash', () => {
   });
 });
 
+describe('providerIsReady', () => {
+  it('requires a configured provider that has passed a connection test', () => {
+    expect(providerIsReady(null)).toBe(false);
+    expect(providerIsReady({ provider: 'anthropic' })).toBe(false);
+    expect(providerIsReady({ provider: 'anthropic', anthropic: { apiKey: 'k' } })).toBe(false);
+    expect(providerIsReady({ provider: 'anthropic', anthropic: { apiKey: 'k' } }, { anthropic: { ok: true } })).toBe(true);
+    expect(providerIsReady({ provider: 'anthropic', anthropic: { apiKey: 'k' }, lastTestOk: true })).toBe(true);
+  });
+});
+
 describe('applyPairingFromUrl', () => {
   it('saves the bridge config and selects the local agent on a fresh install', () => {
     const replaceState = vi.fn();
@@ -74,8 +86,27 @@ describe('applyPairingFromUrl', () => {
     expect(persisted.bridge.bridgeToken).toBe('abc123');
   });
 
-  it('never overrides a provider the learner already configured', () => {
+  it('switches to the local agent when the stored provider is not ready', () => {
+    // Stored provider has no key and was never tested — the CLI pairing should win.
     globalThis.localStorage = mockLocalStorage({ provider: 'anthropic', onboardingDone: true });
+    const replaceState = vi.fn();
+    const stored = applyPairingFromUrl({
+      location: { hash: PAIRING_HASH, pathname: '/', search: '' },
+      history: { replaceState },
+    });
+
+    expect(stored.provider).toBe(BRIDGE_PROVIDER);
+    expect(stored.bridge.bridgeToken).toBe('abc123');
+    expect(replaceState).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a provider that is configured and verified', () => {
+    globalThis.localStorage = mockLocalStorage({
+      provider: 'anthropic',
+      onboardingDone: true,
+      anthropic: { apiKey: 'sk-ant-x' },
+      lastTestOk: true,
+    });
     const replaceState = vi.fn();
     const stored = applyPairingFromUrl({
       location: { hash: PAIRING_HASH, pathname: '/', search: '' },
@@ -84,7 +115,6 @@ describe('applyPairingFromUrl', () => {
 
     expect(stored.provider).toBe('anthropic');
     expect(stored.bridge.bridgeToken).toBe('abc123');
-    expect(replaceState).toHaveBeenCalledTimes(1);
   });
 
   it('does nothing when there is no pairing hash', () => {
@@ -100,5 +130,26 @@ describe('applyPairingFromUrl', () => {
 
   it('returns null without a location', () => {
     expect(applyPairingFromUrl({})).toBeNull();
+  });
+});
+
+describe('installPairingWatcher', () => {
+  it('re-applies pairing when the hash changes on an already-open tab', () => {
+    const win = new EventTarget();
+    const loc = { hash: '#/', pathname: '/', search: '' };
+    const history = { replaceState: vi.fn() };
+    const off = installPairingWatcher({ window: win, location: loc, history });
+
+    loc.hash = PAIRING_HASH;
+    win.dispatchEvent(new Event('hashchange'));
+
+    const stored = loadSettings();
+    expect(stored.bridge.bridgeToken).toBe('abc123');
+    expect(stored.provider).toBe(BRIDGE_PROVIDER);
+    off();
+  });
+
+  it('is a no-op without a window', () => {
+    expect(installPairingWatcher({})).toBeTypeOf('function');
   });
 });
