@@ -7,15 +7,10 @@ import { parseSSE } from './sse.js';
 import { createGenerateJson, MAX_TOKENS } from './provider-utils.js';
 import { providerError, isAbortError } from './errors.js';
 import { localFetch, classifyNetworkError, mapHttpError } from './fetch-local.js';
+import { OPENAI_PRESETS } from './catalog.js';
 
 /** Suggested endpoints in Settings. */
-export const PRESETS = [
-  { id: 'openai', label: 'OpenAI', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini', note: 'Direct browser access may be blocked by CORS at times.' },
-  { id: 'openrouter', label: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1', model: 'anthropic/claude-3.5-sonnet', note: 'Reliable from the browser.' },
-  { id: 'groq', label: 'Groq', baseUrl: 'https://api.groq.com/openai/v1', model: 'llama-3.3-70b-versatile', note: 'Fast; they recommend a proxy for keys.' },
-  { id: 'lmstudio', label: 'LM Studio', baseUrl: 'http://localhost:1234/v1', model: 'local-model', note: 'Enable CORS in LM Studio; local sources work best with `npm run dev`.' },
-  { id: 'custom', label: 'Custom', baseUrl: '', model: '', note: 'Any OpenAI-compatible endpoint.' },
-];
+export const PRESETS = OPENAI_PRESETS;
 
 /**
  * @param {{ baseUrl: string, apiKey?: string, model: string, headers?: Record<string,string> }} config
