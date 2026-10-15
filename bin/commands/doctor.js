@@ -8,6 +8,7 @@ import http from 'http';
 import net from 'net';
 import os from 'os';
 import chalk from 'chalk';
+import { nodeSupportsSqlite } from '../node-version.js';
 
 const AGENT_CLIS = ['claude', 'opencode', 'cursor-agent', 'gemini'];
 const PLATFORMS = ['claude', 'gemini', 'opencode', 'cursor'];
@@ -128,6 +129,16 @@ export async function runChecks({ cwd = process.cwd(), nodeVersion = process.ver
 
   const node = evaluateNodeVersion(nodeVersion);
   add('Node.js >= 18', node.status, node.detail, node.hint);
+
+  const studioReady = nodeSupportsSqlite(nodeVersion);
+  add(
+    'Node.js 22.5+ (Studio)',
+    studioReady ? 'ok' : 'warn',
+    studioReady ? nodeVersion : `${nodeVersion} (Studio needs >= 22.5)`,
+    studioReady
+      ? undefined
+      : 'Studio, review and import use node:sqlite. Update Node from https://nodejs.org'
+  );
 
   if (!whichPath('git')) {
     add('git', 'fail', 'not found on PATH', 'Install git from https://git-scm.com');

@@ -14,8 +14,10 @@ import { spawn, execSync } from 'child_process';
 import { existsSync, readFileSync, statSync, readdirSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 import { randomBytes } from 'crypto';
 import { startStaticServer } from '../static-server.js';
+import { requireStudioNode } from '../node-version.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = join(__dirname, '..', '..');
@@ -202,8 +204,25 @@ export function openBrowser(url, { platform = process.platform, spawnImpl = spaw
   }
 }
 
-function ensureDeps({ dir, label, spinner }) {
+/** True when `pkg` can be resolved from `dir` (or any ancestor `node_modules`, e.g. the root). */
+function canResolveFrom(dir, pkg) {
+  try {
+    createRequire(join(dir, 'index.js')).resolve(pkg);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Install a package's deps only when they are genuinely missing. `probe` short-circuits the install
+ * when the dependency already resolves from an ancestor (the root package's own `node_modules`) —
+ * which is the case for the web server once `express`/`cors` are root dependencies.
+ */
+function ensureDeps({ dir, label, spinner, probe }) {
+  if (probe && canResolveFrom(dir, probe)) return false;
   if (existsSync(join(dir, 'node_modules'))) return false;
+  if (!existsSync(join(dir, 'package.json'))) return false;
   spinner.start(`Installing ${label} dependencies…`);
   try {
     execSync('npm install', { cwd: dir, stdio: 'pipe' });
@@ -211,11 +230,24 @@ function ensureDeps({ dir, label, spinner }) {
     return true;
   } catch (err) {
     spinner.fail(`${label} dependencies failed.`);
-    throw new Error(`npm install failed in ${dir}: ${err.message}`);
+    const message = String(err?.message || err);
+    if (err?.code === 'EACCES' || /EACCES|permission denied|read-only/i.test(message)) {
+      throw new Error(
+        `Cannot install ${label} dependencies in ${dir} (permission denied). ` +
+          'This happens when the package runs from the read-only npx cache. ' +
+          `Install the package globally instead (\`npm i -g course-professor\`) or re-run with a writable cache.`
+      );
+    }
+    throw new Error(`npm install failed in ${dir}: ${message}`);
   }
 }
 
+/**
+ * Build `studio/dist` from source — but only from a git checkout. An installed package ships a
+ * prebuilt `studio/dist` and has no `studio/src`, so we never attempt a build there.
+ */
 function ensureBuild({ studioDir, spinner }) {
+  if (!existsSync(join(studioDir, 'src'))) return false;
   if (!isBuildStale(studioDir)) return false;
   spinner.start('Building Studio (studio/dist)…');
   try {
@@ -231,7 +263,7 @@ function ensureBuild({ studioDir, spinner }) {
 /**
  * @param {{ args?: string[], cwd?: string, chalk?: object, style?: Function, repoRoot?: string,
  *           ora?: Function, spawnImpl?: typeof spawn, fetchImpl?: typeof fetch,
- *           openImpl?: typeof openBrowser }} [ctx]
+ *           openImpl?: typeof openBrowser, nodeVersion?: string }} [ctx]
  */
 export async function run(ctx = {}) {
   const {
@@ -244,6 +276,8 @@ export async function run(ctx = {}) {
     openImpl = openBrowser,
   } = ctx;
 
+  requireStudioNode(ctx.nodeVersion);
+
   const ora = ctx.ora || (await import('ora')).default;
   const { port, apiPort, open } = parseStudioArgs(args);
 
@@ -251,6 +285,7 @@ export async function run(ctx = {}) {
   const studioDir = join(repoRoot, 'studio');
   const serverEntry = join(webDir, 'server.js');
   const distDir = join(studioDir, 'dist');
+  const studioHasSource = existsSync(join(studioDir, 'src'));
 
   if (!existsSync(serverEntry)) {
     throw new Error(`Local server not found at ${serverEntry}. Is the package installed fully?`);
@@ -258,8 +293,12 @@ export async function run(ctx = {}) {
 
   console.log('');
   const setupSpinner = ora('Preparing local platform…');
-  ensureDeps({ dir: webDir, label: 'web', spinner: setupSpinner });
-  ensureDeps({ dir: studioDir, label: 'studio', spinner: setupSpinner });
+  // `express`/`cors` are root dependencies, so the web server runs without a nested install. This
+  // stays as a fallback for a checkout that has `web/package.json` but no resolvable deps.
+  ensureDeps({ dir: webDir, label: 'web', spinner: setupSpinner, probe: 'express' });
+  if (studioHasSource) {
+    ensureDeps({ dir: studioDir, label: 'studio', spinner: setupSpinner });
+  }
   ensureBuild({ studioDir, spinner: setupSpinner });
   setupSpinner.stop();
 
