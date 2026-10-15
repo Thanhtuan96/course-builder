@@ -29,7 +29,11 @@ import {
   saveReflection,
   saveQuizAttempt,
   logActivity,
+  getCapstone,
+  createCapstone,
+  createCapstoneSubmission,
 } from '../../studio/src/lib/repo/index.js';
+import { parseRubricFromMarkdown } from '../../studio/src/lib/prompts/capstone.js';
 
 const nowIso = () => new Date().toISOString();
 const dateIso = (date) => (date ? `${date}T00:00:00.000Z` : nowIso());
@@ -44,6 +48,53 @@ export function readCourseGoal(dir) {
   } catch {
     return '';
   }
+}
+
+/**
+ * Read `CAPSTONE.md` (immutable brief; rubric parsed if present, else empty) and `COMPLETION.md`
+ * (frontmatter verdict + summary) for a course (CAP-05). Missing files yield null.
+ * @param {string} dir
+ * @param {string} slug
+ */
+export function readCapstonePlan(dir, slug) {
+  const capstonePath = join(dir, 'CAPSTONE.md');
+  const capstone = existsSync(capstonePath)
+    ? {
+        brief_md: readFileSync(capstonePath, 'utf-8'),
+        externalId: `cli:${slug}:capstone`,
+      }
+    : null;
+  if (capstone) capstone.rubric = parseRubricFromMarkdown(capstone.brief_md);
+
+  const completionPath = join(dir, 'COMPLETION.md');
+  let completion = null;
+  if (existsSync(completionPath)) {
+    const raw = readFileSync(completionPath, 'utf-8');
+    const meta = parseFrontmatter(raw);
+    completion = {
+      content_md: meta.capstone_summary || stripFrontmatter(raw),
+      verdict: 'course_complete',
+      completed: meta.completed || null,
+      externalId: `cli:${slug}:completion`,
+    };
+  }
+  return { capstone, completion };
+}
+
+/** Parse simple `key: value` YAML frontmatter (no nesting — this file is flat). */
+function parseFrontmatter(text) {
+  const match = String(text || '').match(/^---\s*\n([\s\S]*?)\n---/);
+  if (!match) return {};
+  const out = {};
+  for (const line of match[1].split('\n')) {
+    const kv = line.match(/^\s*([A-Za-z0-9_]+)\s*:\s*(.*)\s*$/);
+    if (kv) out[kv[1]] = kv[2].replace(/^["']|["']$/g, '').trim();
+  }
+  return out;
+}
+
+function stripFrontmatter(text) {
+  return String(text || '').replace(/^---\s*\n[\s\S]*?\n---\s*\n?/, '').trim();
 }
 
 /** Archived lectures (sorted) + the current LECTURE.md, each with a stable external id. */
@@ -164,6 +215,8 @@ export function planCourseImport(course, { now = Date.now() } = {}) {
     };
   });
 
+  const { capstone, completion } = readCapstonePlan(course.dir, slug);
+
   return {
     course: {
       id: courseId,
@@ -177,13 +230,15 @@ export function planCourseImport(course, { now = Date.now() } = {}) {
     lessons,
     cards,
     logs,
+    capstone,
+    completion,
     versionCount: lessons.reduce((n, l) => n + l.lectures.length, 0),
   };
 }
 
 /** Aggregate counters for one course (also used by --dry-run). */
 function emptyStats() {
-  return { lessons: 0, versions: 0, cards: 0, quiz: 0, reflections: 0, notes: 0 };
+  return { lessons: 0, versions: 0, cards: 0, quiz: 0, reflections: 0, notes: 0, capstones: 0, completions: 0 };
 }
 
 async function existingExternalIds(store, table, where) {
@@ -202,6 +257,8 @@ export async function applyCourseImport(plan, store, { dryRun = false } = {}) {
   stats.lessons = plan.lessons.length;
   stats.versions = plan.versionCount;
   stats.cards = plan.cards.length;
+  stats.capstones = plan.capstone ? 1 : 0;
+  stats.completions = plan.completion ? 1 : 0;
   for (const log of plan.logs) {
     if (log.kind === 'quiz') stats.quiz += 1;
     else if (log.kind === 'reflection') stats.reflections += 1;
@@ -306,9 +363,61 @@ export async function applyCourseImport(plan, store, { dryRun = false } = {}) {
   }
 
   await applyLogs(plan, store);
+  await applyCapstone(plan, store);
 
   await logActivity('import', course.id);
   return stats;
+}
+
+/**
+ * Import `CAPSTONE.md` into `capstones` (immutable — an existing capstone is kept) and
+ * `COMPLETION.md` into a `course_complete` submission. Idempotent via `external_id`.
+ * @param {object} plan
+ * @param {object} store
+ */
+async function applyCapstone(plan, store) {
+  const { course } = plan;
+  if (!plan.capstone && !plan.completion) return;
+
+  let capstone = null;
+  if (plan.capstone) {
+    capstone = await createCapstone({
+      courseId: course.id,
+      kind: course.kind,
+      brief_md: plan.capstone.brief_md,
+      rubric: plan.capstone.rubric || [],
+      externalId: plan.capstone.externalId,
+    });
+  }
+
+  if (!plan.completion) return;
+  if (!capstone) capstone = await getCapstone(course.id);
+  if (!capstone) {
+    // A COMPLETION.md without a brief: create an (empty-brief) capstone so the submission can attach.
+    capstone = await createCapstone({
+      courseId: course.id,
+      kind: course.kind,
+      brief_md: '',
+      rubric: [],
+      externalId: `cli:${course.slug}:capstone`,
+    });
+  }
+
+  const submission = await createCapstoneSubmission({
+    capstoneId: capstone.id,
+    content_md: plan.completion.content_md || '',
+    verdict: plan.completion.verdict,
+    externalId: plan.completion.externalId,
+  });
+  if (plan.completion.completed && submission?.id) {
+    const at = dateIso(plan.completion.completed);
+    await store.put('capstone_submissions', { ...submission, created_at: at, updated_at: at });
+  }
+
+  const courseRow = await store.get('courses', course.id);
+  if (courseRow && courseRow.status !== 'completed') {
+    await updateCourse(course.id, { status: 'completed' });
+  }
 }
 
 async function applyLogs(plan, store) {
@@ -392,6 +501,9 @@ export async function run(ctx = {}) {
       console.log(`  ${course.title}  (${course.kind}${course.level ? `, ${course.level}` : ''})`);
       console.log(`  ${verb}: ${stats.lessons} lessons · ${stats.versions} lecture versions · ${stats.cards} cards`);
       console.log(`             ${stats.quiz} quiz attempts · ${stats.reflections} reflections · ${stats.notes} notes`);
+      if (stats.capstones || stats.completions) {
+        console.log(`             ${stats.capstones} capstone · ${stats.completions} completion(s)`);
+      }
 
       if (dryRun) {
         for (const lesson of plan.lessons) {
@@ -406,7 +518,8 @@ export async function run(ctx = {}) {
       style('success',
         `${verb} ${selected.length} course${selected.length === 1 ? '' : 's'}: ` +
         `${totals.lessons} lessons, ${totals.versions} versions, ${totals.cards} cards, ` +
-        `${totals.quiz + totals.reflections + totals.notes} log entries.`)
+        `${totals.quiz + totals.reflections + totals.notes} log entries, ` +
+        `${totals.capstones} capstones, ${totals.completions} completions.`)
     );
     console.log('');
     return { courses: selected.length, totals, dryRun, all };
