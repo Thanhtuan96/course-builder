@@ -7,6 +7,7 @@
  * rules stay in `system` and the echoed content is delimited as reference material.
  */
 import { buildSystemPrompt, courseContext, wrapUntrusted } from './base.js';
+import { COURSE_KIND_IDS } from '../course.js';
 
 /** How many prior messages are sent back to the model. */
 export const HISTORY_LIMIT = 20;
@@ -61,8 +62,8 @@ export const HINT_LEVELS = [
 
 export const MAX_HINT_LEVEL = HINT_LEVELS.length;
 
-/** Course kinds the tutor adapts to. */
-export const COURSE_KINDS = ['programming', 'quantitative', 'conceptual', 'skill'];
+/** Course kinds the tutor adapts to — one source of truth, from the course model. */
+export const COURSE_KINDS = COURSE_KIND_IDS;
 
 /** Fallback kind when a course does not declare one. */
 export const DEFAULT_COURSE_KIND = 'programming';
