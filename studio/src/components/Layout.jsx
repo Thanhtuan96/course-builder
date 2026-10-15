@@ -3,6 +3,7 @@ import { Link, useRoute } from '../lib/router.js';
 import { getAdapterInfo } from '../lib/repo/index.js';
 import { useSettings } from '../lib/settings.js';
 import { PROVIDERS } from '../lib/ai/index.js';
+import { useProviderStatus, providerReadiness } from '../lib/ai/status.js';
 import { DueBadge } from './practice/DueBadge.jsx';
 
 const DISMISS_KEY = 'professor-studio:durability-dismissed';
@@ -25,6 +26,7 @@ function NavLink({ to, active, children }) {
 export function Layout({ children }) {
   const route = useRoute();
   const [settings] = useSettings();
+  const providerStatus = useProviderStatus();
   const [adapter, setAdapter] = useState(null);
   const [dismissed, setDismissed] = useState(() =>
     typeof localStorage !== 'undefined' ? localStorage.getItem(DISMISS_KEY) === '1' : false
@@ -41,6 +43,7 @@ export function Layout({ children }) {
   }, []);
 
   const provider = PROVIDERS.find((p) => p.id === settings.provider);
+  const readiness = providerReadiness(settings, providerStatus);
   const showDurability = adapter && !adapter.persistent && !dismissed;
 
   const dismiss = () => {
@@ -78,11 +81,14 @@ export function Layout({ children }) {
 
           <Link
             to="/settings"
-            title="Active AI source"
+            title={provider ? `${provider.label} — ${readiness.label}` : 'No AI source selected'}
             className="flex items-center gap-2 rounded-full border border-neutral-200 px-2.5 py-1 text-xs text-neutral-600 dark:border-neutral-700 dark:text-neutral-300"
           >
-            <span className={`h-2 w-2 rounded-full ${settings.provider ? 'bg-green-500' : 'bg-neutral-400'}`} />
-            {provider ? provider.label : 'No provider'}
+            <span className={`h-2 w-2 rounded-full ${readiness.dot}`} aria-hidden="true" />
+            <span className="hidden sm:inline">{provider ? provider.label : 'No provider'}</span>
+            <span className={readiness.state === 'ready' ? 'text-green-600 dark:text-green-400' : 'text-neutral-500'}>
+              {readiness.label}
+            </span>
           </Link>
         </div>
       </header>

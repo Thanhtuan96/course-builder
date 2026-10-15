@@ -2,6 +2,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { ProviderError, providerError, isAbortError } from '../src/lib/ai/errors.js';
 import { createGenerateJson, MAX_TOKENS } from '../src/lib/ai/provider-utils.js';
 import { classifyNetworkError, mapHttpError } from '../src/lib/ai/fetch-local.js';
+import { getProvider } from '../src/lib/ai/index.js';
+import { configIssue, isConfigured } from '../src/lib/ai/config.js';
+import { mapAnthropicError } from '../src/lib/ai/anthropic.js';
 
 function fakeResponse(status, body = '') {
   return { status, ok: status >= 200 && status < 300, text: async () => body };
@@ -85,5 +88,52 @@ describe('generateJson', () => {
 describe('cost caps', () => {
   it('exports per-task defaults', () => {
     expect(MAX_TOKENS).toEqual({ lesson: 8000, json: 4000, chat: 2000 });
+  });
+});
+
+describe('configuration prechecks', () => {
+  it('flags missing required config per provider', () => {
+    expect(configIssue({ provider: 'anthropic', anthropic: { apiKey: '' } }).code).toBe('auth');
+    expect(configIssue({ provider: 'openai', openai: { baseUrl: '' } }).code).toBe('auth');
+    expect(configIssue({ provider: 'bridge', bridge: { bridgeUrl: 'http://localhost:3000', bridgeToken: '' } }).code).toBe('auth');
+    expect(configIssue({ provider: 'bridge', bridge: { bridgeUrl: '', bridgeToken: 't' } }).code).toBe('auth');
+  });
+
+  it('passes when config is present (key optional for local servers)', () => {
+    expect(isConfigured({ provider: 'anthropic', anthropic: { apiKey: 'sk-ant-x' } })).toBe(true);
+    expect(isConfigured({ provider: 'openai', openai: { baseUrl: 'https://api.openai.com/v1' } })).toBe(true);
+    expect(isConfigured({ provider: 'ollama', ollama: { baseUrl: 'http://localhost:11434/v1' } })).toBe(true);
+    expect(isConfigured({ provider: 'bridge', bridge: { bridgeUrl: 'http://localhost:3000', bridgeToken: 't' } })).toBe(true);
+  });
+
+  it('getProvider rejects with auth before loading an adapter when config is missing', async () => {
+    await expect(getProvider({ provider: 'anthropic', anthropic: { apiKey: '' } })).rejects.toMatchObject({
+      code: 'auth',
+      message: expect.stringMatching(/API key/i),
+    });
+    await expect(getProvider({ provider: 'openai', openai: { baseUrl: '' } })).rejects.toMatchObject({ code: 'auth' });
+    await expect(
+      getProvider({ provider: 'bridge', bridge: { bridgeUrl: 'http://localhost:3000', bridgeToken: '' } })
+    ).rejects.toMatchObject({ code: 'auth' });
+  });
+
+  it('getProvider builds a configured provider', async () => {
+    const provider = await getProvider({ provider: 'ollama', ollama: { baseUrl: 'http://localhost:11434/v1' }, model: 'x' });
+    expect(typeof provider.streamText).toBe('function');
+    expect(typeof provider.generateJson).toBe('function');
+  });
+});
+
+describe('Anthropic SDK error mapping', () => {
+  it('maps the missing-key SDK message to auth', () => {
+    const err = mapAnthropicError(new Error('Could not resolve authentication method. Expected either apiKey to be set.'));
+    expect(err.code).toBe('auth');
+    expect(err).toBeInstanceOf(ProviderError);
+  });
+
+  it('maps statuses', () => {
+    expect(mapAnthropicError({ status: 401, message: 'no' }).code).toBe('auth');
+    expect(mapAnthropicError({ status: 429, message: 'slow' }).code).toBe('rate_limit');
+    expect(mapAnthropicError({ status: 500, message: 'boom' }).code).toBe('network');
   });
 });

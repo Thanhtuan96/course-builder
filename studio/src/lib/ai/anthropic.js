@@ -7,16 +7,12 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { ProviderError, providerError, isAbortError } from './errors.js';
 import { createGenerateJson, MAX_TOKENS } from './provider-utils.js';
+import { ANTHROPIC_MODELS, ANTHROPIC_DEFAULT_MODEL } from './catalog.js';
 
-export const DEFAULT_MODEL = 'claude-opus-5-5';
+export const DEFAULT_MODEL = ANTHROPIC_DEFAULT_MODEL;
 
 /** @type {{ id: string, label: string, advanced?: boolean }[]} */
-export const MODELS = [
-  { id: 'claude-opus-5-5', label: 'Claude Opus 5.5' },
-  { id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5' },
-  { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5' },
-  { id: 'claude-fable-5-1', label: 'Claude Fable 5.1 (advanced, premium)', advanced: true },
-];
+export const MODELS = ANTHROPIC_MODELS;
 
 const FALLBACK_BETA = 'server-side-fallback-2026-07-01';
 
@@ -95,13 +91,19 @@ function isFallbackRejection(err) {
   return (status === 400 || status === 404) && (message.includes('fallback') || message.includes('beta'));
 }
 
-function mapAnthropicError(err) {
+export function mapAnthropicError(err) {
   if (err instanceof ProviderError) return err;
   if (isAbortError(err)) return providerError('aborted', 'Stopped');
   const status = err?.status;
-  if (status === 401 || status === 403) return providerError('auth', err.message);
-  if (status === 429) return providerError('rate_limit', err.message);
-  if (status >= 500) return providerError('network', err.message);
-  if (err instanceof TypeError) return providerError('network', err.message || 'Network error reaching Anthropic');
-  return providerError('unknown', err?.message || 'Anthropic request failed');
+  const message = String(err?.message || '');
+  const lower = message.toLowerCase();
+  if (status === 401 || status === 403) return providerError('auth', message);
+  // The SDK throws this (without a status) when no key resolves on the client.
+  if (lower.includes('authentication') || lower.includes('api key') || lower.includes('api_key')) {
+    return providerError('auth', message || 'Add your Anthropic API key');
+  }
+  if (status === 429) return providerError('rate_limit', message);
+  if (status >= 500) return providerError('network', message);
+  if (err instanceof TypeError) return providerError('network', message || 'Network error reaching Anthropic');
+  return providerError('unknown', message || 'Anthropic request failed');
 }
