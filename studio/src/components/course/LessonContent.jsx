@@ -66,7 +66,7 @@ export function LessonContent({ lesson, course }) {
   const generate = async () => {
     setError(null);
     try {
-      const provider = getProvider(settings);
+      const provider = await getProvider(settings);
       const { system, messages } = buildLessonMessages({
         course,
         lesson,

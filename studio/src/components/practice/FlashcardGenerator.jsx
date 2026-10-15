@@ -41,7 +41,7 @@ export function FlashcardGenerator({ lesson, course }) {
     const existing = await existingFronts(lesson.id);
     const { system, messages } = buildFlashcardsMessages({ course, lesson, content: content.content_md });
     try {
-      const provider = getProvider(settings);
+      const provider = await getProvider(settings);
       const result = await start(({ signal }) =>
         provider.generateJson({ system, messages, signal, validate: validateFlashcards })
       );

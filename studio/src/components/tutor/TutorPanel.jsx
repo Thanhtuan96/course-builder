@@ -152,7 +152,7 @@ export function TutorPanel({ lesson, course }) {
 
       try {
         await start(async ({ onText, signal }) => {
-          const provider = getProvider(settingsRef.current);
+          const provider = await getProvider(settingsRef.current);
           const { system, messages: built } = buildTutorMessages({
             course,
             lesson,
