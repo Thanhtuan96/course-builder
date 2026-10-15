@@ -113,9 +113,10 @@ function saveCourseFile(slug, file, content) {
   }
   
   try {
-    // Archive the existing lecture before it is overwritten by a new section.
+    // Archive the existing lecture, but only when moving to a different section
+    // (in-place edits of the active lecture must not create duplicates).
     if (sanitizedFile === 'LECTURE.md' && existsSync(filePath)) {
-      const result = archiveLecture(courseDir);
+      const result = archiveLecture(courseDir, content);
       if (result.archived) {
         console.log(`🗂️  Archived previous lecture → courses/${slug}/${result.path}`);
       }

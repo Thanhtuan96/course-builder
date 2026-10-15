@@ -32,12 +32,13 @@ Research the section topic using web search for current, accurate content.
 
 **Archive the previous lecture, then write the new one (ordered):**
 
-1. **Archive the existing `LECTURE.md`** (skip if it does not exist):
+1. **Archive the existing `LECTURE.md`** (skip if it does not exist, and skip if you are not moving to a different section):
+   - **Only archive when the section number changes.** If the existing and new lecture share the same section number, this is an in-place edit — do NOT archive (it would create duplicate `NN-x.md`, `NN-x-2.md` files). If either lecture has no section number, archive only when both the content and the title differ.
    - Determine the course directory: check `learning/{slug}/` first, then fall back to `courses/{slug}/`
    - Parse the section number from the existing lecture's `# Section N:` / `# 📖 Section N:` heading
    - Move (rename) the file to `lectures/NN-<section-slug>.md`:
      - `NN` = zero-padded section number (e.g. `02`); if the heading has no number, use the next free number after the files already in `lectures/`
-     - `<section-slug>` = lowercased, hyphenated section title (e.g. `closures-and-scope`)
+     - `<section-slug>` = lowercased, hyphenated section title, transliterated to ASCII (e.g. `closures-and-scope`; Vietnamese `Biến và kiểu dữ liệu` → `bien-va-kieu-du-lieu`)
      - Create the `lectures/` directory if it does not exist
    - **Never delete or overwrite an archive** — the full lecture history is kept; if a target name already exists, append `-2`, `-3`, …
 2. **Write the new `LECTURE.md`** for the current section (overwriting the now-archived file). Update `COURSE.md` status to 🔄 In progress for that section and update "Last active" date.

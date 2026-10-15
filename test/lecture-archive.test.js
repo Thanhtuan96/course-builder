@@ -4,6 +4,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -14,6 +15,7 @@ import { tmpdir } from 'os';
 import {
   sectionNumberFromLecture,
   archiveFileName,
+  shouldArchive,
   archiveLecture,
 } from '../web/lecture-archive.js';
 
@@ -87,6 +89,68 @@ describe('archiveFileName', () => {
       '02-closures-2.md'
     );
   });
+
+  it('transliterates Vietnamese diacritics to ASCII', () => {
+    expect(archiveFileName('# Section 1: Biến và kiểu dữ liệu', [])).toBe(
+      '01-bien-va-kieu-du-lieu.md'
+    );
+  });
+
+  it('transliterates Vietnamese words with đ', () => {
+    expect(archiveFileName('# Section 3: Đối tượng', [])).toBe(
+      '03-doi-tuong.md'
+    );
+  });
+
+  it('transliterates multi-word Vietnamese titles', () => {
+    expect(
+      archiveFileName('# 📖 Section 4: Lập trình hướng đối tượng', [])
+    ).toBe('04-lap-trinh-huong-doi-tuong.md');
+  });
+});
+
+describe('shouldArchive', () => {
+  it('returns false for an in-place edit of the same section', () => {
+    const existing = '# Section 2: Closures\n\nversion 1';
+    const incoming = '# Section 2: Closures\n\nversion 2 (edited)';
+    expect(shouldArchive(existing, incoming)).toBe(false);
+  });
+
+  it('returns true when moving to a new section', () => {
+    expect(
+      shouldArchive('# Section 2: Closures', '# Section 3: Scope')
+    ).toBe(true);
+  });
+
+  it('returns false for identical content', () => {
+    const md = '# Section 2: Closures\n\nsame body';
+    expect(shouldArchive(md, md)).toBe(false);
+  });
+
+  it('returns false for identical unnumbered content', () => {
+    expect(shouldArchive('no heading', 'no heading')).toBe(false);
+  });
+
+  it('returns true when only one side has a section number and content differs', () => {
+    expect(shouldArchive('plain lecture body', '# Section 5: New Topic')).toBe(
+      true
+    );
+  });
+
+  it('returns false for unnumbered content whose titles both differ from nothing', () => {
+    expect(shouldArchive('first body', 'second body')).toBe(false);
+  });
+
+  it('returns true when section numbers differ but titles match', () => {
+    expect(shouldArchive('# Section 2: Closures', '# Section 4: Closures')).toBe(
+      true
+    );
+  });
+
+  it('returns false for non-string input', () => {
+    expect(shouldArchive(undefined, '# Section 2: X')).toBe(false);
+    expect(shouldArchive('# Section 2: X', null)).toBe(false);
+  });
 });
 
 describe('archiveLecture', () => {
@@ -106,11 +170,11 @@ describe('archiveLecture', () => {
     expect(result.reason).toBe('no-lecture');
   });
 
-  it('copies LECTURE.md into lectures/NN-slug.md', () => {
+  it('copies LECTURE.md into lectures/NN-slug.md when moving sections', () => {
     const lecture = '# 📖 Section 2: Closures\n\nContent here.';
     writeFileSync(join(courseDir, 'LECTURE.md'), lecture, 'utf-8');
 
-    const result = archiveLecture(courseDir);
+    const result = archiveLecture(courseDir, '# 📖 Section 3: Scope');
 
     expect(result.archived).toBe(true);
     expect(result.fileName).toBe('02-closures.md');
@@ -125,35 +189,61 @@ describe('archiveLecture', () => {
     expect(existsSync(join(courseDir, 'LECTURE.md'))).toBe(true);
   });
 
+  it('does not archive an in-place edit of the same section', () => {
+    writeFileSync(
+      join(courseDir, 'LECTURE.md'),
+      '# Section 2: Closures\n\nversion 1',
+      'utf-8'
+    );
+
+    const result = archiveLecture(courseDir, '# Section 2: Closures\n\nversion 2');
+
+    expect(result.archived).toBe(false);
+    expect(result.reason).toBe('same-section');
+    expect(existsSync(join(courseDir, 'lectures'))).toBe(false);
+  });
+
   it('creates the lectures directory when absent', () => {
     writeFileSync(join(courseDir, 'LECTURE.md'), '# Section 1: Intro', 'utf-8');
-    archiveLecture(courseDir);
+    archiveLecture(courseDir, '# Section 2: Next');
     expect(existsSync(join(courseDir, 'lectures'))).toBe(true);
   });
 
-  it('uses the next free number for a second unnumbered lecture', () => {
-    writeFileSync(join(courseDir, 'LECTURE.md'), 'First lecture', 'utf-8');
-    archiveLecture(courseDir);
-    writeFileSync(join(courseDir, 'LECTURE.md'), 'Second lecture', 'utf-8');
-    const result = archiveLecture(courseDir);
+  it('uses the next free number for an unnumbered incoming lecture', () => {
+    writeFileSync(join(courseDir, 'LECTURE.md'), '# Section 1: Intro', 'utf-8');
+    const result = archiveLecture(courseDir, 'A lecture without a heading');
+
+    expect(result.archived).toBe(true);
+    expect(result.fileName).toBe('01-intro.md');
+  });
+
+  it('falls back to the next free number when a newer archive exists', () => {
+    writeFileSync(join(courseDir, 'LECTURE.md'), '# Section 1: Intro', 'utf-8');
+    archiveLecture(courseDir, '# Section 2: Next');
+    writeFileSync(join(courseDir, 'LECTURE.md'), 'No heading lecture', 'utf-8');
+
+    const result = archiveLecture(courseDir, '# Section 3: Third');
 
     expect(result.archived).toBe(true);
     expect(result.fileName).toBe('02-section.md');
   });
 
   it('never overwrites an existing archive (collision gets a suffix)', () => {
+    mkdirSync(join(courseDir, 'lectures'), { recursive: true });
+    writeFileSync(join(courseDir, 'lectures', '02-closures.md'), 'prior', 'utf-8');
     writeFileSync(join(courseDir, 'LECTURE.md'), '# Section 2: Closures', 'utf-8');
-    archiveLecture(courseDir);
-    writeFileSync(join(courseDir, 'LECTURE.md'), '# Section 2: Closures', 'utf-8');
-    const result = archiveLecture(courseDir);
+
+    const result = archiveLecture(courseDir, '# Section 02: Closures');
 
     expect(result.fileName).toBe('02-closures-2.md');
-    expect(existsSync(join(courseDir, 'lectures', '02-closures.md'))).toBe(true);
-    expect(existsSync(join(courseDir, 'lectures', '02-closures-2.md'))).toBe(true);
+    expect(readFileSync(join(courseDir, 'lectures', '02-closures.md'), 'utf-8')).toBe(
+      'prior'
+    );
   });
 
-  it('does not create lectures/ when there is nothing to archive', () => {
-    archiveLecture(courseDir);
+  it('does not create lectures/ for a same-section edit', () => {
+    writeFileSync(join(courseDir, 'LECTURE.md'), '# Section 1: Intro\n\nv1', 'utf-8');
+    archiveLecture(courseDir, '# Section 1: Intro\n\nv2');
     expect(existsSync(join(courseDir, 'lectures'))).toBe(false);
   });
 });

@@ -30,19 +30,57 @@ function sectionTitleFromLecture(md) {
 }
 
 /**
- * Turn a title into a kebab-case filename slug.
+ * Turn a title into a kebab-case filename slug, transliterating to ASCII.
+ * Vietnamese/Unicode diacritics are stripped (NFD + combining marks) and
+ * `đ`/`Đ` are mapped to `d` before the ASCII filter.
  * @param {string} text
  * @param {string} [fallback='section']
  * @returns {string}
  */
 function slugify(text, fallback = 'section') {
   const slug = String(text || '')
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[đĐ]/g, 'd')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 60)
     .replace(/-+$/g, '');
   return slug || fallback;
+}
+
+/**
+ * Decide whether an existing lecture should be archived before `incomingMd`
+ * replaces it. Archiving only makes sense when the active lecture is moving to
+ * a different section — in-place edits of the same section must not create
+ * duplicate archives.
+ *
+ * Rule:
+ * - both have a section number -> archive iff the numbers differ
+ * - either has no section number -> archive only when the content differs
+ *   AND the titles differ
+ * - otherwise -> no archive
+ * @param {string} existingMd - Current LECTURE.md content.
+ * @param {string} incomingMd - Content about to be written.
+ * @returns {boolean}
+ */
+export function shouldArchive(existingMd, incomingMd) {
+  if (typeof existingMd !== 'string' || typeof incomingMd !== 'string') {
+    return false;
+  }
+
+  const existingNumber = sectionNumberFromLecture(existingMd);
+  const incomingNumber = sectionNumberFromLecture(incomingMd);
+
+  if (existingNumber && incomingNumber) {
+    return existingNumber !== incomingNumber;
+  }
+
+  return (
+    existingMd !== incomingMd &&
+    sectionTitleFromLecture(existingMd) !== sectionTitleFromLecture(incomingMd)
+  );
 }
 
 /**
@@ -98,10 +136,13 @@ export function archiveFileName(md, existingNames = []) {
 /**
  * Archive the current LECTURE.md of a course into lectures/NN-<slug>.md.
  * Copies (never deletes) the file; the caller overwrites LECTURE.md afterwards.
+ * When `incomingContent` is provided, the file is only archived if
+ * {@link shouldArchive} says the lecture is moving to a different section.
  * @param {string} courseDir - Absolute course directory.
+ * @param {string} [incomingContent] - Content about to replace LECTURE.md.
  * @returns {{ archived: boolean, fileName?: string, path?: string, reason?: string, error?: string }}
  */
-export function archiveLecture(courseDir) {
+export function archiveLecture(courseDir, incomingContent) {
   const lecturePath = join(courseDir, 'LECTURE.md');
   if (!existsSync(lecturePath)) {
     return { archived: false, reason: 'no-lecture' };
@@ -109,6 +150,10 @@ export function archiveLecture(courseDir) {
 
   try {
     const content = readFileSync(lecturePath, 'utf-8');
+    if (typeof incomingContent === 'string' && !shouldArchive(content, incomingContent)) {
+      return { archived: false, reason: 'same-section' };
+    }
+
     const lecturesDir = join(courseDir, 'lectures');
     const existingNames = existsSync(lecturesDir)
       ? readdirSync(lecturesDir).filter((name) => name.endsWith('.md'))
