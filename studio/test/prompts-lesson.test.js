@@ -1,5 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { buildLessonMessages, buildLessonOutline, KIND_BLOCKS, LEVEL_GUIDANCE } from '../src/lib/prompts/lesson.js';
+import {
+  buildLessonMessages,
+  buildLessonOutline,
+  buildsTowardLine,
+  isExerciseHeading,
+  sectionTitle,
+  kindBlockTitle,
+  LESSON_LABELS,
+  KIND_BLOCKS,
+  LEVEL_GUIDANCE,
+} from '../src/lib/prompts/lesson.js';
 
 const course = {
   title: 'Learn Go',
@@ -99,5 +109,42 @@ describe('buildLessonMessages', () => {
     const { messages } = buildLessonMessages({ course, lesson });
     expect(messages).toHaveLength(1);
     expect(messages[0].role).toBe('user');
+  });
+});
+
+describe('lesson localisation (stable section ids)', () => {
+  it('keeps stable ids + English titles in the canonical label table', () => {
+    for (const section of ['objectives', 'explanation', 'worked-example', 'misconceptions', 'check', 'exercise', 'takeaways', 'resources', 'answers']) {
+      expect(LESSON_LABELS.English.sections[section]).toBeTruthy();
+    }
+    expect(sectionTitle('exercise', 'English')).toBe('Exercise');
+    expect(kindBlockTitle('conceptual', 'English')).toBe(KIND_BLOCKS.conceptual.title);
+  });
+
+  it('emits Vietnamese headings/labels for a Vietnamese course', () => {
+    const outline = buildLessonOutline({ kind: 'conceptual', level: 'Beginner', language: 'Vietnamese' });
+    expect(outline).toContain('## Mục tiêu');
+    expect(outline).toContain('## Bài tập');
+    expect(outline).toContain('## Đáp án để tự kiểm tra');
+    expect(outline).toContain('Hiểu nhầm: … → Thực tế: …');
+    expect(outline).not.toContain('## Objectives');
+    expect(outline).not.toContain('Misconception:');
+  });
+
+  it('matches the exercise heading in any supported language', () => {
+    expect(isExerciseHeading('Exercise')).toBe(true);
+    expect(isExerciseHeading('Bài tập')).toBe(true);
+    expect(isExerciseHeading('Exercise + success criteria')).toBe(true);
+    expect(isExerciseHeading('Objectives')).toBe(false);
+    expect(isExerciseHeading('')).toBe(false);
+  });
+
+  it('adds a "builds toward" line from the course artifact', () => {
+    const artifact = { title: 'Playbook', deliverable: 'A one-page learning playbook.' };
+    expect(buildsTowardLine(artifact, 'English')).toBe('This course builds toward: A one-page learning playbook.');
+    expect(buildsTowardLine(artifact, 'Vietnamese')).toContain('Khoá học này hướng tới:');
+    expect(buildsTowardLine(null, 'English')).toBe('');
+    const prompt = fullPrompt({ course, lesson, artifact });
+    expect(prompt).toContain('This course builds toward: A one-page learning playbook.');
   });
 });

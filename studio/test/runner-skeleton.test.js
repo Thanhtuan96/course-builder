@@ -38,6 +38,17 @@ describe('runner skeleton extraction', () => {
     expect(section.body).not.toContain('quick sample');
   });
 
+  it('finds a localised (Vietnamese) exercise section by its stable id', () => {
+    const vi = LESSON
+      .replace('## Concept', '## Giải thích')
+      .replace('## Exercise', '## Bài tập');
+    const section = findExerciseSection(vi);
+    expect(section).toBeTruthy();
+    expect(section.body).toContain('double');
+    const skeleton = extractSkeleton(vi, { language: 'javascript' });
+    expect(skeleton.content).toContain('function double');
+  });
+
   it('prefers the exercise block matching the course language', () => {
     const skeleton = extractSkeleton(LESSON, { language: 'javascript' });
     expect(skeleton.content).toContain('function double');
