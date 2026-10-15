@@ -57,6 +57,39 @@ other origins or without the token — see [Security & privacy](#security--priva
 > Starting the bridge each time generates a **new** token. Paste it once when it changes.
 > Set `STUDIO_BRIDGE_TOKEN=…` to keep a fixed token.
 
+### One command: `course-professor studio` (recommended)
+
+From the repository root, one command installs and builds what is missing, starts the bridge server
+and the built Studio app, and pairs them for you:
+
+```bash
+npx course-professor studio              # starts server + Studio and opens the browser
+npx course-professor studio --no-open    # print the pairing URL only
+npx course-professor studio --port 5180 --api-port 3000
+```
+
+It prints a **pairing URL** like
+`http://localhost:5180/#/settings?bridge=http%3A%2F%2Flocalhost%3A3000&token=<48 hex chars>` and opens
+it. On load, Studio reads `bridge`/`token` from the URL, saves them as the bridge settings, selects
+**My local agent** on a fresh install, and then removes the secrets from the address bar
+(`history.replaceState`) so they are never bookmarked or shared. Inherited `CLAUDECODE` /
+`CLAUDE_CODE_*` variables are stripped from the server process so a nested agent CLI behaves like a
+normal terminal.
+
+### Terminal review & import (`course-professor review` / `import`)
+
+The CLI and Studio share the same SQLite file and the same repository logic:
+
+```bash
+npx course-professor review                  # due flashcards: Space flips, 1 again · 2 hard · 3 good · 4 easy, q quits
+npx course-professor review --limit 10
+npx course-professor import --all            # COURSE.md + lectures/ + SCHEDULE.md + LEARNING-LOG.md → SQLite
+npx course-professor import nextjs --dry-run # preview the import, write nothing
+```
+
+`import` is idempotent — it stores `source: 'cli'` and a stable `external_id`, so re-running updates
+instead of duplicating, and never overwrites graded cards or existing lecture versions.
+
 ### Use Ollama (free, local)
 
 1. `ollama serve` (and `ollama pull llama3.2` or any model you like).
@@ -93,7 +126,9 @@ locally, or grant the browser permission and use a browser that supports it.
 | Local bridge server running + token set | **SQLite** at `${PROFESSOR_HOME:-~/.professor}/professor.db` |
 
 Studio auto-detects the bridge: if the URL + token are set in Settings and `/db/health` answers, it
-uses SQLite; otherwise IndexedDB. On a static deploy with no server it always uses IndexedDB.
+uses SQLite; otherwise IndexedDB. On a static deploy with no server it always uses IndexedDB. The CLI
+(`course-professor review` / `import`) always uses this SQLite file, so terminal and browser state
+stay in sync.
 
 Settings → **Storage** shows which backend is active and whether storage is persistent, and offers:
 
