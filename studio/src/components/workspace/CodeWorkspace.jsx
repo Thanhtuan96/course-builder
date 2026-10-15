@@ -12,6 +12,7 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { listWorkspaceFiles, saveWorkspaceFile, deleteWorkspaceFile, saveRunResult, listRunResults } from '../../lib/repo/index.js';
 import { useSettings } from '../../lib/settings.js';
+import { useT } from '../../lib/i18n/index.js';
 import { Card } from '../ui/Card.jsx';
 import { Button } from '../ui/Button.jsx';
 import { Spinner } from '../ui/Spinner.jsx';
@@ -73,6 +74,7 @@ function ensureExt(path) {
 }
 
 export function CodeWorkspace({ lesson, course }) {
+  const t = useT();
   const [settings] = useSettings();
   const dark = usePrefersDark();
   const courseId = course?.id || null;
@@ -315,11 +317,11 @@ export function CodeWorkspace({ lesson, course }) {
 
   /* --------------------------------------------------------------- file actions */
   const addFile = useCallback(async () => {
-    const name = window.prompt('New file name (e.g. util.js)');
+    const name = window.prompt(t('workspace.newFileName'));
     if (!name) return;
     const path = ensureExt(name.trim());
     if (!isSafeRelPath(path)) {
-      setError(Object.assign(new Error('Invalid file name.'), { hint: 'Use a simple relative name like util.js — no slashes at the start or "..".' }));
+      setError(Object.assign(new Error(t('workspace.invalidFileName')), { hint: t('workspace.invalidFileHint') }));
       return;
     }
     if (filesRef.current.some((f) => f.path === path)) {
@@ -340,11 +342,11 @@ export function CodeWorkspace({ lesson, course }) {
 
   const renameFile = useCallback(
     async (from) => {
-      const name = window.prompt('Rename file to', from);
+      const name = window.prompt(t('workspace.renameTo'), from);
       if (!name || name.trim() === from) return;
       const to = name.trim();
       if (!isSafeRelPath(to) || filesRef.current.some((f) => f.path === to)) {
-        setError(Object.assign(new Error('Invalid or duplicate file name.'), { hint: 'Pick a unique relative name without "..".' }));
+        setError(Object.assign(new Error(t('workspace.invalidOrDuplicate')), { hint: t('workspace.invalidOrDuplicateHint') }));
         return;
       }
       const target = filesRef.current.find((f) => f.path === from);
@@ -365,7 +367,7 @@ export function CodeWorkspace({ lesson, course }) {
   const deleteFile = useCallback(
     async (path) => {
       if (filesRef.current.length <= 1) return;
-      if (!window.confirm(`Delete ${path}? The run history is kept.`)) return;
+      if (!window.confirm(t('workspace.deleteFileConfirm', { path }))) return;
       const remaining = filesRef.current.filter((f) => f.path !== path);
       setFiles(remaining);
       if (activePath === path) setActivePath(remaining[0]?.path || null);
@@ -379,7 +381,7 @@ export function CodeWorkspace({ lesson, course }) {
   );
 
   const resetToSkeleton = useCallback(async () => {
-    if (!window.confirm('Reset the workspace to the exercise skeleton? Your run history is kept, but current edits will be replaced.')) return;
+    if (!window.confirm(t('workspace.resetConfirm'))) return;
     const seed = seedFiles(lesson, course);
     setFiles(seed);
     setActivePath(seed[0]?.path || null);
@@ -423,7 +425,7 @@ export function CodeWorkspace({ lesson, course }) {
   if (!loaded) {
     return (
       <Card className="flex items-center gap-2 text-sm text-neutral-500">
-        <Spinner /> Loading workspace…
+        <Spinner /> {t('workspace.loading')}
       </Card>
     );
   }
@@ -432,33 +434,35 @@ export function CodeWorkspace({ lesson, course }) {
     <Card className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <h2 className="font-medium">Workspace</h2>
+          <h2 className="font-medium">{t('workspace.title')}</h2>
           <Badge tone={runnerInfo.kind === 'local' ? 'accent' : 'neutral'}>
-            {runnerInfo.kind === 'local' ? 'Local server' : 'Browser'}
+            {runnerInfo.kind === 'local' ? t('workspace.localServer') : t('workspace.browser')}
           </Badge>
           {runnerInfo.kind === 'local' && !runnerInfo.ready && (
             <span className="text-xs text-amber-600 dark:text-amber-400">
-              {runnerInfo.command ? `needs \`${runnerInfo.command}\`` : 'needs the local server'}
+              {runnerInfo.command
+                ? t('workspace.needsCommandShort', { command: runnerInfo.command })
+                : t('workspace.needsServerShort')}
             </span>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button size="sm" onClick={() => start('run')} disabled={Boolean(running)}>
-            {running === 'run' ? 'Running…' : 'Run'}
+            {running === 'run' ? t('workspace.running') : t('workspace.run')}
           </Button>
           <Button size="sm" variant="secondary" onClick={() => start('check')} disabled={Boolean(running)}>
-            {running === 'check' ? 'Checking…' : 'Check'}
+            {running === 'check' ? t('workspace.check') : t('workspace.checkButton')}
           </Button>
           {running && (
             <Button size="sm" variant="ghost" onClick={stop}>
-              Stop
+              {t('workspace.stop')}
             </Button>
           )}
           <Button size="sm" variant="ghost" onClick={() => setShowHistory((v) => !v)}>
-            History{history.length ? ` (${history.length})` : ''}
+            {t('workspace.history')}{history.length ? ` (${history.length})` : ''}
           </Button>
           <Button size="sm" variant="ghost" onClick={resetToSkeleton}>
-            Reset
+            {t('workspace.reset')}
           </Button>
         </div>
       </div>
@@ -473,7 +477,7 @@ export function CodeWorkspace({ lesson, course }) {
       />
 
       {activeFile ? (
-        <Suspense fallback={<div className="flex h-64 items-center justify-center text-sm text-neutral-500"><Spinner /> Loading editor…</div>}>
+        <Suspense fallback={<div className="flex h-64 items-center justify-center text-sm text-neutral-500"><Spinner /> {t('workspace.loadingEditor')}</div>}>
           <Editor
             value={activeFile.content}
             language={activeFile.language}

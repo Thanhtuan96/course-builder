@@ -3,14 +3,19 @@
  * SQL result tables and a sandboxed HTML preview.
  */
 import { Badge } from '../ui/Badge.jsx';
+import { useT } from '../../lib/i18n/index.js';
 
 function CheckList({ checks }) {
+  const t = useT();
   if (!checks?.length) return null;
   const passed = checks.filter((c) => c.passed).length;
   return (
     <div className="space-y-1">
       <p className="text-sm font-medium">
-        Checks <span className={passed === checks.length ? 'text-green-600' : 'text-amber-600'}>{passed}/{checks.length} passed</span>
+        {t('workspace.checks')}{' '}
+        <span className={passed === checks.length ? 'text-green-600' : 'text-amber-600'}>
+          {t('workspace.passedOf', { passed, total: checks.length })}
+        </span>
       </p>
       <ul className="space-y-1">
         {checks.map((check, i) => (
@@ -63,13 +68,15 @@ function RowsTable({ columns, rows }) {
  * @param {{ output: object|null, runnerInfo?: object|null }} props
  */
 export function OutputPanel({ output, runnerInfo = null }) {
+  const t = useT();
   if (!output) {
     return (
       <div className="rounded-lg border border-dashed border-neutral-300 p-4 text-sm text-neutral-500 dark:border-neutral-700">
-        Press <span className="font-medium">Run</span> to execute your code, or <span className="font-medium">Check</span> to run the exercise self-checks.
+        {t('workspace.pressRun')} <span className="font-medium">{t('workspace.run')}</span> {t('workspace.pressRunMid')}{' '}
+        <span className="font-medium">{t('workspace.checkButton')}</span> {t('workspace.pressRunMid2')}
         {runnerInfo?.kind === 'local' && !runnerInfo.ready && (
           <span className="mt-1 block text-amber-600 dark:text-amber-400">
-            {runnerInfo.command ? `Needs the local server with \`${runnerInfo.command}\` on your PATH.` : 'Needs the local server.'}
+            {runnerInfo.command ? t('workspace.needsCommand', { command: runnerInfo.command }) : t('workspace.needsServer')}
           </span>
         )}
       </div>
@@ -80,15 +87,15 @@ export function OutputPanel({ output, runnerInfo = null }) {
     <div className="space-y-3 text-sm">
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone={output.runner === 'local' ? 'accent' : 'neutral'}>
-          {output.runner === 'local' ? 'Local server' : 'Browser'}
+          {output.runner === 'local' ? t('workspace.localServer') : t('workspace.browser')}
         </Badge>
         {typeof output.exitCode === 'number' && (
-          <Badge tone={output.exitCode === 0 ? 'success' : 'warning'}>exit {output.exitCode}</Badge>
+          <Badge tone={output.exitCode === 0 ? 'success' : 'warning'}>{t('workspace.exit', { code: output.exitCode })}</Badge>
         )}
         {typeof output.durationMs === 'number' && <span className="text-xs text-neutral-500">{output.durationMs} ms</span>}
-        {output.timedOut && <Badge tone="warning">timed out</Badge>}
-        {output.outputTruncated && <Badge tone="warning">output truncated</Badge>}
-        {output.aborted && <Badge tone="neutral">stopped</Badge>}
+        {output.timedOut && <Badge tone="warning">{t('workspace.timedOut')}</Badge>}
+        {output.outputTruncated && <Badge tone="warning">{t('workspace.outputTruncated')}</Badge>}
+        {output.aborted && <Badge tone="neutral">{t('workspace.stopped')}</Badge>}
       </div>
 
       {output.statusText && <p className="text-xs text-neutral-500">{output.statusText}</p>}
@@ -97,14 +104,14 @@ export function OutputPanel({ output, runnerInfo = null }) {
 
       {output.stdout ? (
         <div>
-          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-neutral-500">stdout</p>
+          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-neutral-500">{t('workspace.stdout')}</p>
           <pre className="max-h-64 overflow-auto rounded-lg bg-neutral-50 p-3 font-mono text-xs dark:bg-neutral-950">{output.stdout}</pre>
         </div>
       ) : null}
 
       {output.stderr ? (
         <div>
-          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-neutral-500">stderr</p>
+          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-neutral-500">{t('workspace.stderr')}</p>
           <pre className="max-h-64 overflow-auto rounded-lg bg-red-50 p-3 font-mono text-xs text-red-800 dark:bg-red-500/10 dark:text-red-200">
             {output.stderr}
           </pre>
@@ -115,9 +122,9 @@ export function OutputPanel({ output, runnerInfo = null }) {
 
       {output.preview?.html ? (
         <div>
-          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-neutral-500">Preview</p>
+          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-neutral-500">{t('workspace.preview')}</p>
           <iframe
-            title="Workspace preview"
+            title={t('workspace.preview')}
             sandbox="allow-scripts"
             srcDoc={output.preview.html}
             className="h-64 w-full rounded-lg border border-neutral-200 bg-white dark:border-neutral-800"
@@ -126,7 +133,7 @@ export function OutputPanel({ output, runnerInfo = null }) {
       ) : null}
 
       {!output.stdout && !output.stderr && !output.checks?.length && !output.rows?.columns?.length && !output.preview?.html && (
-        <p className="text-neutral-500">No output.</p>
+        <p className="text-neutral-500">{t('workspace.noOutput')}</p>
       )}
     </div>
   );

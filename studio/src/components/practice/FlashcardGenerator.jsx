@@ -6,6 +6,7 @@
 import { useCallback, useState } from 'react';
 import { getLessonContent, addCards, logActivity } from '../../lib/repo/index.js';
 import { useSettings } from '../../lib/settings.js';
+import { useT } from '../../lib/i18n/index.js';
 import { getProvider, ProviderError } from '../../lib/ai/index.js';
 import { useStream } from '../../lib/ai/useStream.js';
 import { buildFlashcardsMessages, normalizeFlashcards, validateFlashcards } from '../../lib/prompts/practice.js';
@@ -19,6 +20,7 @@ import { ErrorNotice } from '../ui/ErrorNotice.jsx';
 let rowKey = 0;
 
 export function FlashcardGenerator({ lesson, course }) {
+  const t = useT();
   const [settings] = useSettings();
   const [cards, setCards] = useState(null); // preview list or null before generation
   const [skipped, setSkipped] = useState(0);
@@ -34,21 +36,22 @@ export function FlashcardGenerator({ lesson, course }) {
     const content = await getLessonContent(lesson.id).catch(() => null);
     if (!content?.content_md) {
       setError(
-        new ProviderError('unknown', 'This lesson has no content yet.', 'Generate or open the lesson first, then try again.')
+        new ProviderError('unknown', t('practice.flashcards.noContent'), t('practice.flashcards.noContentHint'))
       );
       return;
     }
     const existing = await existingFronts(lesson.id);
+    const language = course?.language ?? settings.language;
     const { system, messages } = buildFlashcardsMessages({
       course,
       lesson,
       content: content.content_md,
-      language: course?.language ?? settings.language,
+      language,
     });
     try {
       const provider = await getProvider(settings);
       const result = await start(({ signal }) =>
-        provider.generateJson({ system, messages, signal, validate: validateFlashcards })
+        provider.generateJson({ system, messages, signal, validate: validateFlashcards, language })
       );
       const normalized = normalizeFlashcards(result);
       const fresh = dedupeCards(normalized, existing);
@@ -57,7 +60,7 @@ export function FlashcardGenerator({ lesson, course }) {
     } catch {
       /* useStream surfaces the actionable error */
     }
-  }, [lesson?.id, course, settings, start]);
+  }, [lesson?.id, course, settings, start, t]);
 
   const update = (key, patch) => setCards((rows) => rows.map((c) => (c.key === key ? { ...c, ...patch } : c)));
   const remove = (key) => setCards((rows) => rows.filter((c) => c.key !== key));
@@ -87,10 +90,10 @@ export function FlashcardGenerator({ lesson, course }) {
       {busy && (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <span className="inline-flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-300">
-            <Spinner label="Generating flashcards" /> Writing flashcards…
+            <Spinner label={t('practice.flashcards.generating')} /> {t('practice.flashcards.writing')}
           </span>
           <Button variant="danger" size="sm" onClick={stop}>
-            Stop
+            {t('practice.flashcards.stop')}
           </Button>
         </div>
       )}
@@ -99,41 +102,41 @@ export function FlashcardGenerator({ lesson, course }) {
 
       {savedCount !== null && !busy && (
         <p className="text-sm text-green-700 dark:text-green-400">
-          Added {savedCount} card{savedCount === 1 ? '' : 's'} to your review queue.
+          {t('practice.flashcards.added', { count: savedCount, cardWord: t('common.card', { count: savedCount }) })}
         </p>
       )}
 
       {!cards && !busy && (
-        <p className="text-sm text-neutral-600 dark:text-neutral-300">
-          Turn this lesson into a few flashcards and they will enter your spaced-repetition queue.
-        </p>
+        <p className="text-sm text-neutral-600 dark:text-neutral-300">{t('practice.flashcards.intro')}</p>
       )}
 
       {cards && !busy && (
         <div className="space-y-3">
           {skipped > 0 && (
-            <p className="text-xs text-neutral-500">{skipped} card{skipped === 1 ? '' : 's'} already in your deck were skipped.</p>
+            <p className="text-xs text-neutral-500">
+              {t('practice.flashcards.skipped', { count: skipped, cardWord: t('common.card', { count: skipped }) })}
+            </p>
           )}
           {cards.length === 0 ? (
-            <p className="text-sm text-neutral-500">Everything from this lesson is already in your deck.</p>
+            <p className="text-sm text-neutral-500">{t('practice.flashcards.alreadyInDeck')}</p>
           ) : (
             cards.map((card) => (
               <div key={card.key} className="space-y-2 rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
                 <Input
-                  label="Front"
+                  label={t('practice.flashcards.front')}
                   name={`front-${card.key}`}
                   value={card.front}
                   onChange={(e) => update(card.key, { front: e.target.value })}
                 />
                 <Input
-                  label="Back"
+                  label={t('practice.flashcards.back')}
                   name={`back-${card.key}`}
                   value={card.back}
                   onChange={(e) => update(card.key, { back: e.target.value })}
                 />
                 <div className="flex justify-end">
                   <Button variant="ghost" size="sm" onClick={() => remove(card.key)}>
-                    Delete
+                    {t('practice.flashcards.delete')}
                   </Button>
                 </div>
               </div>
@@ -146,11 +149,13 @@ export function FlashcardGenerator({ lesson, course }) {
         <div className="flex flex-wrap gap-2">
           {cards && cards.length > 0 && (
             <Button onClick={save} disabled={saving}>
-              {saving ? 'Saving…' : `Save ${cards.length} card${cards.length === 1 ? '' : 's'}`}
+              {saving
+                ? t('common.saving')
+                : t('practice.flashcards.save', { count: cards.length, cardWord: t('common.card', { count: cards.length }) })}
             </Button>
           )}
           <Button variant={cards ? 'secondary' : 'primary'} onClick={generate}>
-            {cards ? 'Generate again' : 'Generate flashcards'}
+            {cards ? t('practice.flashcards.generateAgain') : t('practice.flashcards.generate')}
           </Button>
         </div>
       )}

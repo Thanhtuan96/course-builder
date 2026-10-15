@@ -6,6 +6,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import { listQuizAttempts, onChange } from '../../lib/repo/index.js';
+import { useT } from '../../lib/i18n/index.js';
 import { QuizPanel } from './QuizPanel.jsx';
 import { FlashcardGenerator } from './FlashcardGenerator.jsx';
 import { Card } from '../ui/Card.jsx';
@@ -17,6 +18,7 @@ function formatWhen(value) {
 }
 
 export function LessonPractice({ lesson, course }) {
+  const t = useT();
   const [attempts, setAttempts] = useState([]);
 
   const refresh = useCallback(
@@ -43,24 +45,24 @@ export function LessonPractice({ lesson, course }) {
     <div className="space-y-6">
       <section className="space-y-3">
         <div>
-          <h2 className="text-base font-semibold">Check your understanding</h2>
-          <p className="text-sm text-neutral-500">Five quick questions, explained as you go.</p>
+          <h2 className="text-base font-semibold">{t('practice.quiz.title')}</h2>
+          <p className="text-sm text-neutral-500">{t('practice.quiz.subtitle')}</p>
         </div>
         <QuizPanel lesson={lesson} course={course} onAttemptSaved={refresh} />
       </section>
 
       <section className="space-y-3">
         <div>
-          <h2 className="text-base font-semibold">Flashcards</h2>
-          <p className="text-sm text-neutral-500">Add cards from this lesson to your review queue.</p>
+          <h2 className="text-base font-semibold">{t('practice.flashcards.title')}</h2>
+          <p className="text-sm text-neutral-500">{t('practice.flashcards.subtitle')}</p>
         </div>
         <FlashcardGenerator lesson={lesson} course={course} />
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-base font-semibold">Past attempts</h2>
+        <h2 className="text-base font-semibold">{t('practice.past.title')}</h2>
         {past.length === 0 ? (
-          <p className="text-sm text-neutral-500">No attempts yet — finish a self-check to see it here.</p>
+          <p className="text-sm text-neutral-500">{t('practice.past.empty')}</p>
         ) : (
           <Card className="divide-y divide-neutral-200 p-0 dark:divide-neutral-800">
             {past.map((attempt) => (

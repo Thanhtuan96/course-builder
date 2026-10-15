@@ -4,9 +4,11 @@
  */
 import { useEffect, useState } from 'react';
 import { listDueCards, onChange } from '../../lib/repo/index.js';
+import { useT } from '../../lib/i18n/index.js';
 import { Badge } from '../ui/Badge.jsx';
 
 export function DueBadge({ className = '' }) {
+  const t = useT();
   const [count, setCount] = useState(0);
 
   useEffect(() => {
@@ -27,8 +29,11 @@ export function DueBadge({ className = '' }) {
 
   if (!count) return null;
   return (
-    <span className={className} title={`${count} card${count === 1 ? '' : 's'} due for review`}>
-      <Badge tone="accent">{count} due</Badge>
+    <span
+      className={className}
+      title={t('practice.due.title', { count, cardWord: t('common.card', { count }) })}
+    >
+      <Badge tone="accent">{t('practice.due.badge', { count })}</Badge>
     </span>
   );
 }

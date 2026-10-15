@@ -12,6 +12,8 @@ import { LEVELS, COURSE_KINDS, COURSE_KIND_IDS } from '../lib/course.js';
 import { getProvider, createGenerateJson } from '../lib/ai/index.js';
 import { useStream } from '../lib/ai/useStream.js';
 import { useSettings } from '../lib/settings.js';
+import { useT } from '../lib/i18n/index.js';
+import { uiLanguageOptions } from '../lib/i18n/languages.js';
 import { buildSyllabusMessages, syllabusValidator } from '../lib/prompts/course.js';
 import { generateCapstoneForCourse, capstoneCopy } from '../lib/capstone.js';
 import { Card } from '../components/ui/Card.jsx';
@@ -19,8 +21,6 @@ import { Button } from '../components/ui/Button.jsx';
 import { Input, Textarea, Select } from '../components/ui/Input.jsx';
 import { Spinner } from '../components/ui/Spinner.jsx';
 import { ErrorNotice } from '../components/ui/ErrorNotice.jsx';
-
-const LANGUAGES = ['English', 'Vietnamese', 'Spanish', 'French', 'German', 'Japanese', 'Chinese'];
 
 function makeSyllabus(topic, level, goal) {
   return {
@@ -34,27 +34,32 @@ function makeSyllabus(topic, level, goal) {
 }
 
 export function NewCourse() {
+  const t = useT();
   const [settings] = useSettings();
   const [topic, setTopic] = useState('');
   const [level, setLevel] = useState('Beginner');
   const [goal, setGoal] = useState('');
-  const [language, setLanguage] = useState(settings.language || 'English');
+  // LANG-01: the course uses the single learning language by default; the disclosure opts out.
+  const [useDifferentLanguage, setUseDifferentLanguage] = useState(false);
+  const [language, setLanguage] = useState(settings.language);
   const [draft, setDraft] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
+  const effectiveLanguage = useDifferentLanguage ? language : settings.language;
+
   const gen = useStream();
-  const copy = capstoneCopy(language);
+  const copy = capstoneCopy(effectiveLanguage);
 
   const propose = async () => {
     if (!topic.trim()) return;
     setError(null);
     try {
-      const { system, messages } = buildSyllabusMessages({ topic, level, goal, language });
+      const { system, messages } = buildSyllabusMessages({ topic, level, goal, language: effectiveLanguage });
       const proposed = await gen.start(async ({ signal }) => {
         const provider = await getProvider(settings);
         const generateJson = createGenerateJson(provider.streamText.bind(provider));
-        return generateJson({ system, messages, signal, validate: syllabusValidator });
+        return generateJson({ system, messages, signal, validate: syllabusValidator, language: effectiveLanguage });
       });
       if (proposed) setDraft(proposed);
     } catch {
@@ -106,7 +111,7 @@ export function NewCourse() {
         description: syllabus.description || '',
         level,
         goal: goal.trim(),
-        language,
+        language: effectiveLanguage,
         kind: COURSE_KIND_IDS.includes(syllabus.kind) ? syllabus.kind : 'conceptual',
         source: input ? 'manual' : 'ai',
         lessons: syllabus.lessons
@@ -138,41 +143,54 @@ export function NewCourse() {
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       <div>
-        <h1 className="text-xl font-semibold">New course</h1>
-        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
-          Describe what you want to learn. Professor proposes a syllabus you can edit before starting.
-        </p>
+        <h1 className="text-xl font-semibold">{t('newCourse.title')}</h1>
+        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">{t('newCourse.subtitle')}</p>
       </div>
 
       {!draft ? (
         <Card className="space-y-4">
           <Input
-            label="What do you want to learn?"
+            label={t('newCourse.topic.label')}
             name="topic"
-            placeholder="e.g. Kubernetes networking, Music theory, Linear algebra"
+            placeholder={t('newCourse.topic.placeholder')}
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
           />
           <div className="grid gap-4 sm:grid-cols-2">
-            <Select label="Level" name="level" value={level} onChange={(e) => setLevel(e.target.value)}>
+            <Select label={t('newCourse.level')} name="level" value={level} onChange={(e) => setLevel(e.target.value)}>
               {LEVELS.map((l) => (
                 <option key={l} value={l}>
                   {l}
                 </option>
               ))}
             </Select>
-            <Select label="Lesson language" name="language" value={language} onChange={(e) => setLanguage(e.target.value)}>
-              {LANGUAGES.map((l) => (
-                <option key={l} value={l}>
-                  {l}
-                </option>
-              ))}
-            </Select>
+            {useDifferentLanguage && (
+              <Select
+                label={t('newCourse.language')}
+                name="language"
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+              >
+                {uiLanguageOptions().map((l) => (
+                  <option key={l.code} value={l.code}>
+                    {l.name}
+                  </option>
+                ))}
+              </Select>
+            )}
           </div>
+          <label className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-300">
+            <input
+              type="checkbox"
+              checked={useDifferentLanguage}
+              onChange={(e) => setUseDifferentLanguage(e.target.checked)}
+            />
+            {t('newCourse.useDifferent')}
+          </label>
           <Input
-            label="Your goal"
+            label={t('newCourse.goal.label')}
             name="goal"
-            placeholder="e.g. Pass the CKA exam, compose my first song"
+            placeholder={t('newCourse.goal.placeholder')}
             value={goal}
             onChange={(e) => setGoal(e.target.value)}
           />
@@ -182,11 +200,11 @@ export function NewCourse() {
           <div className="flex flex-wrap items-center gap-2">
             <Button onClick={propose} disabled={busy || !topic.trim()}>
               {busy && <Spinner />}
-              {busy ? 'Proposing…' : 'Propose syllabus'}
+              {busy ? t('newCourse.proposing') : t('newCourse.propose')}
             </Button>
             {busy && (
               <Button variant="secondary" onClick={gen.stop}>
-                Stop
+                {t('newCourse.stop')}
               </Button>
             )}
             <button
@@ -194,23 +212,23 @@ export function NewCourse() {
               className="text-sm text-neutral-500 underline hover:text-neutral-800 dark:hover:text-neutral-200"
               onClick={() => start(makeSyllabus(topic, level, goal))}
             >
-              Skip AI — start an empty course
+              {t('newCourse.skipAi')}
             </button>
           </div>
           <p className="text-xs text-neutral-500">
-            Using a no-key AI source? Configure it in{' '}
+            {t('newCourse.hint.before')}{' '}
             <Link to="/settings" className="underline">
-              Settings
+              {t('newCourse.hint.settingsLink')}
             </Link>
-            , or open the demo course first.
+            {t('newCourse.hint.after')}
           </p>
         </Card>
       ) : (
         <div className="space-y-4">
           <Card className="space-y-3">
-            <Input label="Course title" name="courseTitle" value={draft.title} onChange={(e) => patchSyllabus({ title: e.target.value })} />
+            <Input label={t('newCourse.courseTitle')} name="courseTitle" value={draft.title} onChange={(e) => patchSyllabus({ title: e.target.value })} />
             <Textarea
-              label="Description"
+              label={t('newCourse.description')}
               name="courseDescription"
               rows={2}
               value={draft.description}
@@ -219,8 +237,10 @@ export function NewCourse() {
           </Card>
 
           <Card className="space-y-3">
-            <h2 className="text-sm font-semibold">Course kind</h2>
-            {draft.kindReason && <p className="text-sm text-neutral-600 dark:text-neutral-300">Detected: {draft.kindReason}</p>}
+            <h2 className="text-sm font-semibold">{t('newCourse.courseKind')}</h2>
+            {draft.kindReason && (
+              <p className="text-sm text-neutral-600 dark:text-neutral-300">{t('newCourse.detected', { reason: draft.kindReason })}</p>
+            )}
             <div className="flex flex-wrap gap-2">
               {COURSE_KINDS.map((k) => {
                 const active = draft.kind === k.id;
@@ -254,23 +274,23 @@ export function NewCourse() {
                 onClick={addArtifactDone}
                 className="text-xs text-neutral-500 underline hover:text-neutral-800 dark:hover:text-neutral-200"
               >
-                Add to “{copy.definitionOfDone}”
+                {t('newCourse.addToDo', { label: copy.definitionOfDone })}
               </button>
             </div>
             <Input
-              label="Artifact title"
+              label={t('newCourse.artifactTitle')}
               name="artifactTitle"
               value={draft.artifact?.title || ''}
               onChange={(e) => patchArtifact({ title: e.target.value })}
-              placeholder="e.g. A deployed URL shortener + repo"
+              placeholder={t('newCourse.artifactTitlePlaceholder')}
             />
             <Textarea
-              label="What you'll ship"
+              label={t('newCourse.deliverable')}
               name="artifactDeliverable"
               rows={2}
               value={draft.artifact?.deliverable || ''}
               onChange={(e) => patchArtifact({ deliverable: e.target.value })}
-              placeholder="The ONE concrete, real thing this course builds toward."
+              placeholder={t('newCourse.deliverablePlaceholder')}
             />
             <div className="space-y-2">
               <p className="text-sm font-medium">{copy.definitionOfDone}</p>
@@ -281,9 +301,9 @@ export function NewCourse() {
                     className="flex-1"
                     value={item}
                     onChange={(e) => patchArtifactDone(() => e.target.value, index)}
-                    placeholder="A checkable finished-state bullet"
+                    placeholder={t('newCourse.doneBulletPlaceholder')}
                   />
-                  <Button variant="ghost" size="sm" aria-label="Remove item" onClick={() => removeArtifactDone(index)}>
+                  <Button variant="ghost" size="sm" aria-label={t('newCourse.removeItem')} onClick={() => removeArtifactDone(index)}>
                     ✕
                   </Button>
                 </div>
@@ -294,10 +314,13 @@ export function NewCourse() {
           <Card className="space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold">
-                Syllabus · {draft.lessons.length} lesson{draft.lessons.length === 1 ? '' : 's'}
+                {t('newCourse.syllabus', {
+                  count: draft.lessons.length,
+                  lessonWord: t('common.lesson', { count: draft.lessons.length }),
+                })}
               </h2>
               <Button variant="ghost" size="sm" onClick={propose} disabled={busy}>
-                Regenerate
+                {t('common.regenerate')}
               </Button>
             </div>
             <ol className="space-y-3">
@@ -307,32 +330,32 @@ export function NewCourse() {
                     <span className="mt-2 text-xs text-neutral-500">{index + 1}</span>
                     <div className="flex-1 space-y-2">
                       <Input
-                        label={`Lesson ${index + 1} title`}
+                        label={t('newCourse.lessonNTitle', { n: index + 1 })}
                         name={`title-${index}`}
                         value={lesson.title}
                         onChange={(e) => patchLesson(index, { title: e.target.value })}
                       />
                       <Input
-                        label="Summary"
+                        label={t('newCourse.summary')}
                         name={`summary-${index}`}
                         value={lesson.summary}
                         onChange={(e) => patchLesson(index, { summary: e.target.value })}
                       />
                     </div>
                     <div className="flex flex-col gap-1 pt-1">
-                      <Button variant="ghost" size="sm" aria-label="Move up" disabled={index === 0} onClick={() => moveLesson(index, -1)}>
+                      <Button variant="ghost" size="sm" aria-label={t('newCourse.moveUp')} disabled={index === 0} onClick={() => moveLesson(index, -1)}>
                         ↑
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
-                        aria-label="Move down"
+                        aria-label={t('newCourse.moveDown')}
                         disabled={index === draft.lessons.length - 1}
                         onClick={() => moveLesson(index, 1)}
                       >
                         ↓
                       </Button>
-                      <Button variant="ghost" size="sm" aria-label="Delete lesson" onClick={() => removeLesson(index)}>
+                      <Button variant="ghost" size="sm" aria-label={t('common.delete')} onClick={() => removeLesson(index)}>
                         ✕
                       </Button>
                     </div>
@@ -341,7 +364,7 @@ export function NewCourse() {
               ))}
             </ol>
             <Button variant="secondary" size="sm" onClick={addLesson}>
-              Add lesson
+              {t('newCourse.addLesson')}
             </Button>
           </Card>
 
@@ -349,10 +372,10 @@ export function NewCourse() {
 
           <div className="flex flex-wrap items-center gap-2">
             <Button onClick={() => start()} disabled={saving || !draft.title.trim()}>
-              {saving ? 'Starting…' : 'Start course'}
+              {saving ? t('newCourse.starting') : t('newCourse.start')}
             </Button>
             <Button variant="secondary" onClick={() => setDraft(null)}>
-              Back
+              {t('common.back')}
             </Button>
           </div>
         </div>

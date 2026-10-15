@@ -6,11 +6,13 @@
  */
 import { TUTOR_MODES } from '../../lib/prompts/tutor.js';
 import { hintLevelLabel } from '../../lib/chat-store.js';
+import { useT } from '../../lib/i18n/index.js';
 import { Button } from '../ui/Button.jsx';
 
 export function QuickActions({ onAction, disabled = false, hintLevel = 0, pendingMode = null }) {
+  const t = useT();
   return (
-    <div className="flex flex-wrap gap-2" role="group" aria-label="Tutor quick actions">
+    <div className="flex flex-wrap gap-2" role="group" aria-label={t('tutor.quickAria')}>
       {TUTOR_MODES.map((mode) => {
         const active = pendingMode === mode.id;
         const suffix = mode.id === 'hint' && hintLevel > 0 ? ` · ${hintLevelLabel(hintLevel)}` : '';
@@ -23,7 +25,7 @@ export function QuickActions({ onAction, disabled = false, hintLevel = 0, pendin
             aria-pressed={active}
             onClick={() => onAction(mode.id)}
           >
-            {mode.label}
+            {t(`tutor.mode.${mode.id}`)}
             {suffix}
           </Button>
         );

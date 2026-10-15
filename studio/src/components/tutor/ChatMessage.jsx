@@ -6,11 +6,12 @@
 import { Markdown } from '../ui/Markdown.jsx';
 import { Badge } from '../ui/Badge.jsx';
 import { Spinner } from '../ui/Spinner.jsx';
-import { modeLabel } from '../../lib/prompts/tutor.js';
+import { useT } from '../../lib/i18n/index.js';
 
 export function ChatMessage({ message, streaming = false }) {
+  const t = useT();
   const isUser = message.role === 'user';
-  const label = message.mode ? modeLabel(message.mode) : '';
+  const label = message.mode ? t(`tutor.mode.${message.mode}`) : '';
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -33,8 +34,8 @@ export function ChatMessage({ message, streaming = false }) {
         )}
         {streaming && (
           <span className="mt-1 inline-flex items-center gap-1.5 text-xs text-neutral-500">
-            <Spinner label="Tutor is replying" />
-            <span>thinking…</span>
+            <Spinner label={t('tutor.title')} />
+            <span>{t('tutor.thinking')}</span>
           </span>
         )}
       </div>

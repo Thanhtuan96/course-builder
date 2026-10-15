@@ -1,11 +1,18 @@
 /**
  * ErrorNotice — shows a ProviderError message plus its actionable hint, or any other error.
+ * Default per-code hints are localised through the i18n catalog (LANG-02); custom hints a caller
+ * supplies are shown untouched.
  */
+import { ERROR_HINTS } from '../../lib/ai/errors.js';
+import { useT } from '../../lib/i18n/index.js';
+
 export function ErrorNotice({ error, onDismiss, className = '' }) {
+  const t = useT();
   if (!error) return null;
   const message = error.message || String(error);
-  const hint = error.hint;
   const code = error.code;
+  const isDefaultHint = error.hint && code && ERROR_HINTS[code] === error.hint;
+  const hint = isDefaultHint ? t(`errors.${code}`) : error.hint;
   return (
     <div
       role="alert"

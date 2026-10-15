@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { getLessonContent, saveQuizAttempt, logActivity } from '../../lib/repo/index.js';
 import { useSettings } from '../../lib/settings.js';
+import { useT } from '../../lib/i18n/index.js';
 import { getProvider, ProviderError } from '../../lib/ai/index.js';
 import { useStream } from '../../lib/ai/useStream.js';
 import {
@@ -41,6 +42,7 @@ function seedQuestions(lesson) {
 }
 
 export function QuizPanel({ lesson, course, onAttemptSaved }) {
+  const t = useT();
   const [settings] = useSettings();
   const seeded = useMemo(() => seedQuestions(lesson), [lesson?.quiz_seed]);
   const [state, dispatch] = useReducer(quizReducer, seeded, (initial) =>
@@ -62,25 +64,26 @@ export function QuizPanel({ lesson, course, onAttemptSaved }) {
     const content = await getLessonContent(lesson.id).catch(() => null);
     if (!content?.content_md) {
       setError(
-        new ProviderError('unknown', 'This lesson has no content yet.', 'Generate or open the lesson first, then try again.')
+        new ProviderError('unknown', t('practice.quiz.noContent'), t('practice.quiz.noContentHint'))
       );
       return;
     }
+    const language = course?.language ?? settings.language;
     const { system, messages } = buildQuizMessages({
       course,
       lesson,
       content: content.content_md,
-      language: course?.language ?? settings.language,
+      language,
     });
     try {
       const provider = await getProvider(settings);
-      const result = await start(({ signal }) => provider.generateJson({ system, messages, signal, validate: validateQuiz }));
+      const result = await start(({ signal }) => provider.generateJson({ system, messages, signal, validate: validateQuiz, language }));
       const questions = normalizeQuiz(result);
       if (questions.length) dispatch({ type: 'load', questions, source: 'ai' });
     } catch {
       /* useStream surfaces the actionable error */
     }
-  }, [lesson?.id, course, settings, start]);
+  }, [lesson?.id, course, settings, start, t]);
 
   const persist = useCallback(
     async (questions, answers) => {
@@ -115,14 +118,11 @@ export function QuizPanel({ lesson, course, onAttemptSaved }) {
   if ((status === 'idle' || status === 'stopped') && state.stage === 'idle') {
     return (
       <Card className="space-y-3">
-        <p className="text-sm text-neutral-600 dark:text-neutral-300">
-          Answer 5 quick questions to check what stuck. You will see the reasoning after each one — this is a self-check,
-          not a grade.
-        </p>
+        <p className="text-sm text-neutral-600 dark:text-neutral-300">{t('practice.quiz.intro')}</p>
         <div className="flex items-center gap-2">
           <Button onClick={generate}>
-            <span className="sm:hidden">Start self-check</span>
-            <span className="hidden sm:inline">Check your understanding</span>
+            <span className="sm:hidden">{t('practice.quiz.startShort')}</span>
+            <span className="hidden sm:inline">{t('practice.quiz.start')}</span>
           </Button>
         </div>
       </Card>
@@ -133,10 +133,10 @@ export function QuizPanel({ lesson, course, onAttemptSaved }) {
     return (
       <Card className="flex flex-wrap items-center justify-between gap-3">
         <span className="inline-flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-300">
-          <Spinner label="Generating questions" /> Writing your 5 questions…
+          <Spinner label={t('practice.quiz.generating')} /> {t('practice.quiz.writing')}
         </span>
         <Button variant="danger" size="sm" onClick={stop}>
-          Stop
+          {t('practice.quiz.stop')}
         </Button>
       </Card>
     );
@@ -147,7 +147,7 @@ export function QuizPanel({ lesson, course, onAttemptSaved }) {
       <Card className="space-y-3">
         <ErrorNotice error={error || streamError} onDismiss={() => setError(null)} />
         <Button variant="secondary" onClick={generate}>
-          Try again
+          {t('practice.quiz.tryAgain')}
         </Button>
       </Card>
     );
@@ -157,11 +157,9 @@ export function QuizPanel({ lesson, course, onAttemptSaved }) {
     return (
       <Card className="space-y-4">
         <div className="space-y-1">
-          <p className="font-semibold">
-            You got {score} of {total} correct.
-          </p>
+          <p className="font-semibold">{t('practice.quiz.youGot', { score, total })}</p>
           <p className="text-sm text-neutral-500">
-            {saving ? 'Saving your attempt…' : 'Saved to your attempts.'}
+            {saving ? t('practice.quiz.saving') : t('practice.quiz.saved')}
           </p>
         </div>
         <ul className="space-y-1.5 text-sm">
@@ -178,9 +176,9 @@ export function QuizPanel({ lesson, course, onAttemptSaved }) {
           })}
         </ul>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => dispatch({ type: 'retake' })}>Retake</Button>
+          <Button onClick={() => dispatch({ type: 'retake' })}>{t('practice.quiz.retake')}</Button>
           <Button variant="secondary" onClick={generate}>
-            New quiz
+            {t('practice.quiz.newQuiz')}
           </Button>
         </div>
       </Card>
@@ -192,10 +190,8 @@ export function QuizPanel({ lesson, course, onAttemptSaved }) {
   return (
     <Card className="space-y-4">
       <div className="flex items-center justify-between text-xs text-neutral-500">
-        <span>
-          Question {state.current + 1} of {total}
-        </span>
-        {state.source === 'seed' && <span>demo quiz</span>}
+        <span>{t('practice.quiz.questionOf', { n: state.current + 1, total })}</span>
+        {state.source === 'seed' && <span>{t('practice.quiz.demoQuiz')}</span>}
       </div>
 
       <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{question.question}</p>
@@ -232,7 +228,9 @@ export function QuizPanel({ lesson, course, onAttemptSaved }) {
               chosen === question.answerIndex ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'
             }`}
           >
-            {chosen === question.answerIndex ? 'Correct' : `Not quite — the answer is ${OPTION_LETTERS[question.answerIndex]}.`}
+            {chosen === question.answerIndex
+              ? t('practice.quiz.correct')
+              : t('practice.quiz.notQuite', { letter: OPTION_LETTERS[question.answerIndex] })}
           </p>
           {question.explanation && (
             <p className="rounded-lg bg-neutral-50 p-3 text-sm text-neutral-700 dark:bg-neutral-800/60 dark:text-neutral-300">
@@ -240,7 +238,7 @@ export function QuizPanel({ lesson, course, onAttemptSaved }) {
             </p>
           )}
           <div className="flex justify-end">
-            <Button onClick={next}>{isLast ? 'See score' : 'Next question'}</Button>
+            <Button onClick={next}>{isLast ? t('practice.quiz.seeScore') : t('practice.quiz.nextQuestion')}</Button>
           </div>
         </div>
       )}

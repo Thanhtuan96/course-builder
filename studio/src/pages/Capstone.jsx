@@ -20,6 +20,7 @@ import {
   onChange,
 } from '../lib/repo/index.js';
 import { useSettings } from '../lib/settings.js';
+import { useT } from '../lib/i18n/index.js';
 import { getProvider, createGenerateJson } from '../lib/ai/index.js';
 import { useStream } from '../lib/ai/useStream.js';
 import {
@@ -32,7 +33,6 @@ import {
   capstoneUnlocked,
   capstoneProgress,
   capstoneHasTests,
-  capstoneCopy,
   runCapstoneTests,
   generateCapstoneForCourse,
   toCompletionMarkdown,
@@ -57,6 +57,7 @@ import { CompletionPanel } from '../components/capstone/CompletionPanel.jsx';
 import { TutorPanel } from '../components/tutor/TutorPanel.jsx';
 
 export function Capstone({ id }) {
+  const t = useT();
   const [settings] = useSettings();
   const [course, setCourse] = useState(null);
   const [capstone, setCapstone] = useState(null);
@@ -102,28 +103,27 @@ export function Capstone({ id }) {
     };
   }, [id]);
 
-  if (!loaded) return <p className="text-sm text-neutral-500">Loading…</p>;
+  if (!loaded) return <p className="text-sm text-neutral-500">{t('common.loading')}</p>;
   if (!course) {
     return (
       <EmptyState
-        title="Course not found"
-        description="It may have been deleted."
+        title={t('capstone.notFound.title')}
+        description={t('capstone.notFound.description')}
         action={
           <Link to="/">
-            <Button variant="secondary">Back home</Button>
+            <Button variant="secondary">{t('capstone.notFound.back')}</Button>
           </Link>
         }
       />
     );
   }
 
-  const copy = capstoneCopy(course.language);
   const unlocked = capstoneUnlocked(course);
   const progress = capstoneProgress(course);
   const latest = submissions[submissions.length - 1] || null;
   const completionSubmission = [...submissions].reverse().find((s) => s.verdict === 'course_complete') || null;
   const completed = Boolean(completionSubmission);
-  const tutorLesson = { id: `capstone:${capstone?.id || course.id}`, title: artifactLabel(capstone?.artifact) || 'Capstone' };
+  const tutorLesson = { id: `capstone:${capstone?.id || course.id}`, title: artifactLabel(capstone?.artifact) || t('capstone.capstoneTutorTitle') };
 
   const generate = async () => {
     setGenerating(true);
@@ -159,8 +159,8 @@ export function Capstone({ id }) {
         }
       } else {
         setRunnerError(
-          Object.assign(new Error('No Workspace files were attached.'), {
-            hint: 'Tick "Use my Workspace files" so the capstone tests can run against your code, then submit again.',
+          Object.assign(new Error(t('capstone.noWorkspaceFiles')), {
+            hint: t('capstone.noWorkspaceFilesHint'),
           })
         );
       }
@@ -177,6 +177,7 @@ export function Capstone({ id }) {
           messages,
           signal,
           validate: capstoneReviewValidator({ testsFailed, rubric: capstone.rubric }),
+          language: course?.language,
         })
       );
       const validated = validateCapstoneReview(raw, { testsFailed, rubric: capstone.rubric });
@@ -216,21 +217,21 @@ export function Capstone({ id }) {
         <Breadcrumb course={course} />
         {unlocked ? (
           <EmptyState
-            title="No capstone yet"
-            description="This course predates capstones. Generate the brief once — it is immutable afterwards."
+            title={t('capstone.noCapstone.title')}
+            description={t('capstone.noCapstone.description')}
             action={
               <Button onClick={generate} disabled={generating}>
-                {generating ? 'Generating…' : copy.generate || 'Generate capstone'}
+                {generating ? t('capstone.generating') : t('capstone.generate')}
               </Button>
             }
           />
         ) : (
           <EmptyState
-            title="Capstone is locked"
-            description={`Finish every lesson to unlock your capstone. ${progress.done}/${progress.total} done.`}
+            title={t('capstone.lockedTitle')}
+            description={t('capstone.lockedDesc', { done: progress.done, total: progress.total })}
             action={
               <Link to={`/course/${course.id}`}>
-                <Button variant="secondary">Back to lessons</Button>
+                <Button variant="secondary">{t('capstone.backToLessons')}</Button>
               </Link>
             }
           />
@@ -246,22 +247,20 @@ export function Capstone({ id }) {
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <h1 className="text-xl font-semibold">Capstone</h1>
-          {unlocked ? <Badge tone="success">🔓 Unlocked</Badge> : <Badge tone="neutral">🔒 Locked</Badge>}
+          <h1 className="text-xl font-semibold">{t('capstone.title')}</h1>
+          {unlocked ? <Badge tone="success">{t('capstone.unlocked')}</Badge> : <Badge tone="neutral">{t('capstone.locked')}</Badge>}
         </div>
-        {completed && <Badge tone="success">🎓 {copy.verdictComplete || 'Course Complete'}</Badge>}
+        {completed && <Badge tone="success">🎓 {t('capstone.verdictComplete')}</Badge>}
       </div>
 
-      <ArtifactCard artifact={capstone.artifact} copy={copy} />
+      <ArtifactCard artifact={capstone.artifact} />
 
       {!unlocked && (
         <Card className="space-y-2">
-          <p className="text-sm">
-            You can read your capstone brief any time, but it unlocks only after the last lesson.
-          </p>
-          <Progress value={progress.pct} label={`${progress.done}/${progress.total} lessons`} />
+          <p className="text-sm">{t('capstone.readAnyway')}</p>
+          <Progress value={progress.pct} label={t('common.lessonsDoneShort', { done: progress.done, total: progress.total })} />
           <p className="text-xs text-neutral-500">
-            {progress.done} of {progress.total} lessons done — {copy.locked}
+            {t('common.lessonsDone', { done: progress.done, total: progress.total })} — {t('capstone.lockedHint')}
           </p>
         </Card>
       )}
@@ -272,28 +271,26 @@ export function Capstone({ id }) {
           capstone={capstone}
           submission={completionSubmission}
           attempts={submissions.length}
-          copy={copy}
           onExport={exportCompletion}
         />
       )}
 
       <Card className="space-y-3">
-        <h2 className="font-semibold">{copy.brief || 'Capstone brief'}</h2>
+        <h2 className="font-semibold">{t('capstone.brief')}</h2>
         <div className="prose prose-sm max-w-none dark:prose-invert">
           <Markdown>{capstone.brief_md}</Markdown>
         </div>
       </Card>
 
       <Card>
-        <RubricList rubric={capstone.rubric} title={copy.rubric || 'Rubric'} />
+        <RubricList rubric={capstone.rubric} />
       </Card>
 
-      {latest && <ReviewPanel review={latest.review} testResults={latest.testResults} copy={copy} />}
+      {latest && <ReviewPanel review={latest.review} testResults={latest.testResults} />}
 
       {unlocked && (
         <>
           <SubmissionForm
-            copy={copy}
             programming={course.kind === 'programming'}
             workspaceFiles={workspaceFiles}
             onSubmit={submit}
@@ -308,7 +305,7 @@ export function Capstone({ id }) {
         </>
       )}
 
-      <SubmissionHistory submissions={submissions} copy={copy} />
+      <SubmissionHistory submissions={submissions} />
     </div>
   );
 }

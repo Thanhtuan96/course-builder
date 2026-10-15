@@ -8,6 +8,9 @@ import { getLessonContent, listLessonVersions, addLessonVersion, onChange } from
 import { getProvider, MAX_TOKENS } from '../../lib/ai/index.js';
 import { useStream } from '../../lib/ai/useStream.js';
 import { useSettings, activeModel } from '../../lib/settings.js';
+import { useT } from '../../lib/i18n/index.js';
+import { isEnglish, languageName, normalizeLanguage } from '../../lib/i18n/languages.js';
+import { checkLanguage } from '../../lib/i18n/detect.js';
 import { buildLessonMessages } from '../../lib/prompts/lesson.js';
 import { Markdown } from '../ui/Markdown.jsx';
 import { EmptyState } from '../ui/EmptyState.jsx';
@@ -25,18 +28,21 @@ function timeLabel(iso) {
   }
 }
 
-function versionLabel(v) {
+function versionLabel(v, t) {
   const time = timeLabel(v.created_at);
   const model = v.model || v.provider || '';
-  return [`v${v.version}`, time && `generated ${time}`, model].filter(Boolean).join(' · ');
+  return [`v${v.version}`, time && t('lesson.generated', { time }), model].filter(Boolean).join(' · ');
 }
 
 export function LessonContent({ lesson, course }) {
+  const t = useT();
   const [settings] = useSettings();
   const [versions, setVersions] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [error, setError] = useState(null);
+  const [langNotice, setLangNotice] = useState(false);
   const gen = useStream();
+  const courseLanguage = course?.language ?? settings.language;
 
   useEffect(() => {
     let alive = true;
@@ -63,26 +69,49 @@ export function LessonContent({ lesson, course }) {
 
   const selected = useMemo(() => versions?.find((v) => v.id === selectedId) || null, [versions, selectedId]);
 
+  /** One generation run; `strict` adds the stronger post-retry language instruction (LANG-04). */
+  const runGenerate = async (strict) => {
+    const provider = await getProvider(settings);
+    const { system, messages } = buildLessonMessages({
+      course,
+      lesson,
+      level: course?.level,
+      language: courseLanguage,
+      strict,
+    });
+    return gen.start(({ onText, signal }) =>
+      provider.streamText({ system, messages, onText, signal, effort: 'high', maxTokens: MAX_TOKENS.lesson })
+    );
+  };
+
+  const store = async (text) => {
+    const row = await addLessonVersion(lesson.id, {
+      content_md: text,
+      model: activeModel(settings),
+      provider: settings.provider,
+      language: courseLanguage,
+    });
+    return row;
+  };
+
   const generate = async () => {
     setError(null);
+    setLangNotice(false);
     try {
-      const provider = await getProvider(settings);
-      const { system, messages } = buildLessonMessages({
-        course,
-        lesson,
-        level: course?.level,
-        language: course?.language ?? settings.language,
-      });
-      const text = await gen.start(({ onText, signal }) =>
-        provider.streamText({ system, messages, onText, signal, effort: 'high', maxTokens: MAX_TOKENS.lesson })
-      );
-      if (text && text.trim()) {
-        const row = await addLessonVersion(lesson.id, {
-          content_md: text,
-          model: activeModel(settings),
-          provider: settings.provider,
-        });
-        setSelectedId(row.id);
+      const first = await runGenerate(false);
+      if (!first || !first.trim()) return;
+      const firstRow = await store(first);
+      setSelectedId(firstRow.id);
+
+      // LANG-04: enforce a non-English course language; if the model drifted, regenerate ONCE with
+      // a stronger instruction and keep BOTH versions.
+      if (!isEnglish(courseLanguage) && !checkLanguage(first, courseLanguage).ok) {
+        setLangNotice(true);
+        const second = await runGenerate(true);
+        if (second && second.trim()) {
+          const secondRow = await store(second);
+          setSelectedId(secondRow.id);
+        }
       }
     } catch (err) {
       setError(err);
@@ -90,13 +119,11 @@ export function LessonContent({ lesson, course }) {
   };
 
   const regenerate = () => {
-    const ok = window.confirm(
-      'Regenerate this lesson? This calls the AI again and costs tokens. Your current version is kept.'
-    );
+    const ok = window.confirm(t('lesson.regenerateConfirm'));
     if (ok) generate();
   };
 
-  if (versions === null) return <p className="text-sm text-neutral-500">Loading lesson…</p>;
+  if (versions === null) return <p className="text-sm text-neutral-500">{t('lesson.loading')}</p>;
 
   const streaming = gen.status === 'streaming';
   const hasContent = Boolean(selected?.content_md);
@@ -105,11 +132,11 @@ export function LessonContent({ lesson, course }) {
     return (
       <div className="space-y-3">
         <EmptyState
-          title="No lesson content yet"
-          description="Generate this lesson from the course context and your level. You can regenerate later — older versions are never overwritten."
+          title={t('lesson.noContent.title')}
+          description={t('lesson.noContent.description')}
           action={
             <Button onClick={generate}>
-              Generate lesson
+              {t('lesson.noContent.action')}
             </Button>
           }
         />
@@ -124,7 +151,7 @@ export function LessonContent({ lesson, course }) {
         <div className="flex items-center gap-2">
           {versions.length > 1 ? (
             <label className="text-sm">
-              <span className="sr-only">Lesson version</span>
+              <span className="sr-only">{t('lesson.version')}</span>
               <select
                 value={selectedId || ''}
                 onChange={(e) => setSelectedId(e.target.value)}
@@ -132,24 +159,26 @@ export function LessonContent({ lesson, course }) {
               >
                 {[...versions].reverse().map((v) => (
                   <option key={v.id} value={v.id}>
-                    {versionLabel(v)}
+                    {versionLabel(v, t)}
                   </option>
                 ))}
               </select>
             </label>
           ) : (
-            selected && <span className="text-xs text-neutral-500">{versionLabel(selected)}</span>
+            selected && <span className="text-xs text-neutral-500">{versionLabel(selected, t)}</span>
           )}
         </div>
         <div className="flex items-center gap-2">
           {streaming && <Spinner />}
           {streaming ? (
             <Button variant="secondary" onClick={gen.stop}>
-              Stop
+              {t('common.stop')}
             </Button>
           ) : (
             <Button variant="secondary" size="sm" onClick={regenerate}>
-              Regenerate
+              {selected?.language && normalizeLanguage(selected.language) !== normalizeLanguage(courseLanguage)
+                ? t('lesson.regenerateIn', { language: languageName(courseLanguage) })
+                : t('common.regenerate')}
             </Button>
           )}
         </div>
@@ -157,9 +186,15 @@ export function LessonContent({ lesson, course }) {
 
       {(error || gen.error) && <ErrorNotice error={error || gen.error} onDismiss={() => setError(null)} />}
 
+      {langNotice && !streaming && (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+          {t('lesson.languageNotice', { language: languageName(courseLanguage) })}
+        </p>
+      )}
+
       {streaming ? (
         <Card className="bg-neutral-50 dark:bg-neutral-900/50">
-          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-500">Generating lesson…</p>
+          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-500">{t('lesson.generating')}</p>
           <pre className="whitespace-pre-wrap break-words font-mono text-sm text-neutral-700 dark:text-neutral-200">
             {gen.text || '…'}
           </pre>

@@ -4,9 +4,11 @@
  */
 import { useEffect, useState } from 'react';
 import { onChange } from '../../lib/repo/index.js';
+import { useT } from '../../lib/i18n/index.js';
 import { getStreak, getStudyDays, STUDY_WINDOW_DAYS } from '../../lib/activity.js';
 
 export function StreakBadge({ className = '' }) {
+  const t = useT();
   const [streak, setStreak] = useState(0);
   const [days, setDays] = useState([]);
 
@@ -35,8 +37,8 @@ export function StreakBadge({ className = '' }) {
   const studied = days.some((d) => d.studied);
   if (!streak && !studied) return null;
 
-  const label = streak === 0 ? 'No streak yet' : streak === 1 ? '1-day streak' : `${streak}-day streak`;
-  const title = `Studied on ${days.filter((d) => d.studied).length} of the last ${days.length} days`;
+  const label = streak === 0 ? t('practice.streak.none') : streak === 1 ? t('practice.streak.one') : t('practice.streak.many', { count: streak });
+  const title = t('practice.streak.title', { studied: days.filter((d) => d.studied).length, total: days.length });
 
   return (
     <span
