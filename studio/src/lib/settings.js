@@ -16,6 +16,14 @@ export const DEFAULT_PROVIDER = 'anthropic';
 /** Provider id for "My local agent" (the CLI bridge). */
 export const BRIDGE_PROVIDER = 'bridge';
 
+/**
+ * Where learning data is written (STORE-01). `null` means the learner has not chosen yet — the app
+ * then resolves a default (SQLite when a bridge is paired, else the browser) and records it.
+ */
+export const STORAGE_BROWSER = 'browser';
+export const STORAGE_SQLITE = 'sqlite';
+export const STORAGE_KINDS = [STORAGE_BROWSER, STORAGE_SQLITE];
+
 /** One model slot per bridge agent — no more global `model` leaking between providers. */
 export const DEFAULT_BRIDGE_MODELS = {
   claude: '',
@@ -45,6 +53,7 @@ export const DEFAULT_SETTINGS = {
   learnerName: '',
   language: 'English',
   onboardingDone: false,
+  storage: null,
 };
 
 const listeners = new Set();
@@ -73,6 +82,9 @@ function deepMerge(base, patch) {
 export function migrateSettings(raw) {
   if (!raw || typeof raw !== 'object') return raw;
   const next = { ...raw };
+  // STORE-01: keep only a known storage kind; an absent/invalid value means "undecided" so the app
+  // can migrate existing users from the store that actually holds their data.
+  if (next.storage !== undefined && !STORAGE_KINDS.includes(next.storage)) delete next.storage;
   const legacy = typeof next.model === 'string' ? next.model.trim() : '';
   delete next.model;
   if (!legacy) return next;
@@ -208,6 +220,9 @@ export function applyPairingFromUrl(env = {}) {
   // studio` exists to hand them a working local setup, so an unconfigured/untested provider yields.
   if (!providerIsReady(stored)) patch.provider = BRIDGE_PROVIDER;
   if (!stored || stored.onboardingDone !== true) patch.onboardingDone = true;
+  // A paired bridge means a local server exists — default to SQLite (STORE-01) unless the learner
+  // has already chosen where their data lives.
+  if (!stored || !STORAGE_KINDS.includes(stored.storage)) patch.storage = STORAGE_SQLITE;
 
   const next = saveSettings(patch);
 

@@ -13,6 +13,8 @@ import { TABLE_NAMES, SCHEMA_VERSION, tableSpec, assertIndexedField } from './sc
 import { createMemoryAdapter, validateDump, APP_ID } from './memory-adapter.js';
 
 const DB_NAME = 'professor-studio';
+/** The IndexedDB database name (DELETE it to remove the browser copy — STORE-03). */
+export const IDB_DB_NAME = DB_NAME;
 // v1 = the seed db.js (courses/cards/meta); v2 = the normalized schema; v3 adds the CLI-import
 // `external_id` indexes; v4 adds the capstone tables (Phase 33). Bumping the version is what makes
 // `onupgradeneeded` run for browsers that already have an older database — otherwise the new
@@ -193,6 +195,16 @@ export function createIdbAdapter({ dbName = DB_NAME } = {}) {
     async info() {
       const db = await ready;
       return db ? { kind: 'indexeddb', persistent } : { kind: 'memory', persistent: false };
+    },
+    async clearAll() {
+      const db = await ready;
+      if (!db) return fallback.clearAll();
+      for (const table of TABLE_NAMES) {
+        const tx = db.transaction(table, 'readwrite');
+        tx.objectStore(table).clear();
+        await txDone(tx);
+      }
+      return { cleared: true };
     },
   };
 }

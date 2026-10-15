@@ -15,6 +15,7 @@
  *   softDelete(table, id)                  -> row | null     (sets deleted_at = now, ISO-8601)
  *   exportAll()                            -> { app, version, schemaVersion, exportedAt, tables }
  *   importAll(dump)                        -> { imported }
+ *   clearAll()                             -> { cleared: true }   (removes every row — STORE-03)
  *   info()                                 -> { kind: 'indexeddb'|'memory'|'remote', persistent, … }
  * -------------------------------------------------------------------------------------------
  *
@@ -132,6 +133,9 @@ export function createRemoteAdapter({ baseUrl, token, fetchImpl = globalThis.fet
     },
     async importAll(dump) {
       return post('importAll', null, [dump]);
+    },
+    async clearAll() {
+      return post('clearAll');
     },
     async info() {
       try {

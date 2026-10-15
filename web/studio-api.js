@@ -1164,6 +1164,9 @@ export function createStudioRouter(options = {}) {
         case 'importAll':
           result = db.importAll(args[0]);
           break;
+        case 'clearAll':
+          result = db.clearAll();
+          break;
         case 'info':
           result = db.info();
           break;

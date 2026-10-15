@@ -325,6 +325,19 @@ export function createStudioDb({ dbPath, migrationsDir, log = () => {} } = {}) {
     }
   }
 
+  /** Remove every row from every table (STORE-03 "remove the old copy"). Schema is preserved. */
+  function clearAll() {
+    db.exec('BEGIN');
+    try {
+      for (const name of Object.keys(schema)) db.exec(`DELETE FROM ${q(name)}`);
+      db.exec('COMMIT');
+    } catch (err) {
+      db.exec('ROLLBACK');
+      throw err;
+    }
+    return { cleared: true };
+  }
+
   return {
     path,
     tables: Object.keys(schema),
@@ -337,6 +350,7 @@ export function createStudioDb({ dbPath, migrationsDir, log = () => {} } = {}) {
     softDelete,
     exportAll,
     importAll,
+    clearAll,
     close,
     /** @returns {{kind:'sqlite', path:string, schemaVersion:number}} */
     info() {
