@@ -23,6 +23,7 @@
         "plugin.json",
         "web/server.js",
         "web/studio-api.js",
+        "web/studio-api/",
         "web/studio-db.js",
         "web/studio-runner.js",
         "web/lecture-archive.js",
@@ -70,7 +71,10 @@
     },
     "author": "ronnie-tk",
     "license": "MIT",
+    "packageManager": "npm@11.19.0",
     "devDependencies": {
-        "vitest": "^4.1.1"
+        "@playwright/test": "^1.50.0",
+        "supertest": "^7.1.0",
+        "vitest": "^5.0.5"
     }
 }
