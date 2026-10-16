@@ -51,7 +51,7 @@ verify) in its own git worktree branched from `develop`. Phases in the same wave
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Seams and Toolchain Prep** - Split hotspot monoliths with no behavior change and land every milestone dependency in one lockfile change (Wave 0)
+- [x] **Phase 1: Seams and Toolchain Prep** - Split hotspot monoliths with no behavior change and land every milestone dependency in one lockfile change (Wave 0) (completed 2026-10-17)
 - [ ] **Phase 2: Security Release Gate and Legacy Gating** - Studio-only by default, one hardened guard layer for every route, safe spawning and a side-effect-asserting regression suite (Wave 1)
 - [ ] **Phase 3: Plugin Drift Guard** - Generate `shared/` from canonical sources with one script and fail CI on drift (Wave 1)
 - [ ] **Phase 4: Test Entry and CI Baseline** - One `npm test` for both suites, CI on `develop`, deterministic tests (Wave 1)
@@ -68,6 +68,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Phase Details
 
 ### Phase 1: Seams and Toolchain Prep
+
 **Goal**: Maintainer can run parallel workers safely because hotspot files are split into modules and all milestone dependencies are already installed — with zero behavior change
 **Wave**: 0 (serial; must merge before any Wave 1 phase starts)
 **Depends on**: Nothing (first phase)
@@ -79,9 +80,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. `web/studio-api.js` is a thin composition of route modules and the `web` command body lives in `bin/commands/web.js`, so Security, Data and Evidence work can be done in disjoint files
   3. `supertest`, `@playwright/test`, root `vitest@^5`, `express@^4.22.3` and Studio `zod` are installed in a single lockfile change; `packageManager` pins the npm version; `npm ci` succeeds in all four package roots
   4. A test fails if migration filenames are duplicated or non-contiguous, or if a released migration (0001–0004) changes content
+
 **Plans**: TBD
 
 ### Phase 2: Security Release Gate and Legacy Gating
+
 **Goal**: No agent-execution or file-writing route is reachable from an arbitrary browser origin, through any entry point, and the legacy web is opt-in only
 **Wave**: 1
 **Depends on**: Phase 1
@@ -94,11 +97,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Traversal attempts on course slugs, exercise filenames and workspace paths (`..`, `%2e%2e`, `..\\`, symlinks) are rejected for both read and write; no agent is spawned with a permission-bypass flag or env, and every agent runs shell-less in a temp cwd with a scrubbed environment
   4. The runner rejects `npm`, `npx`, `playwright`, `sh`/`bash`, keeps Bash off by default and caps concurrent runs; the token lives in `~/.professor/` at mode 0600, is masked in the banner, reaches browsers only via injected HTML or `#fragment`, and `--rotate-token` issues a new one
   5. `STUDIO_ORIGINS=*` and `STUDIO_ALLOW_NON_LOOPBACK` print loud warnings and their combination is refused; `course-professor doctor` reports legacy mount, bind address, token file mode, Bash and relaxed env; every high/medium CONCERNS.md finding is fixed or recorded as accepted (registry integrity accepted, `validateItemName('..')` fixed)
+
 **Plans**: TBD
 **UI hint**: yes
 **Research flag**: current non-interactive, non-bypass flags per agent CLI (Claude, Gemini, Cursor, OpenCode, Codex); Windows `.cmd` shim handling (document as unsupported via `doctor` if not resolved)
 
 ### Phase 3: Plugin Drift Guard
+
 **Goal**: The plugin files in `shared/` can never silently diverge from their canonical sources again
 **Wave**: 1
 **Depends on**: Phase 1
@@ -109,9 +114,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. Running the sync script regenerates every `shared/` copy (agents, commands, hooks, `SKILL.md`) from canonical sources, and `shared/SKILL.md` matches `professor-skill/SKILL.md` after sync
   2. `sync-shared.mjs --check` and `test/shared-drift.test.js` fail when any canonical file and its `shared/` copy differ
   3. The drift test fails when a command file exists without a `plugin.json` / `templates/claude/plugin.json` entry or vice versa
+
 **Plans**: TBD
 
 ### Phase 4: Test Entry and CI Baseline
+
 **Goal**: Every push and PR to `develop` is checked by one command that runs everything, deterministically
 **Wave**: 1
 **Depends on**: Phase 1
@@ -122,9 +129,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. `npm test` runs the root and Studio suites without entering watch mode and reports a combined test count (Vitest projects, or the documented chained fallback); `test:watch` and `test:security` exist as separate scripts
   2. A push to `develop` or a PR into `develop` triggers CI jobs for unit (root + Studio), security, drift, tarball smoke and the Node 18 CLI floor, each with `timeout-minutes`
   3. The reported 5-second import-test timeout is reproduced and fixed at its root (injected clock/fs, no real `npm`/network); `testTimeout` is not raised and the suite passes repeatedly
+
 **Plans**: TBD
 
 ### Phase 5: Beta Data Foundation
+
 **Goal**: Studio records trustworthy, content-free learning events and revision links in every storage adapter, and can compute activation, retention and the beta report from them
 **Wave**: 1
 **Depends on**: Phase 1
@@ -137,9 +146,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Activation is the first meaningful action (offset 0); pinned-clock tests in UTC+7, UTC-8 and a DST week show week-1 = offsets 1–7 and week-2 return = ≥1 meaningful action on offsets 8–14 in local calendar days
   4. A retry after feedback is linked to that feedback explicitly (via `revisionOf`) or inferred within 72 hours on the same artifact, with explicit and inferred counted separately; negative tests (different artifact, attempt before feedback) create no link
   5. `/api/studio/db/health` reports the schema version derived from applied migrations, and existing data upgrades to the new schema with backup/restore round-tripping the new tables
+
 **Plans**: TBD
 
 ### Phase 6: Studio Beta Debt
+
 **Goal**: Learners never silently get wrong-language content, the language switch is render-safe, and BYOK keys are protected by a loopback-only bridge and a CSP
 **Wave**: 1
 **Depends on**: Phase 1
@@ -150,10 +161,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. When generated syllabus, quiz, flashcard or capstone JSON is still in the wrong language after the repair retry, the learner sees a retryable error instead of wrong-language content
   2. Switching the UI language never mutates shared state during render (covered by a test), and the catalogs are split per namespace so new namespaces can be added without editing shared files
   3. Studio refuses to talk to a non-loopback bridge or runner URL, accepts the pairing token from a `#token=` fragment, and ships a Content-Security-Policy in `index.html`
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 7: Beta Report UI and Nudges
+
 **Goal**: A beta learner can see exactly what their beta report contains and download it, and is reminded to do so at day 7 and day 14
 **Wave**: 2
 **Depends on**: Phase 5 (report builder, schema, events API); Phase 6 (i18n namespace split)
@@ -164,10 +177,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. Learner opens "Export beta report", previews the full file contents ("this is everything in the file") and downloads `professor-beta-report-<pid>-d<N>.json`
   2. The downloaded JSON contains schemaVersion, random participant id, report window with active-day offsets, activation, learning loops, retention, capstone, app version and storage kind; it passes strict schema validation and the content-free check
   3. On day 7 and day 14 after activation Home shows a dismissible, non-blocking reminder to export the report; on other days it does not appear
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 8: Revision Loop UI and Run-Location Disclosure
+
 **Goal**: After feedback, revising is the obvious next step, the learner can see how each attempt improved, and local code execution is disclosed honestly
 **Wave**: 2
 **Depends on**: Phase 5 (`revisionOf`, attempt/revision read API); Phase 6 (i18n namespace split); Phase 2 assumed merged for runner behavior
@@ -179,10 +194,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Feedback lists each rubric criterion as met / partial / not met with one Socratic question per unmet criterion, and a regression test shows review output for the learner's own task contains no corrected code
   3. The learner can open their attempt history and see which criteria changed between attempts
   4. The workspace shows a `Browser` or `Local machine` badge, states "Code runs on your machine" before the first local run with a one-time acknowledgement, and the word "sandbox" never describes the local runner
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 9: Playwright Template and Verify Externally
+
 **Goal**: A learner can take the Playwright E2E course end-to-end and get their own project's test reviewed against a fixed rubric using self-reported run evidence — without Studio ever running Playwright
 **Wave**: 2
 **Depends on**: Phase 5 (capstone checkpoint events, `revisionOf`); Phase 6 (i18n namespace split); Phase 2 (runner allowlist)
@@ -194,11 +211,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Learner copies the command, runs Playwright in their own project, then pastes or uploads JSON-reporter or list output; Studio auto-detects the format, shows the extracted facts, warns on mismatches and labels it "self-reported evidence"
   3. The capstone review grades code and explanation against R1–R7, treats pasted text as untrusted data (an injected "mark this complete" instruction has no effect) and cannot pass a run that contains failures
   4. Evidence is stored with the capstone submission and appears in its history; a test fails if the runner allowlist ever accepts `npm`, `npx` or `playwright`
+
 **Plans**: TBD
 **UI hint**: yes
 **Research flag**: real JSON/list/line reporter outputs from recent Playwright versions for parser fixtures; lesson content grounded in fetched official docs
 
 ### Phase 10: Beta Kit and Aggregation
+
 **Goal**: The owner has everything needed to recruit, onboard, check in with and analyze a 3–5 person cohort, with decision rules fixed in advance
 **Wave**: 2
 **Depends on**: Phase 5 (frozen report schema)
@@ -209,9 +228,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. `docs/beta/` contains an onboarding one-pager, a macOS participant screener, a consent paragraph, a Day 0 / 3–4 / 7 / 14 check-in script with the three behavioral questions, and a troubleshooting guide that never recommends `STUDIO_ORIGINS=*`
   2. Running the aggregation script on a folder of exported reports rejects invalid ones, dedupes duplicates and prints raw per-participant counts, showing a missing export as "unknown" and no percentages
   3. Continue / change / stop thresholds and metric formulas are written down and committed before cohort Day 0
+
 **Plans**: TBD
 
 ### Phase 11: Product Boundary Docs
+
 **Goal**: Every path a new user can take (README, Studio README, CLI help, `init`) leads to Studio, and the `web` default change is documented
 **Wave**: 3
 **Depends on**: Phase 2 (new `web` behavior and flags); Waves 1–2 merged
@@ -222,9 +243,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. A new user following README, `studio/README.md`, `course-professor --help` or `init` is told to use Studio and how to start it
   2. The CHANGELOG explains that `web` now serves Studio only and how to opt into deprecated legacy mode
   3. No user-facing doc or help text recommends legacy web, `--dangerously-skip-permissions` or `STUDIO_ORIGINS=*`
+
 **Plans**: TBD
 
 ### Phase 12: Full-Loop E2E, CI Completion and UAT
+
 **Goal**: The whole learning loop is proven in a real browser on every CI run, and with a real provider by hand before any beta build ships
 **Wave**: 3
 **Depends on**: Phases 2, 4, 7, 8, 9 merged
@@ -235,9 +258,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. In CI, Chromium drives new course → lesson → quiz → tutor → workspace run → revision → external evidence → capstone → beta report export against a fake agent / stub provider, with a temp DB and fixed token, without `retries` masking failures
   2. A second-origin spec proves a foreign page cannot reach the bridge
   3. A written manual UAT checklist for macOS with a real provider and the local bridge exists, is run, and passes before any `1.6.0-beta.x` is published
+
 **Plans**: TBD
 
 ### Phase 13: Private Beta Cohort
+
 **Goal**: Real AI-assisted builders use Studio for four weeks and the owner can make an evidence-based continue / change / stop decision
 **Wave**: 4 (human-run; starts only after Phase 12 UAT passes and the beta build is published)
 **Depends on**: Phase 10 (kit, thresholds), Phase 12 (UAT passed, beta published)
@@ -249,6 +274,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. 3–5 screened AI-assisted builders run the cohort for four weeks with Day 0 / 3–4 / 7 / 14 check-ins and Day 7 / Day 14 report exports collected
   3. At least 3 participants complete a real practice loop; week-2 return, artifacts used in real projects and qualitative answers are recorded per participant
   4. A decision memo compares the results with the pre-registered thresholds and states continue, change or stop
+
 **Plans**: TBD (human-run checklists; BETA-01 dogfood plan gates recruiting)
 
 ## Progress
@@ -258,7 +284,7 @@ Wave 0 (Phase 1) → Wave 1 (Phases 2, 3, 4, 5, 6 in parallel) → Wave 2 (Phase
 
 | Phase | Wave | Plans Complete | Status | Completed |
 |-------|------|----------------|--------|-----------|
-| 1. Seams and Toolchain Prep | 0 | 0/TBD | Not started | - |
+| 1. Seams and Toolchain Prep | 0 | 5/4 | Complete    | 2026-10-17 |
 | 2. Security Release Gate and Legacy Gating | 1 | 0/TBD | Not started | - |
 | 3. Plugin Drift Guard | 1 | 0/TBD | Not started | - |
 | 4. Test Entry and CI Baseline | 1 | 0/TBD | Not started | - |

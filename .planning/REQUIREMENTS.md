@@ -31,10 +31,10 @@ Requirements for the security-hardened private beta. Each maps to exactly one ro
 
 ### Test & Release Baseline
 
-- [ ] **QA-01**: Maintainer can work in parallel safely: `web/studio-api.js` and the `bin/cli.js` command switch are split into modules with no behavior change, all milestone dev dependencies land in one lockfile change, and the npm version is pinned
+- [x] **QA-01**: Maintainer can work in parallel safely: `web/studio-api.js` and the `bin/cli.js` command switch are split into modules with no behavior change, all milestone dev dependencies land in one lockfile change, and the npm version is pinned
 - [ ] **QA-02**: One `npm test` runs both the root and Studio suites without watch mode and reports a combined test count
 - [ ] **QA-03**: CI runs on every push to `develop` and every PR into `develop`: unit (root + Studio), security, drift, tarball smoke and the Node 18 CLI floor
-- [ ] **QA-04**: Migration files are verified unique and contiguous, and released migrations are never edited
+- [x] **QA-04**: Migration files are verified unique and contiguous, and released migrations are never edited
 - [ ] **QA-05**: Slow or flaky tests are deterministic (the reported 5-second import-test timeout is reproduced and fixed at its root, not by raising timeouts)
 - [ ] **QA-06**: A Chromium E2E suite drives the full loop (new course → lesson → quiz → tutor → workspace run → revision → external evidence → capstone → beta report) against a fake agent / stub provider in CI, plus a test that a foreign origin cannot reach the bridge
 - [ ] **QA-07**: A manual UAT checklist with a real provider and the local bridge on macOS passes before any beta build is published
@@ -141,10 +141,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEC-14 | Phase 2 | Pending |
 | BOUND-01 | Phase 11 | Pending |
 | BOUND-02 | Phase 3 | Pending |
-| QA-01 | Phase 1 | Pending |
+| QA-01 | Phase 1 | Complete |
 | QA-02 | Phase 4 | Pending |
 | QA-03 | Phase 4 | Pending |
-| QA-04 | Phase 1 | Pending |
+| QA-04 | Phase 1 | Complete |
 | QA-05 | Phase 4 | Pending |
 | QA-06 | Phase 12 | Pending |
 | QA-07 | Phase 12 | Pending |
