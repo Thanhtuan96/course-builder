@@ -181,9 +181,10 @@ export async function run({ args = [], style }) {
     console.log(style('info', 'No API key found. Local providers will be used when available.\n'));
   }
 
+  // `args` is argv after `web` (the dispatcher slices), so the positional port is `args[0]`.
   let port = '3000';
-  if (!isProduction) port = args[1] || process.env.PORT || '3000';
-  else if (args[1] && args[1] !== '--production') port = args[1];
+  if (!isProduction) port = args[0] || process.env.PORT || '3000';
+  else if (args[0] && args[0] !== '--production') port = args[0];
   process.env.PORT = port;
 
   let defaultCourses = './courses';
