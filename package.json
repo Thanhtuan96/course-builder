@@ -23,6 +23,7 @@
         "plugin.json",
         "web/server.js",
         "web/studio-api.js",
+        "web/studio-api/",
         "web/studio-db.js",
         "web/studio-runner.js",
         "web/lecture-archive.js",
