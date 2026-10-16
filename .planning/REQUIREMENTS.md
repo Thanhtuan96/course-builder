@@ -125,13 +125,58 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (filled by roadmapper) | | |
+| SEC-01 | Phase 2 | Pending |
+| SEC-02 | Phase 2 | Pending |
+| SEC-03 | Phase 2 | Pending |
+| SEC-04 | Phase 2 | Pending |
+| SEC-05 | Phase 2 | Pending |
+| SEC-06 | Phase 2 | Pending |
+| SEC-07 | Phase 2 | Pending |
+| SEC-08 | Phase 2 | Pending |
+| SEC-09 | Phase 2 | Pending |
+| SEC-10 | Phase 2 | Pending |
+| SEC-11 | Phase 2 | Pending |
+| SEC-12 | Phase 6 | Pending |
+| SEC-13 | Phase 2 | Pending |
+| SEC-14 | Phase 2 | Pending |
+| BOUND-01 | Phase 11 | Pending |
+| BOUND-02 | Phase 3 | Pending |
+| QA-01 | Phase 1 | Pending |
+| QA-02 | Phase 4 | Pending |
+| QA-03 | Phase 4 | Pending |
+| QA-04 | Phase 1 | Pending |
+| QA-05 | Phase 4 | Pending |
+| QA-06 | Phase 12 | Pending |
+| QA-07 | Phase 12 | Pending |
+| DEBT-01 | Phase 6 | Pending |
+| DEBT-02 | Phase 6 | Pending |
+| DEBT-03 | Phase 5 | Pending |
+| INSTR-01 | Phase 5 | Pending |
+| INSTR-02 | Phase 5 | Pending |
+| INSTR-03 | Phase 5 | Pending |
+| INSTR-04 | Phase 5 | Pending |
+| INSTR-05 | Phase 7 | Pending |
+| INSTR-06 | Phase 7 | Pending |
+| LOOP-01 | Phase 8 | Pending |
+| LOOP-02 | Phase 8 | Pending |
+| LOOP-03 | Phase 8 | Pending |
+| LOOP-04 | Phase 8 | Pending |
+| PW-01 | Phase 9 | Pending |
+| PW-02 | Phase 9 | Pending |
+| PW-03 | Phase 9 | Pending |
+| PW-04 | Phase 9 | Pending |
+| PW-05 | Phase 9 | Pending |
+| BETA-01 | Phase 13 | Pending |
+| BETA-02 | Phase 10 | Pending |
+| BETA-03 | Phase 10 | Pending |
+| BETA-04 | Phase 10 | Pending |
+| BETA-05 | Phase 13 | Pending |
 
 **Coverage:**
 - v1 requirements: 46 total
-- Mapped to phases: 0
-- Unmapped: 46 ⚠️
+- Mapped to phases: 46
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-10-17*
-*Last updated: 2026-10-17 after initial definition*
+*Last updated: 2026-10-17 after roadmap creation*
