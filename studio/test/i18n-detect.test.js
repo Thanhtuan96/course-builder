@@ -98,6 +98,17 @@ describe('checkLanguage', () => {
     expect(checkLanguage(EN_PROSE, 'English').ok).toBe(true);
   });
 
+  it('accepts mostly-ASCII Latin languages instead of mistaking them for English', () => {
+    const ES = 'La programación es el proceso de crear un conjunto de instrucciones que le dicen a una computadora cómo realizar una tarea.';
+    const FR = 'La programmation est le processus de création des instructions qui indiquent à un ordinateur comment effectuer une tâche.';
+    const DE = 'Programmieren ist der Prozess, Anweisungen zu schreiben, die einem Computer sagen, wie er eine Aufgabe ausführen soll.';
+    expect(checkLanguage(ES, 'es').ok).toBe(true);
+    expect(checkLanguage(FR, 'fr').ok).toBe(true);
+    expect(checkLanguage(DE, 'de').ok).toBe(true);
+    expect(checkLanguage(EN_PROSE, 'es').ok).toBe(false);
+    expect(checkLanguage(ES, 'en').ok).toBe(false);
+  });
+
   it('does not fail a payload with no letters to measure', () => {
     expect(checkLanguage('123 + 456 = 579', 'vi').ok).toBe(true);
   });

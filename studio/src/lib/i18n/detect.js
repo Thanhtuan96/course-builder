@@ -79,7 +79,8 @@ export function detectLanguage(text) {
   if (JA_RE.test(prose)) return 'ja';
   if (ZH_RE.test(prose)) return 'zh';
   if (vietnameseRatio(prose) >= VI_THRESHOLD) return 'vi';
-  if (asciiRatio(prose) >= EN_THRESHOLD) return 'en';
+  // Spanish/French/German prose is also mostly ASCII, so let stopwords decide before the ASCII
+  // ratio falls back to English.
   let best = null;
   let bestRate = 0;
   for (const code of Object.keys(STOPWORDS)) {
@@ -89,7 +90,9 @@ export function detectLanguage(text) {
       best = code;
     }
   }
-  return bestRate > 0 ? best : null;
+  if (best && best !== 'en') return best;
+  if (asciiRatio(prose) >= EN_THRESHOLD) return 'en';
+  return best;
 }
 
 /**
@@ -120,7 +123,7 @@ export function checkLanguage(text, expected) {
   if (code === 'en') {
     const score = asciiRatio(prose);
     const detected = detectLanguage(prose);
-    const ok = score >= EN_THRESHOLD && detected !== 'vi';
+    const ok = score >= EN_THRESHOLD && (detected === 'en' || detected === null);
     return { ok, expected: code, detected, score, reason: ok ? 'ascii' : 'non-ascii-letters' };
   }
 
