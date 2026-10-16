@@ -1,0 +1,15 @@
+# Integration TODO (orchestrator)
+- [ ] tutor.js re-declares COURSE_KINDS / DEFAULT_COURSE_KIND — import from lib/course.js instead (Phase 25 merge 2026-10-15)
+- [ ] Wire Phase 29 `getCurrentCode(lessonId)` into TutorPanel "Check my answer" (HANDOFF-29)
+- [x] Mount Phase 29 runner router (done in 26b)
+- [ ] Apply any HANDOFF-2x.md items, then delete the HANDOFF files
+- [ ] Full end-to-end browser UAT of the learning loop
+- [ ] HANDOFF-24 §1: add `repo.listCards({courseId, lessonId})` to repo/index.js and switch practice/card-store.js off `exportAll()`
+- [ ] Unify streak: lib/course.js `streak()` vs lib/activity.js `computeStreak` — keep activity.js, remove the old one if unused
+- [ ] demo-course.js quiz_seed uses `answer` → rename to `answerIndex` (normalizer can stay)
+- [ ] Phase 23: wire "Export COURSE.md" button into Course.jsx header container (Phase 26 DataPanel provides the export fn)
+- [ ] HANDOFF-26 §1: call `initAdapter()` from select-adapter.js in App.jsx startup (before seeding demo) so SQLite is used at startup
+- [ ] Read remaining HANDOFF-26 items (§3+) and apply
+- [ ] Lazy-load CodeWorkspace (React.lazy in Lesson.jsx) — main bundle 164 KB gzip after Phase 29, target <150 KB
+- [ ] HANDOFF-29 §2: TutorPanel "Check my answer" attaches `currentCodeBlock(lesson.id)` in a delimited untrusted block
+- [ ] Read remaining HANDOFF-29 sections and apply

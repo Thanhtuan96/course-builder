@@ -1,0 +1,78 @@
+{
+  "contract": "1.0.0",
+  "flavor": "core",
+  "milestone": "v3.0",
+  "phases": [
+    {
+      "number": "1",
+      "name": "Plugin Scaffold",
+      "status": "complete"
+    },
+    {
+      "number": "1",
+      "name": "b. CLI Auto-Setup",
+      "status": "complete"
+    },
+    {
+      "number": "2",
+      "name": "Professor Agent and Core Commands",
+      "status": "complete"
+    },
+    {
+      "number": "3",
+      "name": "Notes Feature",
+      "status": "complete"
+    },
+    {
+      "number": "4",
+      "name": "PreCompact Hook",
+      "status": "complete"
+    },
+    {
+      "number": "5",
+      "name": "Export Feature",
+      "status": "complete"
+    },
+    {
+      "number": "6",
+      "name": "Course Archive and Context",
+      "status": "complete"
+    },
+    {
+      "number": "7",
+      "name": "Git Worktree Courses",
+      "status": "complete"
+    },
+    {
+      "number": "8",
+      "name": "Auto-create Exercise Files",
+      "status": "complete"
+    },
+    {
+      "number": "9",
+      "name": "Agent Support (Cursor)",
+      "status": "complete"
+    },
+    {
+      "number": "10",
+      "name": "Agent Specialization",
+      "status": "complete"
+    },
+    {
+      "number": "11",
+      "name": "Research-Enhanced Hints",
+      "status": "complete"
+    },
+    {
+      "number": "12",
+      "name": "MCP Documentation",
+      "status": "pending"
+    }
+  ],
+  "next": {
+    "command": "/gsd-discuss-phase",
+    "label": "Discuss the first phase",
+    "reason": "Project initialized — plan your first phase"
+  },
+  "updated_at": "2026-10-15T08:26:43.764Z"
+}

@@ -1,629 +1,137 @@
 # Roadmap: Course Learning Plugin
 
-## Overview
-
-Five phases transform the existing professor-skill-v3 into a full Claude Code plugin. The scaffold comes first to establish the target structure, then the professor agent is packaged with all its course commands, then personal notes and the PreCompact session-save hook are layered on, and finally the Notion/Obsidian export pipeline completes the knowledge-retention story.
-
-v1.1 adds agent support (Cursor), agent specialization, research-enhanced hints, and MCP documentation.
-
-v2.0 adds Local Web UI (React + Express), Retention Layer (spaced repetition, flashcards, streaks), and Sharing & Templates (course template export/import).
-
-v2.1 adds cloud deployment (Vercel), email + GitHub OAuth authentication, and an open SKILL registry backed by the `professor-skills/` GitHub org.
-
-## Phases
-
-**Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
-- Phases 17.1+: Extensions beyond integer milestones
-
-Decimal phases appear between their surrounding integers in numeric order.
-
-<details>
-<summary>✅ v1.1 MVP — Phases 1-12 (SHIPPED 2026-03-07)</summary>
-
-- [x] Phase 1: Plugin Scaffold
-- [x] Phase 1b: CLI Auto-Setup
-- [x] Phase 2: Professor Agent and Core Commands
-- [x] Phase 3: Notes Feature
-- [x] Phase 4: PreCompact Hook
-- [x] Phase 5: Export Feature
-- [x] Phase 6: Course Archive and Context Management
-
-</details>
-
-<details>
-<summary>✅ v2.0 — Phases 13-17, 17.1, 17.1.1, 17.1.1.1, 21 (SHIPPED 2026-03-25)</summary>
-
-- [x] Phase 13: Client Components (React split-pane UI)
-- [x] Phase 14: Integration (CLI web, production build)
-- [x] Phase 15: Retention Layer (spaced repetition, streaks)
-- [x] Phase 16: Sharing and Templates
-- [x] Phase 17: Auto-generate Exercise Files
-- [x] Phase 17.1: Coach Agent (self-assessment dialogue)
-- [x] Phase 17.1.1: Spotter Agent (mid-work check-ins)
-- [x] Phase 17.1.1.1: Navigator Agent (section bridges)
-- [x] Phase 17.1.1.1.1: Professor Orchestrator Refactor (routing table)
-- [x] Phase 21: Agent Cross-Platform Polish (Claude Code, Cursor, Gemini CLI, OpenCode)
-
-</details>
-
-<details>
-<summary>🚧 v2.1 — Phases 18-20 (Deferred)</summary>
-
-- [ ] Phase 18: Cloud Deployment (deferred)
-- [ ] Phase 19: Authentication (deferred)
-- [ ] Phase 20: CLI Install Command
-
-</details>
-
 ## Milestones
 
-**v1.1 (Complete):** Phases 1-12 — Plugin Foundation ✓
-**v2.0 (Complete):** Phases 13-17, 17.1, 17.1.1, 17.1.1.1, 21 — Local Web UI, Retention Layer, Sharing, Multi-Agent Architecture ✓
-**v2.1 (Deferred):** Phases 18-20 — Cloud Deployment, Authentication, CLI Registry Install (deferred focus on CLI/skills)
+- ✅ **v1.1** — Plugin foundation (Phases 1–12) — shipped 2026-03-08
+- ✅ **v2.0** — Local Web UI, retention, multi-agent (Phases 13–17.x, 21) — shipped 2026-03-25
+- ⏸ **v2.1** — Cloud/auth/install (Phases 18–20) — deferred, superseded by v3.0 (archive: `milestones/v2.1-ROADMAP.md`)
+- 🚧 **v3.0 Professor Studio** — Phases 22–37 (current)
 
-## Next Up
+## v3.0 Professor Studio
 
-- [ ] **Phase 21 (Post-Milestone):** Research and polish agents for cross-platform compatibility — COMPLETED 2026-03-25
+**Goal:** A learner runs `npm run dev` in `studio/` (or opens the static deploy) and completes the loop — create a course from a prompt → study a generated lesson → quiz → flashcards → Socratic tutor — free with their own key or local agent.
+
+**Execution model:** Claude orchestrates and reviews; OpenCode workers (`opencode-go/deepseek-v4.1-flash`, TUI in cmux) implement. Phase 22 is serial (foundation, owns shared files). Phases 23–26 run **in parallel**, one git worktree each, and must only touch the files they own (listed per phase) to avoid merge conflicts.
+
+| # | Phase | Goal | Requirements | Parallel |
+|---|-------|------|--------------|----------|
+| 22 | Studio Foundation | App shell, routing, repository layer (normalized schema + IndexedDB adapter), provider layer, Settings | SHELL-01..05, AI-01..05, COURSE-04, DATA-03, LESSON-06 | serial |
+| 23 | Courses & Lessons | Create course from prompt, syllabus edit, lesson generation | COURSE-01..03, COURSE-05, LESSON-01..05 | wave 2 |
+| 24 | Practice & Retention | Quiz, flashcards SM-2, Review page, streak | PRACTICE-01..04 | wave 2 |
+| 25 | Socratic Tutor | Lesson-scoped tutor chat with hybrid rules | TUTOR-01..04 | wave 2 |
+| 26 | Local Server, SQLite & Deploy | Local agent bridge, SQLite repository API, backup/export, static deploy, SaaS doc | AI-06, DATA-01, DATA-02, DATA-04, DATA-05, DEPLOY-01..04 | wave 2 |
+| 27 | Plugin Lesson History | Archive lectures, log Coach reflections and quiz results in the CLI plugin | PLUG-01..03 | ✓ merged |
+| 28 | Plugin Course Kinds | Course kind at creation, kind-aware LECTURE template + exercises, git only for programming | PLUG-04..06 | ✓ merged |
+| 29 | Code Workspace | CodeMirror editor, in-browser runners (JS/TS, Pyodide, sql.js, HTML) + local runner, self-checks, snapshots | CODE-01..05 | wave 2 |
+| 30 | Dev CLI Fast-path | `status`, `next`, `check`, `doctor` from the terminal | CLI-01..04 | wave 2 |
+| 31 | CLI ↔ Studio | `studio` one-command launch, terminal `review`, `import` CLI courses into SQLite | CLI-05..07 | ✓ merged |
+| 32 | Integration | Wire merged phases, fix cross-phase bugs found in E2E | — | wave 3 |
+| 33 | Capstone | Kind-shaped capstone, unlock, submissions, rubric + automated review, completion | CAP-01..05 | wave 4 (after 32) |
+| 34a | Grounded lectures (plugin) | Researched sources, citations, ⚠️ unverified, Verify-it-yourself in CLI lectures | GROUND-07 | wave 4 (parallel) |
+| 34b | Grounded lessons (Studio) | Retrieval-first lessons, sources table, link/excerpt/claim checks, SIFT tasks, report-wrong | GROUND-01..06 | wave 7 (after 35) |
+| 26c | Multi-agent bridge | Per-agent models, opencode/cursor/gemini/antigravity/ollama runners, OpenRouter, no silent errors | AI-06 (hardening) | wave 4 (parallel with 33) |
+| 35 | Language & i18n | One learning language, vi/en UI, localized lesson structure, enforced output language | LANG-01..05 | wave 6 (after 36) |
+| 36 | Storage choice | Browser vs local SQLite chosen by the learner, write-only-there, safe move, banner only for browser | STORE-01..04 | ✓ merged |
+| 37 | Release packaging | npm 1.6.0-beta.1 (tag next): files, prebuilt Studio, Node 22.5 check, tarball smoke test, CHANGELOG | REL-01..05 | wave 6 (parallel with 35) |
 
 ## Phase Details
 
-### Phase 1: Plugin Scaffold
-**Goal**: A valid Claude Code plugin directory exists that can be installed and recognized by the runtime
-**Depends on**: Nothing (first phase)
-**Requirements**: PLG-01, PLG-02, PLG-03
-**Success Criteria** (what must be TRUE):
-  1. `plugin.json` exists at the plugin root with valid metadata, version, and registrations for agents, commands, and hooks
-  2. Directory layout matches Claude Code conventions with `agents/`, `commands/`, and `hooks/` directories present
-  3. README contains step-by-step install instructions including Notion MCP config and Obsidian MCP config
-**Plans**: 2 plans
-
-Plans:
-- [ ] 01-01-PLAN.md — Create plugin.json manifest and scaffold agents/, commands/professor/, hooks/ directories
-- [ ] 01-02-PLAN.md — Write README with install guide, Notion MCP setup, Obsidian MCP setup, and Socratic method explanation
-
-### Phase 1b: CLI Auto-Setup
-**Goal**: Enable `npx course-professor` to auto-detect and configure for any supported AI agent
-**Depends on**: Phase 1
-**Requirements**: CLI-01, CLI-02, CLI-03, CLI-04, CLI-05
-**Success Criteria** (what must be TRUE):
-  1. User can run `npx course-professor init` for auto-detection
-  2. User can run `npx course-professor setup <agent>` for manual selection
-  3. Supports agents: claude, opencode, gemini, agent
-  4. Setup creates proper directory structure with all commands
-  5. No manual file copying required
-**Plans**: 1 plan
-
-Plans:
-- [x] 01b-PLAN.md — CLI auto-setup feature (already implemented)
-
-### Phase 2: Professor Agent and Core Commands
-**Goal**: Users can start and run a full Socratic learning course through slash commands powered by the professor agent
-**Depends on**: Phase 1
-**Requirements**: AGT-01, CMD-01, CMD-02, CMD-03, CMD-04, CMD-05, CMD-06, CMD-07, CMD-08, CMD-09, CMD-10, CMD-11, CMD-12
-**Success Criteria** (what must be TRUE):
-  1. User can run `professor:new-topic` and receive a course syllabus with hybrid review-before-start flow
-  2. User can navigate a course with `professor:next`, `professor:done`, `professor:review`, `professor:syllabus`, and `professor:progress` commands
-  3. User can get help during a section with `professor:hint`, `professor:stuck`, and `professor:discuss` without receiving direct answers
-  4. User can run `professor:quiz` on the current topic and receive a Socratic quiz session
-  5. User can run `professor:capstone` and `professor:capstone-review` to work through the course capstone project
-**Plans**: 4 plans
-
-Plans:
-- [ ] 02-01-PLAN.md — Write agents/professor.md — the professor agent brain with all Socratic rules and command behaviors
-- [ ] 02-02-PLAN.md — Write navigation commands: new-topic, next, done, review, syllabus, progress
-- [ ] 02-03-PLAN.md — Write assistance commands: hint, stuck, discuss, quiz
-- [ ] 02-04-PLAN.md — Write capstone commands (capstone, capstone-review) and future-phase stubs (note, export)
-
-### Phase 3: Notes Feature
-**Goal**: Users can capture personal notes tied to a course and have them automatically available throughout learning
-**Depends on**: Phase 2
-**Requirements**: CMD-13, NOT-01
-**Success Criteria** (what must be TRUE):
-  1. When a new course starts via `professor:new-topic`, a NOTES.md file is automatically created in `courses/{slug}/`
-  2. User can run `professor:note` with text and the note is appended to the active course's NOTES.md with a timestamp
-**Plans**: 1 plan
-
-Plans:
-- [x] 03-01-PLAN.md — Implement NOTES.md auto-creation on new-topic and professor:note command
-
-### Phase 4: PreCompact Hook
-**Goal**: Users never lose session progress silently when Claude's context is about to be compressed
-**Depends on**: Phase 2
-**Requirements**: HOK-01, HOK-02
-**Success Criteria** (what must be TRUE):
-  1. When context approaches the compression threshold, the user sees a visible token-limit warning message before the reset occurs
-  2. The active section, progress, and key session state are written to COURSE.md before context is compressed, so resuming the course picks up where the user left off
-**Plans**: 1 plan
-
-Plans:
-- [x] 04-01-PLAN.md — Implement PreCompact hook with token warning display and COURSE.md session-state auto-save
-
-### Phase 5: Export Feature
-**Goal**: Users can push their entire learning journey — notes, answers, and summaries — to Notion or Obsidian for long-term retention
-**Depends on**: Phase 3
-**Requirements**: CMD-14, EXP-01, EXP-02, EXP-03
-**Success Criteria** (what must be TRUE):
-  1. User runs `professor:export` and is prompted to choose Notion or Obsidian
-  2. **Notion export**: Creates parent page with course properties, child pages for each lecture, separate "Notes" child page, code referenced (not embedded), capstone + summary as child pages
-  3. **Obsidian export**: Creates folder per course with .md files, user provides/configures vault path
-  4. If MCP not available, show helpful setup instructions (link to README)
-**Plans**: 3 plans
-
-Plans:
-- [x] 05-01-PLAN.md — Implement professor:export command with destination selector (Notion/Obsidian)
-- [x] 05-02-PLAN.md — Implement Notion export path (MCP tool calls, content assembly, child pages for lectures/notes)
-- [ ] 05-03-PLAN.md — Implement Obsidian export path (MCP tool calls, user vault path, folder/file structure)
-
-## Progress
-
-**Current Milestone:** v2.0 (in progress)
-**v2.0:** 3 of 17 plans complete
-
-**Execution Order:**
-v1.1: 9 → 10 → 11 → 12
-v2.0: 13 → 14 → 15 → 16
-v2.1: 18 → 19 → 20
-
-### v1.1 Phases
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Plugin Scaffold | 2/2 | Complete   | 2026-03-05 |
-| 1b. CLI Auto-Setup | 1/1 | Complete   | 2026-03-06 |
-| 2. Professor Agent and Core Commands | 4/4 | Complete   | 2026-03-06 |
-| 3. Notes Feature | 1/1 | Complete    | 2026-03-06 |
-| 4. PreCompact Hook | 1/1 | Complete    | 2026-03-06 |
-| 5. Export Feature | 3/3 | Complete    | 2026-03-06 |
-| 6. Course Archive and Context | 1/1 | Complete    | 2026-03-07 |
-| 7. Git Worktree Courses | 1/1 | Complete    | 2026-03-07 |
-| 8. Auto-create Exercise Files | 1/1 | Complete    | 2026-03-08 |
-| 9. Agent Support (Cursor) | 1/1 | Complete    | 2026-03-08 |
-| 10. Agent Specialization | 3/3 | Complete    | 2026-03-11 |
-| 11. Research-Enhanced Hints | 1/1 | Complete    | 2026-03-11 |
-| 12. MCP Documentation | 0/1 | Not started | - |
-
-### v2.0 Phases
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 13. Client Components | 2/2 | Complete   | 2026-03-11 |
-| 14. Integration | 1/1 | Complete    | 2026-03-13 |
-| 15. Retention Layer | 4/4 | Complete    | 2026-03-14 |
-| 16. Sharing and Templates | 1/1 | Complete    | 2026-03-15 |
-| 17. Auto-generate Exercise Files | 1/1 | Complete    | 2026-03-15 |
-| 17.1. Coach Agent | 2/2 | Complete    | 2026-03-15 |
-| 17.1.1. Spotter Agent | 2/2 | Complete    | 2026-03-15 |
-| 17.1.1.1. Navigator Agent | 2/2 | Complete    | 2026-03-15 |
-| 17.1.1.1.1. Professor Orchestrator | 3/3 | Complete    | 2026-03-15 |
-
-### v2.1 Phases
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 18. Cloud Deployment | 0/TBD | Not started | - |
-| 19. Authentication | 0/TBD | Not started | - |
-| 20. OSS SKILL Registry | 0/TBD | Not started | - |
-
-### Phase 6: Course Archive and Context Management
-
-**Goal:** Allow technical learners to archive completed courses with full context (notes, summary, syllabus) while leaving code exercises behind, plus improve context management for technical courses
-**Depends on:** Phase 5
-**Requirements**: ARCH-01, ARCH-02, ARCH-03
-**Success Criteria** (what must be TRUE):
-  1. Course folder can include `exercises/` subfolder for code artifacts
-  2. User can run `professor:archive` after course completion to archive learning context
-  3. Archive creates `.course_archive/{slug}/` with COURSE.md, NOTES.md, CAPSTONE.md, and SUMMARY.md (comprehensive retrospective)
-  4. Original course folder is deleted after successful archive
-  5. Exercises folder is left behind (user has code locally)
-**Plans**: 1 plan
-
-Plans:
-- [x] 06-01-PLAN.md — Implement professor:archive command with course archive and exercises handling
-
-### Phase 7: Git Worktree Courses
-
-**Goal:** Each technology learned = one git worktree. User's code lives in the worktree alongside learning files. When archived, learning context is preserved to `.course_archive/` before worktree is cleaned up.
-**Depends on:** Phase 6
-**Requirements**: WORK-01, WORK-02, WORK-03, WORK-04, ARCH-01, ARCH-02, ARCH-03, ARCH-04, ARCH-05, FILE-01, FILE-02, FILE-03, FILE-04, CMD-15, CMD-16, CMD-17
-**Success Criteria** (what must be TRUE):
-  1. User can create a new course as a git worktree at `learning/{tech-slug}/`
-  2. Learning files (COURSE.md, NOTES.md, CAPSTONE.md) live in worktree root alongside project code
-  3. User can list all existing learning worktrees
-  4. User can switch between learning worktrees
-  5. Archiving copies learning files to `.course_archive/{slug}/` before removing worktree
-  6. User's code remains in worktree (not deleted with the worktree)
-**Plans**: 1 plan
-
-Plans:
-- [x] 07-01-PLAN.md — Implement git worktree-based course structure and worktree management
-
-### Phase 8: Auto-create Exercise Files
-
-**Goal:** Automatically create exercise files when professor:next is called, instead of making users create files manually. Exercise files are templates with comments, not working code.
-**Requirements**: EXER-01, EXER-02, EXER-03, EXER-04
-**Depends on:** Phase 7
-**Plans:** 1/1 plans complete
-**Status:** Complete (2026-03-08)
-
-Plans:
-- [x] 08-01-PLAN.md — Auto-create exercise files on professor:next
-
-### Phase 9: Agent Support
-
-**Goal:** Add Cursor agent support to CLI and templates.
-
-**Depends on:** Phase 8
-
-**Requirements:** AGENT-01
-
-**Success Criteria** (what must be TRUE):
-1. templates/cursor/settings.json exists following templates/claude/ pattern
-2. CLI supports 'cursor' in SUPPORTED_AGENTS
-3. README documents Cursor setup
-
-**Plans:** 1/1 plans complete
-
-Plans:
-- [x] 09-01-PLAN.md — Add Cursor agent support
-
----
-
-### Phase 10: Agent Specialization
-
-**Goal:** Improve and separate agents into specific agent fields (math, marketing, sales, coaching, bookkeeper, researcher, etc.). Let each agent focus on one job and do it well. Agents can use tools or call other agents.
-
-**Depends on:** Phase 9
-
-**Requirements:** AGT-01
-
-**Success Criteria** (what must be TRUE):
-1. Each specialized agent has a clear focus area (e.g., math-agent, marketing-agent, researcher-agent)
-2. Agents can delegate to other agents when needed
-3. Agents have appropriate tools for their domain
-
-**Plans:** 3/3 plans complete
-
-Plans:
-- [x] 10-01-PLAN.md — Create researcher agent and register in plugin.json
-- [x] 10-02-PLAN.md — Add delegation from professor to researcher agent + CLI support
-- [x] 10-03-PLAN.md — Create researcher agent templates
-
----
-
-### Phase 11: Research-Enhanced Hints
-
-**Goal:** Enhance professor:hint and professor:stuck commands to provide keywords for googling or research, plus useful conferences/resources to help users figure out solutions themselves.
-
-**Depends on:** Phase 10
-
-**Requirements:** TBD
-
-**Success Criteria** (what must be TRUE):
-1. Hints include relevant search keywords
-2. Hints suggest useful conferences, tutorials, or documentation
-3. Research suggestions are contextual to the current learning topic
-4. Static fallback available when live research unavailable
-
-**Plans:** 1/1 plans complete
-
-Plans:
-- [x] 11-01-PLAN.md — Enhance hint and stuck commands with research keywords
-
----
-
-### Phase 12: MCP Documentation
-
-**Goal:** Document mcp.json configuration for tools needed in this project (notion, obsidian, etc.)
-
-**Depends on:** Phase 11
-
-**Requirements:** TBD
-
-**Success Criteria** (what must be TRUE):
-1. mcp.json is documented with all required tools
-2. Notion MCP configuration is documented
-3. Obsidian MCP configuration is documented
-
-**Plans:** To be planned
-
----
-
-### Phase 13: Client Components
-
-**Goal:** React client with split-pane layout, lecture panel with markdown rendering, chat panel with streaming and context-aware command pills.
-
-**Depends on:** Phase 12
-
-**Requirements:** WEB-09, WEB-10, WEB-11, WEB-12, WEB-13, WEB-14, WEB-15, WEB-16, WEB-22
-
-**Success Criteria** (what must be TRUE):
-1. Browser displays two-panel layout: lecture panel (left ~40%) and chat panel (right ~60%)
-2. LecturePanel renders LECTURE.md content as formatted markdown with syntax-highlighted code blocks
-3. LecturePanel automatically fetches new content when WebSocket receives "lecture-updated" event
-4. ChatPanel displays streaming Claude responses character-by-character as they arrive via SSE
-5. ChatPanel shows command pills (buttons) above or below chat input
-6. Command pills update based on current learning phase: idle shows new-topic, lecture shows hint/review/quiz, exercise shows hint/stuck/review, review shows done/hint
-7. Top bar displays course selector dropdown listing all available courses
-8. Top bar shows current course name and last active timestamp as progress indicator
-9. All markdown rendered anywhere in the UI is sanitized with DOMPurify to prevent XSS attacks
-
-**Plans:** 2/2 plans complete
-
-Plans:
-- [x] 13-01-PLAN.md — Set up React client project infrastructure with Vite, dependencies, CSS theme, API client, and markdown utilities
-- [x] 13-02-PLAN.md — Implement all React components (Header, SplitPane, LecturePanel, ChatPanel, CommandPills, MobileTabSwitcher), hooks (useWebSocket, useSSE), and integrate with backend
-
----
-
-### Phase 14: Integration
-
-**Goal:** CLI web command launches server, production build creates optimized bundle, Express serves static files in production mode.
-
-**Depends on:** Phase 13
-
-**Requirements:** WEB-17, WEB-18, WEB-19, WEB-20, WEB-21
-
-**Success Criteria** (what must be TRUE):
-1. Running `npx course-professor web` in CLI starts the Express server and opens web UI
-2. `npx course-professor web 8080` starts server on port 8080 instead of default 3000
-3. Web UI reads and writes to the same `courses/` directory that the CLI uses (no separate data store)
-4. Running `npm run build` in project root creates optimized React bundle in `client/dist/`
-5. When NODE_ENV=production, Express serves static React build from `client/dist/` instead of proxying to Vite dev server
-
-**Plans:** 1/1 plans complete
-
-Plans:
-- [x] 14-01-PLAN.md — Implement CLI web command, production build, and static file serving
-
-### Phase 15: Retention Layer
-
-**Goal:** Prevent learners from forgetting completed content through spaced repetition scheduling, interactive recall sessions, streak tracking, and time-per-section logging — all stored in plain Markdown with no external plugin dependencies.
-
-**Depends on:** Phase 14
-
-**Requirements:** RET-01, RET-02, RET-03, RET-04, RET-05
-
-**Success Criteria** (what must be TRUE):
-1. `courses/{slug}/SCHEDULE.md` is auto-created when `professor:done` completes a section, containing a spaced repetition queue and flashcard set for that section
-2. `professor:recall` runs an interactive recall session: shows due sections, asks 3 Socratic questions per section, user self-rates (clear/fuzzy/forgot), updates SCHEDULE.md with next scheduled date
-3. `professor:schedule` displays a read-only dashboard of overdue, due-today, and upcoming reviews
-4. Session start auto-checks SCHEDULE.md and displays recall count + streak if items are due
-5. Streak (days active) and time-per-section are tracked in COURSE.md and visible in `professor:progress`
-6. `professor:export` includes SCHEDULE.md data — flashcards exported as plain Q/A table to Notion; Markdown as-is to Obsidian
-
-**Plans:** 4/4 plans complete
-
-Plans:
-- [x] 15-01-PLAN.md — SCHEDULE.md schema and auto-creation on section completion (completed 2026-03-14)
-- [x] 15-02-PLAN.md — Time-per-section and streak tracking in COURSE.md (completed 2026-03-14)
-- [ ] 15-03-PLAN.md — professor:recall and professor:schedule commands
-- [ ] 15-04-PLAN.md — Session start integration and export support for SCHEDULE.md
-
----
-
-### Phase 16: Sharing and Templates
-
-**Goal:** Enable course syllabus sharing via exportable template files and one-command template import, so instructors and community members can share learning paths without sharing personal progress or notes.
-
-**Depends on:** Phase 15
-
-**Requirements:** SHR-01, SHR-02, SHR-03
-
-**Success Criteria** (what must be TRUE):
-1. `professor:template-export` creates `courses/{slug}/TEMPLATE.md` containing only course structure (sections, objectives, capstone brief) — no personal data (notes, progress, answers, dates)
-2. `professor:template-import <path>` reads a TEMPLATE.md file and creates a new course with pre-built syllabus; user still runs `professor:next` to generate lectures
-3. Exported template is valid Markdown readable without any tool and importable by any Professor installation
-
-**Plans:** 1/1 plans complete
-
-Plans:
-- [ ] 16-01-PLAN.md — Template export and import commands
-
-### Phase 17: auto generate excercise files that user can work on directly (exclude learning framework- only need instructions)
-
-**Goal:** Generate self-contained exercise files that users can work on directly without needing LECTURE.md visible. Differentiate between coding exercises (skeleton code with TODOs) and non-coding exercises (pure instructions only).
-**Requirements**: TBD
-**Depends on:** Phase 16
-**Plans:** 1/1 plans complete
-
-Plans:
-- [x] 17-01-PLAN.md — Enhance exercise generation with topic detection, self-contained coding/non-coding templates
-
----
-
-### Phase 17.1: Coach Agent (Feedback Dialogue)
-
-**Goal:** Create Coach agent that owns professor:review, professor:done, professor:stuck with self-assessment dialogue. Every Coach interaction opens with a self-assessment question before providing feedback.
-
-**Depends on:** Phase 17
-
-**Requirements:** TBD
-
-**Success Criteria** (what must be TRUE):
-1. Every Coach interaction starts with self-assessment question ("Before I look at your work — what do you think about it?")
-2. Learner's self-assessment shapes everything Coach says next
-3. Reasoning trail stored in LEARNING-LOG.md (max 5 rounds per section)
-4. Done gate requires Coach self-assessment before marking complete
-5. Watch-this flag can mark weak areas for Navigator to pick up
-6. Professor routes review/done/stuck to Coach
-
-**Plans:** 2/2 plans complete
-
-Plans:
-- [ ] 17.1-01-PLAN.md — Create Coach agent + update Professor with routing table and LEARNING-LOG format
-- [ ] 17.1-02-PLAN.md — Wire commands to Coach + register in plugin.json
-
----
-
-### Phase 17.1.1: Spotter Agent (Exercise Companion)
-
-**Goal:** Implement Spotter agent for mid-work check-ins, breaking exercise isolation by being present when learner asks for check-in.
-
-**Depends on:** Phase 17.1 (Coach Agent)
-
-**Requirements:** TBD
-
-**Success Criteria** (what must be TRUE):
-1. User can invoke professor:spotter command and receive check-in flow
-2. Spotter asks position question (a/b/c/d) and responds appropriately per routing table
-3. Spotter routes to Coach when learner selects "ready for review"
-4. Spotter appends to Attempt Log in LEARNING-LOG.md
-5. professor:hint reads attempt log before applying hint layers
-6. professor:next reminds learner about spotter at end of lecture
-7. Spotter agent and professor:spotter command registered in plugin.json
-
-**Plans:** 2/2 plans complete
-
-Plans:
-- [ ] 17.1.1-01-PLAN.md — Create Spotter agent + command + Professor format
-- [ ] 17.1.1-02-PLAN.md — Wire hint, next, plugin.json
-
----
-
-### Phase 17.1.1.1: Navigator Agent (Section Bridges and Concept Threading)
-
-**Goal:** Create Navigator agent that helps learners see connections between sections and threads concepts across a course. Navigator appears between sections to reinforce learning by showing "what you just learned → what comes next" bridges.
-
-**Depends on:** Phase 17.1.1 (Spotter Agent)
-
-**Requirements:** TBD
-
-**Success Criteria** (what must be TRUE):
-1. Navigator appears automatically between sections (not invoked — flows from section completion)
-2. Navigator shows "bridge" content: how current section concepts connect to next section
-3. Concept threading: Navigator maintains a lightweight "concept map" showing how key ideas recur across sections
-4. Learner's "aha moments" from Coach feedback are threaded forward by Navigator
-5. Navigator appends bridge summaries to LEARNING-LOG.md
-
-**Plans:** 2/2 plans complete
-
-Plans:
-- [x] 17.1.1.1-01-PLAN.md — Create Navigator agent
-- [x] 17.1.1.1-02-PLAN.md — Wire commands and register
-
----
-
-### Phase 17.1.1.1.1: Professor Orchestrator Refactor
-
-**Goal:** Refactor the Professor agent to use a routing table instead of direct command logic. Strip all command-specific code from the Professor agent and delegate to specialized agents (Coach, Spotter, Navigator) via explicit routing rules.
-
-**Depends on:** Phase 17.1.1.1 (Navigator Agent)
-
-**Requirements:** TBD
-
-**Success Criteria** (what must be TRUE):
-1. Professor agent uses a routing table to delegate commands to specialized agents
-2. All command-specific logic removed from Professor — no more direct hint/stuck/review handling
-3. Routing table is declarative and easy to modify
-4. New commands can be added by adding entries to routing table, not by editing Professor code
-
-**Plans:** 3/3 plans complete
-
-Plans:
-- [x] 17.1.1.1.1-01-PLAN.md — Add YAML routing table to Professor frontmatter
-- [x] 17.1.1.1.1-02-PLAN.md — Strip command behaviors from Professor body
-- [x] 17.1.1.1.1-03-PLAN.md — Gap closure: Add 5 missing routing entries (quiz, template-export, template-import, worktrees, switch)
-
----
-
-### Phase 18: Cloud Deployment
-
-**Goal:** The platform runs at a stable public URL with production-safe configuration — no local machine required to access the app.
-
-**Depends on:** Phase 14 (production build must exist before deploying)
-**Requirements:** DEPL-01, DEPL-02, DEPL-03
-
-**Status:** DEFERRED — Focus on CLI/skills first. Will revisit later.
-
-**Success Criteria** (what must be TRUE):
-1. Visiting the public Vercel URL loads the web UI without error from any network
-2. A custom domain (e.g. `professor.yourdomain.com`) resolves to the deployed platform
-3. Rotating or adding an environment variable (API key, secret) in the Vercel dashboard takes effect on the next request without any code change or redeployment
-4. A new deployment triggered by a `git push` to main completes successfully and serves the updated app
-
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (run /gsd:plan-phase 18 to break down)
-
----
-
-### Phase 19: Authentication
-
-**Goal:** Users can create accounts and stay signed in — via email/password or GitHub — with sessions that survive browser restarts.
-
-**Depends on:** Phase 18 (OAuth callbacks require a public URL; session cookies require a stable domain)
-**Requirements:** AUTH-01, AUTH-02, AUTH-03
-
-**Status:** DEFERRED — Focus on CLI/skills first. Will revisit later.
-
-**Success Criteria** (what must be TRUE):
-1. A new visitor can sign up with email and password and land on the app as an authenticated user
-2. An existing user can click "Continue with GitHub" and complete OAuth login without entering a password
-3. A logged-in user who closes the browser tab and returns later is still authenticated without being asked to log in again
-4. An unauthenticated user who navigates to a protected route is redirected to the login page, then returned to their original destination after login
-
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (run /gsd:plan-phase 19 to break down)
-
----
-
-### Phase 20: CLI Install Command
-
-**Goal:** Any user can browse available community courses and install one with a single CLI command. The registry is `professor-skills/registry` on GitHub — no hosted server required.
-
-**Depends on:** Nothing hosted. Registry repo (`professor-skills/registry`) exists externally and is already functional.
-**Requirements:** REG-03
-
-**External dependency:** `github.com/professor-skills/registry` — separate repo, already built. Contains `index.json` with `courses[]` and `skills[]` arrays, and raw files at `courses/{name}/COURSE.md`.
-
-**Success Criteria** (what must be TRUE):
-1. `npx course-professor list` fetches `index.json` from GitHub raw URL and prints available courses (name, level, section count, description)
-2. `npx course-professor install <course-name>` downloads `COURSE.md` and `meta.json` from `professor-skills/registry` into the local plugin and confirms success
-3. If the course name is not found in `index.json`, CLI prints a clear error with available course names
-4. If GitHub is unreachable, CLI prints a helpful error (not a raw fetch crash)
-5. Installed course is usable immediately with `professor:new-topic` (professor detects the template and pre-fills the syllabus)
-
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (run /gsd:plan-phase 20 to break down)
-
-### Phase 21: research and polish current agent plan to work in real world
-
-**Goal:** Polish all 5 agent files (Professor, Coach, Spotter, Navigator, Researcher) for cross-platform compatibility across Claude Code, Cursor, Gemini CLI, and OpenCode — removing Claude Code-specific patterns and adding self-contained fallback behavior where needed.
-**Requirements**: COMPAT-01, COMPAT-02, COMPAT-03, COMPAT-04, COMPAT-05, COMPAT-06, COMPAT-07
-**Depends on:** Phase 20
-**Plans:** 3/4 plans complete
-
-Plans:
-- [ ] 21-01-PLAN.md — Refactor professor.md: remove routing:/actions: frontmatter, remove AskUserQuestion, trim body, add platform-conditional delegation blocks
-- [ ] 21-02-PLAN.md — Polish coach.md, spotter.md, navigator.md, researcher.md: add mode: subagent, model: inherit, platform-agnostic return language
-- [ ] 21-03-PLAN.md — Sync agents/ to shared/ via bin/sync-shared.sh, add missing navigator.md, update SKILL.md with multi-agent architecture table
-- [ ] 21-04-PLAN.md — Run compatibility checklist and get human sign-off
-
----
-
-## v2.0 Coverage
-
-v2.0 phases:
-- Phase 13: Client Components — React split-pane UI, markdown rendering, command pills
-- Phase 14: Integration — CLI web command, production build, static file serving
-- Phase 15: Retention Layer — SCHEDULE.md, professor:recall, streak, time tracking
-- Phase 16: Sharing and Templates — professor:template-export, professor:template-import
-
-**Coverage:** 4 phases delivering Local Web UI + Retention + Sharing
-
-## v2.1 Coverage
-
-v2.1 phases:
-- Phase 18: Cloud Deployment — Vercel deploy, custom domain, env var management (DEFERRED)
-- Phase 19: Authentication — Email/password signup, GitHub OAuth, persistent sessions (DEFERRED)
-- Phase 20: CLI Install Command — `npx course-professor install/list`, fetches from professor-skills/registry GitHub org
-
-**Active:** Phase 20 only. Phases 18-19 deferred until CLI community is active.
-**External:** Registry repo (`professor-skills/registry`) is complete and separate — courses/ and skills/ split, validate.js + build-index.js + GitHub Actions all working.
+### Phase 22: Studio Foundation
+**Goal**: A runnable Studio shell where every page route exists, data persists, and any of the 4 AI sources can be configured and tested.
+**Depends on**: nothing (seed code in `studio/src/lib/`)
+**Requirements**: SHELL-01, SHELL-02, SHELL-03, SHELL-04, SHELL-05, AI-01, AI-02, AI-03, AI-04, AI-05, COURSE-04, DATA-03
+**Storage design**: all data access goes through `lib/repo/` — a repository API (courses, lessons, lesson_versions, quiz_attempts, cards, reviews, chat_messages, reflections, notes, activity) defined once as SQL migrations in `studio/migrations/NNNN_name.sql` (wrangler D1 migrations layout) and mirrored as JS table metadata in `lib/repo/schema.js` for the IndexedDB adapter. **D1-ready rules**: TEXT primary keys (UUID/ULID), every table has `owner_id` (default `'local'`), `created_at`/`updated_at`/`deleted_at` (tombstones, ISO-8601 TEXT), JSON as TEXT, no PRAGMA/extension dependencies — the same migrations must apply to local `node:sqlite` and to Cloudflare D1 unchanged. Phase 22 ships the IndexedDB adapter + `RemoteAdapter` contract stub; Phase 26 ships the SQLite server. Nothing is ever overwritten: regenerating a lesson adds a `lesson_versions` row.
+**Owns (shared files later phases must not restructure)**: `studio/src/main.jsx`, `lib/repo/*`, `studio/migrations/*`, `App.jsx`, `index.css`, `lib/router.js`, `lib/db.js`, `lib/store.js`, `lib/ai/*`, `lib/prompts/base.js`, `components/ui/*`, `components/Layout.jsx`, `pages/*` (Lesson.jsx and Settings.jsx final; others stubs), `data/demo-course.js`, plus **stub files later phases replace in place**: `components/course/*Stub`, `components/practice/{LessonPractice,StreakBadge,DueBadge}.jsx`, `components/tutor/TutorPanel.jsx`, `components/data/DataPanel.jsx`
+**Success Criteria**:
+1. `npm run dev` serves the app; Home, New, Course, Lesson, Review, Settings routes render (stubs allowed for 23–25 pages)
+2. Settings can save each provider and "Test connection" streams a reply or shows an actionable error
+3. A demo course is visible and openable with zero configuration
+4. `npm test` passes (db, srs, json, course, provider SSE parsing) and `npm run build` succeeds
+
+### Phase 23: Courses & Lessons
+**Goal**: Learner creates a course from a prompt, edits the syllabus, and studies generated lessons.
+**Depends on**: Phase 22
+**Requirements**: COURSE-01, COURSE-02, COURSE-03, LESSON-01, LESSON-02, LESSON-03, LESSON-04
+**Owns**: `pages/Home.jsx`, `pages/NewCourse.jsx`, `pages/Course.jsx`, `components/course/*` (incl. `LessonContent.jsx` mounted by Lesson.jsx), `lib/prompts/course.js`, `lib/prompts/lesson.js`
+**Success Criteria**:
+1. Topic+level+goal → editable syllabus → saved course
+2. Opening a lesson streams Markdown content, caches it, renders safely; regenerate works
+3. Mark done updates progress on Course and Home
+
+### Phase 24: Practice & Retention
+**Goal**: Learner reinforces each lesson with a quiz and spaced-repetition flashcards.
+**Depends on**: Phase 22
+**Requirements**: PRACTICE-01, PRACTICE-02, PRACTICE-03, PRACTICE-04
+**Owns**: `pages/Review.jsx`, `components/practice/*` (LessonPractice, QuizPanel, FlashcardGenerator, StreakBadge, DueBadge), `lib/prompts/practice.js`, `lib/activity.js`
+**Success Criteria**:
+1. Quiz panel generates 5 valid MCQs (with JSON repair/retry), scores, explains
+2. Flashcards from a lesson appear in Review when due; grading reschedules via SM-2
+3. Streak and due count render as reusable components
+
+### Phase 25: Socratic Tutor
+**Goal**: Learner gets lesson-aware tutoring that teaches without doing the work.
+**Depends on**: Phase 22
+**Requirements**: TUTOR-01, TUTOR-02, TUTOR-03, TUTOR-04
+**Owns**: `components/tutor/*` (TutorPanel), `lib/prompts/tutor.js`, `lib/chat-store.js`
+**Success Criteria**:
+1. TutorPanel streams replies using lesson + course context
+2. Asking for the exercise solution yields guiding questions/layered hints, never full code
+3. Quick actions work; history persists per lesson
+
+### Phase 26: Local Server, SQLite & Deploy
+**Goal**: Learners can use their local agent for free, keep their data in a SQLite file on disk, move their data, and the app is deployable with a documented SaaS path.
+**Depends on**: Phase 22
+**Requirements**: AI-06, DATA-01, DATA-02, DATA-04, DATA-05, DEPLOY-01, DEPLOY-02, DEPLOY-03, DEPLOY-04
+**Owns**: new `web/studio-api.js` (Express router: `/api/studio/health`, `/api/studio/complete`, `/api/studio/db/*` on `node:sqlite` at `~/.professor/professor.db`, applying `studio/migrations/*.sql` in order with a `d1_migrations`-compatible tracking table). The `/api/studio/db/*` HTTP contract is the SAME one the future Cloudflare Worker + D1 backend will implement, so `RemoteAdapter` only changes base URL + auth token, exactly ONE mount line in `web/server.js`, `studio/src/lib/repo/remote-adapter.js` (replaces the stub), `studio/src/components/data/*` (Backup/Restore/Export UI mounted in Settings via one import line), `studio/docs/*`, `studio/README.md`
+**Success Criteria**:
+1. With `npx course-professor web` running, Studio's bridge provider streams replies from the local agent; requests from non-allowlisted origins or without the pairing token are rejected
+2. With the server running, Studio stores data in `~/.professor/professor.db`; without it, IndexedDB; "Import from browser storage" moves IDB data into SQLite losslessly
+3. Backup → restore round-trips all data in another browser profile; keys are excluded
+4. Exported COURSE.md parses with `parseCourseMarkdown` and matches plugin format
+5. `npm run build` output deploys to void.cloud following `studio/docs/DEPLOY.md`; `SAAS-ROADMAP.md` exists
+
+### Phase 27: Plugin Lesson History
+**Goal**: CLI/web-UI learners never lose a lecture or their reflections when a section is done.
+**Depends on**: nothing (independent of Studio)
+**Requirements**: PLUG-01, PLUG-02, PLUG-03
+**Owns**: `commands/professor/{next,done,quiz,progress,recall}.md`, matching files in `shared/commands/professor/`, `agents/coach.md` (logging section only), `web/server.js` `saveFilesFromResponse` (archive-before-overwrite only), `test/` additions, `CLAUDE.md` course-files section
+**Success Criteria**:
+1. Running next twice leaves the first lecture at `lectures/01-<slug>.md`; `web/` save path does the same
+2. After done, `LEARNING-LOG.md` contains the section's reflection, verdict and duration
+3. Quiz results are appended to `LEARNING-LOG.md`; progress/recall mention archived lectures
+4. `npm test` passes, including a unit test for the archive helper
+
+### Phase 28: Plugin Course Kinds
+**Goal**: CLI learners of non-programming topics get lectures and exercises that fit their subject, without git/code scaffolding.
+**Depends on**: Phase 27 (merged)
+**Requirements**: PLUG-04, PLUG-05, PLUG-06
+**Owns**: `commands/professor/{new-topic,next,hint,review}.md` + `shared/` copies, `professor-skill/SKILL.md` (LECTURE.md Format + level table), `agents/professor.md` (lecture/exercise sections), `CLAUDE.md`, `test/` (if any helper)
+**Success Criteria**:
+1. new-topic asks/confirms kind and writes `**Kind**:` to COURSE.md
+2. A conceptual course is created without git; a programming course still gets a worktree
+3. LECTURE.md template has the shared learning core + kind blocks; exercise generation follows kind (no keyword heuristic, no JS default)
+
+### Phase 29: Code Workspace
+**Goal**: Programming learners write, run and self-check exercise code inside Studio without installing anything, and can use their real toolchain locally.
+**Depends on**: Phase 22 (slot + tables)
+**Requirements**: CODE-01..05
+**Owns**: `studio/src/components/workspace/*` (replaces stub `CodeWorkspace.jsx`), `studio/src/lib/runner/*`, NEW `web/studio-runner.js` (Express Router; mounted by integration into `web/studio-api.js` via HANDOFF so it inherits token + CORS)
+**Success Criteria**:
+1. Workspace tab loads the exercise skeleton; edits autosave as snapshots
+2. Run works offline-in-browser for JS/TS, Python, SQL, HTML; Check shows per-test pass/fail
+3. With the local server, a Go/Java/etc. file runs via the installed toolchain with a timeout and output limits
+4. Tutor "Check my answer" can include the current code
+
+### Phase 30: Dev CLI Fast-path
+**Goal**: Devs check progress, continue, and verify exercises without leaving the terminal.
+**Depends on**: Phase 28 (merged)
+**Requirements**: CLI-01..04
+**Owns**: `bin/commands/{status,next,check,doctor}.js` (new), `bin/course-reader.js` (new: parse learning/ + courses/ COURSE.md incl. Kind, lectures/, SCHEDULE.md, LEARNING-LOG.md), the matching `case` lines + help text in `bin/cli.js`, `test/cli-*.test.js`, README CLI section
+
+### Phase 31: CLI ↔ Studio
+**Goal**: One command launches the full local platform; CLI and Studio share one learning record.
+**Depends on**: Phase 26 (server + SQLite), Phase 30
+**Requirements**: CLI-05..07
+
+## Integration (after wave 2)
+Orchestrator merges worktrees in order 23 → 24 → 25 → 26 → 27 into `feat/studio-local-first` (panels are already mounted via Phase 22 stubs, so merges replace files without conflicts), runs `npm test && npm run build`, and does a UAT pass of the full learning loop.

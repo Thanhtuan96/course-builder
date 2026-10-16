@@ -1,16 +1,16 @@
 ---
-gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Phases
-current_phase: 21-research-and-polish-current-agent-plan-to-work-in-real-world
-current_plan: 04
-status: completed
-last_updated: "2026-03-25T16:17:48.627Z"
+gsd_state_version: "1.0"
+milestone: v3.0
+milestone_name: Professor Studio
+status: planning
+last_updated: "2026-10-15T08:26:43.761Z"
+last_activity: 2026-10-15
 progress:
-  total_phases: 26
-  completed_phases: 17
-  total_plans: 38
-  completed_plans: 39
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Session State
@@ -31,6 +31,7 @@ See: .planning/PROJECT.md
 ## Accumulated Context
 
 ### Roadmap Evolution
+
 - v1.0 completed: Plugin scaffold, all 14 commands, notes, export, archive, CLI
 - v1.1 completed: Git worktree courses, auto-create exercise files, agent specialization
 - v2.0 in progress: Phase 13 (React client) and Phase 14 (Integration) done; phases 15-17 still pending
@@ -38,17 +39,20 @@ See: .planning/PROJECT.md
 - Phase 21 added: research and polish current agent plan to work in real world
 
 ### v2.1 Phase Summary
+
 - **Phase 18: Cloud Deployment** — DEFERRED. Needs filesystem + CLI replacement for serverless. Revisit after CLI community active.
 - **Phase 19: Authentication** — DEFERRED. Depends on Phase 18.
 - **Phase 20: CLI Install Command** — ACTIVE. `npx course-professor install <course-name>` + `npx course-professor list`. Fetches from `professor-skills/registry` GitHub directly. No server needed.
 
 ### v2.1 Goals
+
 - ~~Cloud deployment (Vercel) with public URL and custom domain~~ — Deferred
 - ~~Email + GitHub OAuth user authentication~~ — Deferred
 - `npx course-professor install <course-name>` — install a community course template locally
 - `npx course-professor list` — browse available courses from registry
 
 ### Registry Repo (External — Complete)
+
 - **Repo:** `professor-skills/registry` (separate repo, not this one)
 - **Status:** Built and validated — `courses/` + `skills/` separation, `index.json` with `courses[]` + `skills[]` arrays
 - **Philosophy:** COURSE = syllabus template for learning. SKILL = real problem-solver built by a learner after completing a course (earned gate).
@@ -57,12 +61,14 @@ See: .planning/PROJECT.md
 - **Phase 21 (Vercel server) removed** — was irrelevant once web platform deferred.
 
 ### Phase 21 Decisions
+
 - All 4 specialized agents (Coach, Spotter, Navigator, Researcher) use mode: subagent + model: inherit in frontmatter for OpenCode compatibility
 - Delegation return language replaced with platform-agnostic block referencing Claude Code (automatic), Cursor (/agent-name), Gemini CLI / OpenCode (@agent-name)
 - Spotter agent includes inline fallback for when Coach is unavailable
 - Navigator activation triggers reframed without command name dependencies for cross-platform compatibility
 
 ### Phase 15 Decisions
+
 - Time tracking uses ISO 8601 timestamps with minute-precision duration calculation
 - Streak tracking uses calendar-day based streak with yesterday/today/2+days logic
 - Duration display format: N min / Nh MMm based on length
@@ -70,18 +76,21 @@ See: .planning/PROJECT.md
 - Fire emoji (🔥) for streaks ≥ 3 days for visual engagement
 
 ### Platform Roadmap Context
+
 - Full roadmap design spec: docs/superpowers/specs/2026-03-13-platform-roadmap-design.md
 - v3.0: Non-tech learner expansion (phases 21-23)
 - v3.1: SKILL Creator Loop (phases 24-27)
 - v4.0: Marketplace — freemium + payments + revenue share (phases 28-33)
 
 ### Deferred Work (Not in Current Plan)
+
 - **Cloud Deployment (Vercel)** — Deferred. Focus on CLI and SKILLs first. Will revisit after core CLI is complete.
   - Previous attempt: Phase 18 (reverted)
   - Reason: User prefers to focus on CLI/skills first
   - Will be re-added to roadmap when ready
 
 ### Pending Todos
+
 - 4 todos (see .planning/todos/pending/)
 
 ## Session Log
@@ -128,3 +137,10 @@ See: .planning/PROJECT.md
 - 2026-03-25: Completed plan 21-03 — Synced agents/ to shared/ (navigator.md now present), added Agent Architecture table to SKILL.md documenting all 5 agents
 - 2026-03-25: Completed quick plan 1 — CLI skill registry lifecycle (update/installed/remove commands, JSON.parse safety, meta.json optional, overwrite protection, Vitest 31 tests). Helpers extracted to bin/registry-helpers.js to enable testing without shebang conflicts.
 - 2026-03-26: Completed quick plan 2 — Publish flow (capstone-review COMPLETION.md write, professor:skill-export SKILL.md generation, course-professor publish CLI with gh fork/clone/push/PR, professor:publish UX wrapper, plugin.json registration, 56 Vitest tests passing)
+
+## Current Position
+
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-10-15 — Milestone v3.0 started
