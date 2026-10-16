@@ -9,7 +9,7 @@
     },
     "scripts": {
         "build": "cd web/client && npm install && npm run build",
-        "build:studio": "npm --prefix studio run build",
+        "build:studio": "npm --prefix studio install --no-audit --no-fund && npm --prefix studio run build",
         "smoke:pack": "node scripts/smoke-pack.mjs",
         "start": "cd web && node server.js",
         "pretest": "npm --prefix web install --no-audit --no-fund --silent",
