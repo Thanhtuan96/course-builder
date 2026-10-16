@@ -29,5 +29,6 @@ GEMINI.md
 
 dist
 /web/client/dist
+/web/.studio-token
 .gitnexus
 .publish-staging/

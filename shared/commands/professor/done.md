@@ -24,6 +24,13 @@ This command routes to the **Coach agent** for self-assessment before marking co
    - Professor calculates and records duration
    - Professor updates COURSE.md (section status → ✅ Done)
    - Professor adds Progress Log entry
+   - Professor appends a **section entry** to `LEARNING-LOG.md` (create it if missing):
+     - **Date** — today
+     - **Section** — number + title
+     - **Duration** — time from section start to completion
+     - **Coach questions & learner answers** — summarised faithfully from this session's self-assessment
+     - **Coach verdict** — `solid` or `⚠️ watch-this: <concept>`
+     - **Archived lecture** — path to this section's lecture in `lectures/NN-<slug>.md` (once `professor:next` archives it; until then the active `LECTURE.md`)
    - Professor clears "Active exercise" field
    - Professor creates/updates SCHEDULE.md with flashcards
    - Professor checks if all sections done → trigger Capstone Unlock if complete

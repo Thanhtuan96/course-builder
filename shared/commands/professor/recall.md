@@ -20,6 +20,8 @@ description: Run an interactive recall session for due sections
    
    Read the 3 flashcards from SCHEDULE.md for this section.
    
+   If the section's lecture was archived, also read `lectures/NN-<slug>.md` (in `learning/{slug}/` first, then `courses/{slug}/`) to ground the recall questions in the original material and confirm the flashcards still match what was taught.
+   
    **Card 1: Conceptual**
    > **Reviewing: [Section Name]**
    > 

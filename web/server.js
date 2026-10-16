@@ -5,11 +5,14 @@ import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { spawn, execSync } from 'child_process';
+import { archiveLecture } from './lecture-archive.js';
+import studioRouter from './studio-api.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Configuration
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '127.0.0.1';
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const COURSES_DIR = process.env.COURSES_DIR || './courses';
 
@@ -20,6 +23,7 @@ const app = express();
 const server = createServer(app);
 
 // Middleware
+app.use('/api/studio', studioRouter);
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
@@ -112,6 +116,14 @@ function saveCourseFile(slug, file, content) {
   }
   
   try {
+    // Archive the existing lecture, but only when moving to a different section
+    // (in-place edits of the active lecture must not create duplicates).
+    if (sanitizedFile === 'LECTURE.md' && existsSync(filePath)) {
+      const result = archiveLecture(courseDir, content);
+      if (result.archived) {
+        console.log(`🗂️  Archived previous lecture → courses/${slug}/${result.path}`);
+      }
+    }
     writeFileSync(filePath, content, 'utf-8');
     return { success: true };
   } catch (e) {
@@ -1189,19 +1201,20 @@ if (NODE_ENV === 'production') {
   }
 }
 
-// Start server
-server.listen(PORT, () => {
+// Start server (loopback by default — the Studio bridge is local-only; set HOST to override)
+server.listen(PORT, HOST, () => {
   const url = NODE_ENV === 'production' 
     ? `http://localhost:${PORT}`
     : `http://localhost:${PORT} (with Vite dev server)`;
-    
+  const hostNote = process.env.HOST ? `\n║   Bound to HOST=${HOST} (exposed beyond loopback)  ║` : '';
+
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
 ║           📚 Professor Web UI - Running                       ║
 ║                                                               ║
 ║   URL: ${url}
 ║   Mode: ${NODE_ENV}
-║   Courses: ${COURSES_DIR}
+║   Courses: ${COURSES_DIR}${hostNote}
 ╚══════════════════════════════════════════════════════════════╝
   `.trim());
 });

@@ -39,6 +39,7 @@ Review the user's completed capstone project. This command is only available aft
    - State what they got right (✅)
    - Ask one Socratic question about a decision they made (❓)
    - Name one thing to research to improve it further (💡)
+   - **Use and citation of sources** (📚) — `conceptual`/`quantitative`: **required**; the project must cite the sources it used. `programming`: the README cites the documentation used. Ask the learner where each key claim came from. Missing citations block a 🏆 verdict.
 
    **Step 4 — Standout moment:**
    Call out the single best thing they did:

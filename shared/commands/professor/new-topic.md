@@ -13,30 +13,53 @@ Use `AskUserQuestion` with these four questions in a single call:
 
 Research the topic using web search before proposing anything.
 
-Propose the syllabus **inline in chat** — do NOT write any files yet. Frame each section description around how it moves the user toward their stated goal.
+**Propose a course kind** (PLUG-04). Based on the topic and the learner's stated goal, pick exactly one:
 
-Wait for the user to confirm or request adjustments.
+| Kind | Use when the topic is about… | Example |
+|---|---|---|
+| `programming` | writing/running code, software, data structures, frameworks, queries | "Python cơ bản", "React", "SQL" |
+| `quantitative` | numbers, formulas, proofs — math, statistics, finance, physics | "Linear algebra", "Statistics" |
+| `conceptual` | ideas, history, theory, social science, culture | "Lịch sử Việt Nam thế kỷ 20", "Marketing" |
+| `skill` | a practical craft or performance practised by drill | "Public speaking", "Chess openings", "Guitar" |
+
+Propose the syllabus **and the kind** inline in chat — do NOT write any files yet. Use this shape:
+
+> **Proposed course kind**: `conceptual` — because you want to understand causes and narratives, not write code.
+> (You can change this — the other kinds are `programming`, `quantitative`, `skill`.)
+
+Frame each section description around how it moves the user toward their stated goal.
+
+Wait for the user to confirm or request adjustments (including a different kind).
 
 **After user confirmation, perform these steps:**
 
-1. **Generate tech slug** from topic name:
+1. **Generate slug** from topic name:
    - Convert to lowercase
+   - Transliterate diacritics to ASCII (e.g. "Lịch sử Việt Nam" → "lich-su-viet-nam")
    - Replace spaces with hyphens
    - Remove special characters
    - Example: "React Fundamentals" → "react-fundamentals"
 
-2. **Ensure git repository exists**:
-   - Verify current directory is a git repository
-   - If not in a git repo: Show error "Courses require a git repository. Please initialize git first."
+2. **Create the course folder** — how depends on the kind:
 
-3. **Create git worktree** at `learning/{slug}/`:
-   ```bash
-   git worktree add learning/{slug}/ -b learning/{slug}
-   ```
+   **If kind is `programming`** (keep current behaviour):
+   - Ensure the current directory is a git repository. If not, show: "Programming courses require a git repository. Please initialize git first."
+   - Create a git worktree at `learning/{slug}/`:
+     ```bash
+     git worktree add learning/{slug}/ -b learning/{slug}
+     ```
+   - Create the `exercises/` directory with scaffolding:
+     - **Framework courses** (React, Vue, Django, …): scaffold a basic project structure (`package.json` or equivalent, `src/`, README with setup instructions) and mark each section's code slot with TODO comments
+     - **Standalone courses**: create an empty `exercises/` directory
 
-4. **Write course files** to `learning/{slug}/`:
-   - `COURSE.md` — syllabus with all sections starting ⬜ Not started
-   - `CAPSTONE.md` — project brief for the capstone
+   **For every other kind (`quantitative`, `conceptual`, `skill`)** (PLUG-05):
+   - Create a **plain folder** `learning/{slug}/` — no git requirement, no worktree, no framework scaffolding
+   - Do **not** create `exercises/` yet — it is created lazily by `professor:next` on first use
+   - If the directory already exists, reuse it
+
+3. **Write course files** to `learning/{slug}/`:
+   - `COURSE.md` — syllabus with all sections starting ⬜ Not started, and `**Kind**: {kind}` in the metadata **right under `**Level**`**
+   - `CAPSTONE.md` — capstone project brief, fitted to the kind (a program for `programming`; an analysis/report for `conceptual`; a solved problem set or model build for `quantitative`; a demonstrated performance for `skill`)
    - `NOTES.md` — empty notes file:
      ```markdown
      # 📝 Notes: [Topic Name]
@@ -45,30 +68,10 @@ Wait for the user to confirm or request adjustments.
 
      ```
 
-5. **Detect if topic is framework/library**:
-   - Parse topic name for framework indicators:
-     - Frontend: React, Vue, Angular, Svelte, Next.js, Nuxt
-     - Backend: Express, Django, FastAPI, Flask, Rails, Laravel
-     - Mobile: React Native, Flutter, Swift, Kotlin
-   - Store framework flag in COURSE.md metadata
+4. **Initial "Active exercise" field**: leave empty — `professor:next` creates the first exercise file.
 
-6. **Create exercises/ directory with scaffolding**:
-   
-   **For framework courses:**
-   - Create `exercises/` directory as project root
-   - Scaffold basic project structure:
-     - `package.json` or equivalent
-     - Basic file structure (src/, components/, etc.)
-     - README.md with setup instructions
-   - Use TODO comments to mark where each section's code goes
+5. **Update paths**: all course files now live in `learning/{slug}/`; reference `learning/{slug}/`.
 
-   **For standalone courses:**
-   - Create empty `exercises/` directory
-   - Files will be created by professor:next as needed
+6. **Tell the user**: *"Course created as a **{kind}** course! Your capstone brief is saved in CAPSTONE.md — you'll build it solo after all sections. Run `professor:next` to load your first section."*
 
-7. **Initial "Active exercise" field**:
-   - Set to empty or first section will be created on first professor:next
-
-8. **Update paths**:
-   - All course files now live in `learning/{slug}/` alongside user's project code
-   - Reference `learning/{slug}/` instead of `courses/{slug}/`
+**Backward compatibility (PLUG-04):** Commands that read `COURSE.md` treat a **missing Kind as `programming`**, so courses created before this feature keep working unchanged.

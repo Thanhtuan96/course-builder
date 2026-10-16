@@ -1,0 +1,8 @@
+{"type":"system","subtype":"init","cwd":"/tmp/x","session_id":"s","tools":[],"model":"claude-sonnet-5-5"}
+{"type":"stream_event","event":{"type":"message_start","message":{"role":"assistant","content":[]}},"session_id":"s"}
+{"type":"stream_event","event":{"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}},"session_id":"s"}
+{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"hello"}},"session_id":"s"}
+{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":" world"}},"session_id":"s"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"hello world"}]},"session_id":"s"}
+{"type":"stream_event","event":{"type":"message_stop"},"session_id":"s"}
+{"type":"result","subtype":"success","result":"hello world","is_error":false,"num_turns":1}

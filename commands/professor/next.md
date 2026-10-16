@@ -28,9 +28,24 @@ When greeting user at session start or after next, include streak info:
 - "You're on a N-day streak! 🔥" (if streak ≥ 3)
 - Or: "Streak: N days" (if streak < 3)
 
-Research the section topic using web search for current, accurate content.
+**Research first — ground the lecture (required):**
 
-Write `LECTURE.md` for that section (overwrite any existing file). Update `COURSE.md` status to 🔄 In progress for that section and update "Last active" date.
+Before writing, search and **fetch 3–6 sources** for this section. Prefer official docs/standards/specs and maintainer repos for `programming`; encyclopedias, peer-reviewed papers, textbooks and primary sources for `quantitative`/`conceptual`/`skill`. Keep the list of URLs you **actually opened** this session. Delegate to the researcher agent when available and ask it to return a source list with credibility tiers.
+
+Then write the lecture so that every key factual claim carries a `[n]` citation. Never invent a URL, title, author or quote — if a claim cannot be sourced, keep it but mark it `⚠️ unverified` and tell the learner how to check it. If web tools are unavailable this session, say so at the very top of the lecture and mark **all** claims `⚠️`. For `programming`, code shown must be runnable as-is or clearly labelled a fragment; verify it with `Bash` when you can and note `✓ ran on <runtime version>`.
+
+**Archive the previous lecture, then write the new one (ordered):**
+
+1. **Archive the existing `LECTURE.md`** (skip if it does not exist, and skip if you are not moving to a different section):
+   - **Only archive when the section number changes.** If the existing and new lecture share the same section number, this is an in-place edit — do NOT archive (it would create duplicate `NN-x.md`, `NN-x-2.md` files). If either lecture has no section number, archive only when both the content and the title differ.
+   - Determine the course directory: check `learning/{slug}/` first, then fall back to `courses/{slug}/`
+   - Parse the section number from the existing lecture's `# Section N:` / `# 📖 Section N:` heading
+   - Move (rename) the file to `lectures/NN-<section-slug>.md`:
+     - `NN` = zero-padded section number (e.g. `02`); if the heading has no number, use the next free number after the files already in `lectures/`
+     - `<section-slug>` = lowercased, hyphenated section title, transliterated to ASCII (e.g. `closures-and-scope`; Vietnamese `Biến và kiểu dữ liệu` → `bien-va-kieu-du-lieu`)
+     - Create the `lectures/` directory if it does not exist
+   - **Never delete or overwrite an archive** — the full lecture history is kept; if a target name already exists, append `-2`, `-3`, …
+2. **Write the new `LECTURE.md`** for the current section (overwriting the now-archived file). Use the **LECTURE.md Format** from `SKILL.md`: the shared learning core plus **exactly one** kind-specific block matching the course Kind. Include `[n]` citations on key claims, a `## 🔗 Sources` list containing **only** URLs actually fetched this session (`[n] Title — Publisher (tier) — URL — accessed YYYY-MM-DD`), and the `## 🔎 Verify it yourself` section (SIFT). Update `COURSE.md` status to 🔄 In progress for that section and update "Last active" date.
 
 **After writing LECTURE.md, auto-create the exercise file:**
 
@@ -38,85 +53,108 @@ Write `LECTURE.md` for that section (overwrite any existing file). Update `COURS
    - First check `learning/{slug}/` (worktree courses - Phase 7)
    - Fall back to `courses/{slug}/` (legacy)
 
-2. **Detect topic type** (coding vs non-coding):
-   - Scan section title and LECTURE.md content for keywords:
-     - **Coding keywords** → coding exercise: "implement", "function", "write code", "program", "algorithm", "build", "create component", "API", "database", "query", "class", "method", "return", "input", "output"
-     - **Non-coding keywords** → non-coding exercise: "analyze", "explain", "compare", "prove", "mark", "calculate", "design", "describe", "discuss", "evaluate", "assess"
-   - Also detect from course name: React → coding, Python → coding, SQL → coding
-   - Default to coding exercise if unclear
+2. **Read the course Kind** from `COURSE.md` metadata (`**Kind**: ...`, right under `**Level**`):
+   - If the field is missing, treat it as `programming` (backward compatible).
+   - The Kind is authoritative — **never guess** coding vs non-coding from section keywords.
 
-3. **Detect technology type** for file extension:
-   - React/JS/Node → `.jsx` (or `.js` if no React detected)
-   - TypeScript → `.ts`
-   - Python → `.py`
-   - SQL → `.sql`
-   - Go → `.go`
-   - Rust → `.rs`
-   - Java → `.java`
-   - Non-coding → `.md`
+3. **Determine the exercise path**:
+   - Use the `exercises/{NN}-{section-slug}.{ext}` pattern
+   - `{NN}` = zero-padded section number from `COURSE.md`
+   - `{section-slug}` = lowercased, hyphenated, ASCII-transliterated section title
+   - Create `exercises/` lazily only when the first exercise file is written
 
-4. **Determine exercise file path**:
-   - Use `exercises/{NN}-{section-slug}.{ext}` pattern
-   - Extract section number from COURSE.md
+4. **Create the exercise file** (skip if it already exists) following the **course Kind**:
 
-5. **Create exercise file** (skip if already exists):
+   **`programming`** → `exercises/{NN}-{section-slug}.{ext}` where the extension, comment syntax, and export style match the course language. Skeleton + self-check ONLY — never the implementation.
+   - JavaScript/TypeScript → `.js` / `.ts`, `// TODO`, `console.assert` self-check (`module.exports` for plain Node CJS; `export` for ESM/modules)
+   - React → `.jsx` (or `.tsx`), `// TODO`, `export default` component stub + a render/log self-check
+   - Python → `.py`, `# TODO`, `def` stub, `if __name__ == "__main__":` block with `assert` self-checks
+   - SQL → `.sql`, commented task + the expected result described in a comment
+   - Go/Rust/Java → `.go` / `.rs` / `.java`, matching comment syntax + a minimal self-check
+   - Example (Python):
+     ```python
+     # ========================================
+     # Exercise: [Title]
+     # Objective: [1-2 sentences]
+     # ========================================
 
-   **For CODING exercises** - generate skeleton code:
-   ```javascript
-   // ========================================
-   // Exercise: [Exercise Title]
-   // ========================================
-   //
-   // Objective: [1-2 sentences what user should accomplish]
-   //
-   // Example:
-   //   Input: [example input]
-   //   Output: [expected output]
-   //
-   // Constraints:
-   //   - [Constraint 1]
-   //   - [Constraint 2]
-   //
-   // Work on this file directly - you can complete it without the lecture visible.
-   // ========================================
+     # TODO: [Task 1]
+     def your_function(param):
+         # your implementation here
+         pass
 
-   // TODO: [Task 1 description]
-   function yourFunction(param) {
-     // Your implementation here
-   }
+     if __name__ == "__main__":
+         # self-checks — make these pass
+         assert your_function(...) == ...
+     ```
+   - Example (JS/TS):
+     ```javascript
+     // ========================================
+     // Exercise: [Title]
+     // Objective: [1-2 sentences]
+     // ========================================
 
-   // TODO: [Task 2 description - if applicable]
-   // function anotherFunction() { }
+     // TODO: [Task 1]
+     function yourFunction(param) {
+       // your implementation here
+     }
 
-   module.exports = { yourFunction };
-   ```
+     console.assert(yourFunction(...) === ..., 'expected ...');
+     ```
 
-   **For NON-CODING exercises** - generate pure instructions:
+   **`quantitative`** → `exercises/{NN}-{section-slug}.md` — a problem set with final answers in a separate section at the bottom (no worked solutions):
    ```markdown
-   # Exercise: [Exercise Title]
+   # Exercise: [Title]
 
    ## Objective
-   [What user should accomplish - 1-2 sentences]
+   [1-2 sentences]
 
-   ## Instructions
-   Complete the following:
-   
-   1. [Instruction 1]
-   2. [Instruction 2]
-   3. [Instruction 3]
+   ## Problems
+   1. [problem]
+   2. [problem]
+   3. [problem]
 
-   ## Your Answer
-   [Space for user's response - either free text or specific format]
-
-   ## Verification
-   [What makes a good answer - criteria for self-verification]
-
-   ## Resources
-   - [Reference to LECTURE.md section]
-   - [Any additional hints without giving the answer]
+   ## Answers (check after trying)
+   1. [final answer only]
+   2. [final answer only]
+   3. [final answer only]
    ```
 
-6. **Update COURSE.md**:
+   **`conceptual`** → `exercises/{NN}-{section-slug}.md` — an analysis/argument prompt + 4-criterion rubric:
+   ```markdown
+   # Exercise: [Title]
+
+   ## Prompt
+   [An analysis, comparison, or argument question about this section]
+
+   ## Your Answer
+   [space for the learner's response]
+
+   ## Rubric (4 criteria)
+   - [ ] [Criterion 1 — accurate use of concepts]
+   - [ ] [Criterion 2 — evidence / examples cited]
+   - [ ] [Criterion 3 — clear, structured argument]
+   - [ ] [Criterion 4 — considers counter-arguments]
+   ```
+
+   **`skill`** → `exercises/{NN}-{section-slug}.md` — drills + self-assessment checklist + flashcard list:
+   ```markdown
+   # Exercise: [Title]
+
+   ## Drills
+   1. [drill]
+   2. [drill]
+
+   ## Self-assessment checklist
+   - [ ] [what good looks like]
+   - [ ] [...]
+
+   ## Turn these into flashcards
+   - [question]
+   - [question]
+   ```
+
+5. **Update COURSE.md**:
    - Add/update "Active exercise" field:
      ```
      **Active exercise**: exercises/01-intro.js

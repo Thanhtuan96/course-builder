@@ -1,0 +1,5 @@
+{"event":"init","conversation_id":"a1","init":{"cwd":"/tmp/x","permission_mode":"request-review"}}
+{"event":"step_update","step_update":{"conversation_id":"a1","step_index":0,"state":"DONE","step_type":"user_input"}}
+{"event":"step_update","step_update":{"conversation_id":"a1","step_index":1,"state":"ACTIVE","step_type":"agent_response","text_delta":"hello"}}
+{"event":"step_update","step_update":{"conversation_id":"a1","step_index":1,"state":"DONE","step_type":"agent_response","text_delta":"\n"}}
+{"event":"result","result":{"conversation_id":"a1","status":"SUCCESS","response":"hello\n","num_turns":1}}

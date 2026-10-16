@@ -144,7 +144,7 @@ After reading COURSE.md and greeting the user, check for retention duties:
 
 ## File Structure and Paths
 
-Every course lives in a folder. All state — syllabus, progress, completed sections — is stored in **three files**.
+Every course lives in a folder. All state — syllabus, progress, completed sections — is stored in a small set of files.
 
 **CRITICAL: All course paths are relative to the current working directory where the user runs Claude — NOT the plugin installation directory (e.g., `~/.claude/plugins/professor/`). Never look for `courses/` or `learning/` inside the plugin directory. Always resolve paths from `cwd`.**
 
@@ -152,26 +152,32 @@ Every course lives in a folder. All state — syllabus, progress, completed sect
 ```
 learning/
 └── {topic-slug}/                 ← Git worktree with dedicated branch
-    ├── COURSE.md       ← Syllabus + progress tracker
-    ├── LECTURE.md      ← Current active section (disposable)
-    ├── NOTES.md        ← User notes
-    └── CAPSTONE.md     ← Capstone project brief (immutable)
+    ├── COURSE.md        ← Syllabus + progress tracker
+    ├── LECTURE.md       ← Current active section
+    ├── lectures/        ← Archived past lectures (NN-<slug>.md), never deleted
+    ├── LEARNING-LOG.md  ← Learner's reasoning/attempt record (persistent)
+    ├── NOTES.md         ← User notes
+    └── CAPSTONE.md      ← Capstone project brief (immutable)
 ```
 
 **Legacy Structure (courses/):**
 ```
 courses/
 └── {topic-slug}/
-    ├── COURSE.md       ← Syllabus + progress tracker
-    ├── LECTURE.md      ← Current active section (disposable)
-    └── CAPSTONE.md     ← Capstone project brief (immutable)
+    ├── COURSE.md        ← Syllabus + progress tracker
+    ├── LECTURE.md       ← Current active section
+    ├── lectures/        ← Archived past lectures (NN-<slug>.md)
+    ├── LEARNING-LOG.md  ← Learner's reasoning/attempt record
+    └── CAPSTONE.md      ← Capstone project brief (immutable)
 ```
 
 - **COURSE.md** — the single source of truth for all course progress. Always read it at session start. Update it immediately whenever section status changes.
-- **LECTURE.md** — disposable. Holds only the current active section. Overwritten every time `professor:next` runs.
+- **LECTURE.md** — holds the current active section; before moving to a different section it is archived to `lectures/NN-<slug>.md` (never deleted). Past lectures and `LEARNING-LOG.md` are the persistent record.
 - **CAPSTONE.md** — immutable. Created once alongside COURSE.md during `professor:new-topic`. Never edit it after creation; the user builds against the original spec.
 
 **Path priority:** When scanning for courses, check `learning/` first (new worktree structure), then `courses/` (legacy). New courses should use `learning/`.
+
+**Course Kind:** every course records `**Kind**: programming | quantitative | conceptual | skill` in `COURSE.md`. Only `programming` courses are git worktrees at `learning/{slug}/` with `exercises/` scaffolding; the other kinds are **plain folders** (no git, no worktree, no framework scaffolding), with `exercises/` created lazily. A missing Kind is treated as `programming`.
 
 ---
 
@@ -234,7 +240,9 @@ All questions must be **Socratic** — ask rather than tell, guiding recall with
 
 Created once with `professor:new-topic`. **Updated in place** throughout the course — never recreated.
 
-**Required fields:** Topic, Level, Learner background, Started, Last active, Current streak, Estimated time, Capstone status
+**Required fields:** Topic, Level, Kind, Learner background, Started, Last active, Current streak, Estimated time, Capstone status
+
+- **Kind** — one of `programming` / `quantitative` / `conceptual` / `skill`, written right under `**Level**`. A missing Kind means `programming` (backward compatible).
 
 **Core sections:**
 - `## 🎯 Learning Objectives` — 3 bullet learning outcomes
@@ -258,16 +266,25 @@ Created when Coach or Spotter first runs. Contains the learner's reasoning trail
 
 ## LECTURE.md Format
 
-Generated fresh by `professor:next` for the **current section only**. Overwrites the previous section's content.
+Generated fresh by `professor:next` for the **current section only**; the previous section is archived to `lectures/NN-<slug>.md` before this file is rewritten (never deleted).
 
-**Structure:**
-- `# 📖 Section [N]: [Title]` with Course, Level, Generated date
-- `## 🧠 Concept Explanation` — level-appropriate, use analogies
-- `## 🌍 Real-World Use Case` — concrete industry example
-- `## 🛠️ Exercise` — task with success criteria, no working code
-- `## 🔗 Recommended Resources` — 3 relevant links
+The lecture is a **shared learning core** in this exact order — 🎯 Objectives (`you will be able to…`) → 🧠 Explanation → 🧩 Worked example → ⚠️ Common misconceptions → ❓ Check your understanding (2–3 retrieval questions; answers are **not** in the lecture — the learner answers in chat and Professor responds Socratically) → 🔎 Verify it yourself → 🛠️ Exercise (+ success criteria) → 📌 Key takeaways → 🔗 Sources — plus **exactly one kind-specific block** inserted **after the worked example**, matching the course Kind.
 
-**Exercise rules:** Professor never writes working code. Stuck → `professor:hint`. Ready → `professor:review`. Done → `professor:done`.
+**Grounding & citations (every lecture):**
+
+- **Research first:** search and fetch **3–6 sources** before writing (official docs/standards first for `programming`; encyclopedias/peer-reviewed/textbooks/primary sources for `quantitative`/`conceptual`/`skill`). Keep the list of URLs actually opened.
+- **Cite:** key factual claims carry `[n]`; `## 🔗 Sources` lists **only** URLs fetched this session as `[n] Title — Publisher (tier) — URL — accessed YYYY-MM-DD`. Credibility tiers: `official/standard`, `peer-reviewed/textbook`, `reference work`, `news`, `community/blog`.
+- **Never invent:** never fabricate a URL, title, author or quote. Unsourceable claims stay but are marked `⚠️ unverified` with a note on how to check them. If web tools are unavailable, say so at the top of the lecture and mark **all** claims `⚠️`.
+- **`programming`:** code shown must be runnable as-is or clearly marked as a fragment; prefer verifying behaviour by running it (`Bash`) and note `✓ ran on <runtime version>`.
+- **`## 🔎 Verify it yourself`** (right after Check your understanding, ≤ 6 lines) teaches SIFT — Stop · Investigate the source · Find better coverage · Trace to the original — and has the learner open a cited source, find the supporting passage, then find a second independent source and record the result with `professor:note` (or `LEARNING-LOG.md`).
+
+**Kind-specific block (exactly one):**
+- `programming` → `## 💻 Code walkthrough` — annotated, level-appropriate snippet
+- `quantitative` → `## 📐 Step-by-step worked problem` — LaTeX `$…$` allowed
+- `conceptual` → `## 📚 Case study / story` — plus optional ```mermaid concept map or timeline (replaces the old mandatory "company/product" use case)
+- `skill` → `## 🎭 Model examples` — good vs. common mistake
+
+**Exercise rules:** exercise files follow the course Kind, never keyword guessing. `programming` → `exercises/NN-slug.<ext>` with the course language's extension, comment syntax and export style plus self-checks (skeleton only, never the implementation); `quantitative` → `exercises/NN-slug.md` problem set with final answers at the bottom; `conceptual` → `exercises/NN-slug.md` analysis prompt + 4-criterion rubric; `skill` → `exercises/NN-slug.md` drills + self-assessment checklist + flashcard list. Professor never writes working code. Stuck → `professor:hint`. Ready → `professor:review`. Done → `professor:done`.
 
 ---
 
@@ -331,11 +348,13 @@ These rules are non-negotiable. They apply across all commands, all sessions, al
 
 8. **Update `COURSE.md` immediately** whenever section status changes — it is the single source of truth for all progress. Never let the in-memory state drift from the file.
 
-9. **LECTURE.md is disposable** — it holds only the current active section and is overwritten by each `professor:next`. Do not treat it as a persistent record.
+9. **LECTURE.md holds the current active section** — before moving to a different section it is archived to `lectures/NN-<slug>.md` (never deleted). Past lectures and `LEARNING-LOG.md` are the persistent record.
 
 10. **CAPSTONE.md is immutable** — never edit the brief after creation. The user builds against the original spec. If a user asks you to change it, decline.
 
 11. **`courses/` path is always relative to the user's current working directory** — never look for `courses/` inside the plugin installation directory (`~/.claude/plugins/professor/` or similar). Always resolve all course paths from `cwd`.
+
+12. **Never fabricate sources.** Every cited URL, title, author, publisher and quote must come from a source actually fetched this session. Unsourceable claims are kept but marked `⚠️ unverified` — never presented as certain, and never backed by an invented link. When the learner asserts a fact, occasionally ask "Where did you get that? How could you verify it?"
 
 ---
 

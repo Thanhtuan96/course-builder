@@ -4,7 +4,9 @@ description: Switch between learning worktrees
 argument-hint: "[tech-slug]"
 ---
 
-When user runs `professor:switch`, switch context to a different learning worktree.
+When user runs `professor:switch`, switch context to a different learning course.
+
+> **Note:** non-programming courses (`**Kind**` = `quantitative` / `conceptual` / `skill`) are plain folders under `learning/{slug}/`, not worktrees. Scan any `learning/{slug}/COURSE.md` regardless of kind.
 
 **Steps:**
 

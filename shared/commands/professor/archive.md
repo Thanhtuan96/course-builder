@@ -13,6 +13,8 @@ Check if the current course is in:
 - `learning/{slug}/` → **worktree archive mode**
 - `courses/{slug}/` → **legacy archive mode** (existing behavior)
 
+> **Note:** non-programming courses (`**Kind**` is `quantitative`, `conceptual`, or `skill`) are **plain folders** under `learning/{slug}/` — there is no worktree or branch. Archive them the same way but skip the `git worktree remove` / `git branch -D` steps and just delete the plain folder.
+
 **Step 2: Worktree archive mode (learning/)**
 
 If course is in `learning/{slug}/`:

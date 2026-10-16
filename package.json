@@ -1,6 +1,6 @@
 {
     "name": "course-professor",
-    "version": "1.5.0",
+    "version": "1.6.0-beta.1",
     "description": "A Socratic learning assistant - teaches by asking questions instead of giving answers. Works with Claude Code, OpenCode, Gemini CLI, and other AI agents.",
     "type": "module",
     "bin": {
@@ -9,9 +9,12 @@
     },
     "scripts": {
         "build": "cd web/client && npm install && npm run build",
+        "build:studio": "npm --prefix studio install --no-audit --no-fund && npm --prefix studio run build",
+        "smoke:pack": "node scripts/smoke-pack.mjs",
         "start": "cd web && node server.js",
+        "pretest": "npm --prefix web install --no-audit --no-fund --silent",
         "test": "vitest",
-        "prepublishOnly": "npm run build"
+        "prepublishOnly": "npm run build && npm run build:studio"
     },
     "files": [
         "bin/",
@@ -19,6 +22,10 @@
         "shared/",
         "plugin.json",
         "web/server.js",
+        "web/studio-api.js",
+        "web/studio-db.js",
+        "web/studio-runner.js",
+        "web/lecture-archive.js",
         "web/package.json",
         "web/package-lock.json",
         "web/dist/",
@@ -29,7 +36,13 @@
         "web/client/vite.config.js",
         "web/client/tailwind.config.js",
         "web/client/postcss.config.js",
-        "web/client/components.json"
+        "web/client/components.json",
+        "studio/dist/",
+        "studio/migrations/",
+        "studio/src/lib/",
+        "README.md",
+        "CHANGELOG.md",
+        "LICENSE"
     ],
     "keywords": [
         "learning",
@@ -47,6 +60,8 @@
     },
     "dependencies": {
         "chalk": "^5.3.0",
+        "cors": "^2.8.5",
+        "express": "^4.21.0",
         "inquirer": "^9.2.23",
         "ora": "^8.1.1"
     },

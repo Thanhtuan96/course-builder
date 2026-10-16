@@ -22,7 +22,8 @@ Most AI coding assistants will write code for you the moment you ask. Professor 
 ## Requirements
 
 - **AI agent** — Claude Code, Gemini CLI, OpenCode, or Cursor.
-- **Node.js** — required for hook scripts (Node.js 18 or newer recommended).
+- **Node.js** — **18+** for setup and the registry commands; **22.5+** for Professor Studio, `review`
+  and `import` (they use the built-in `node:sqlite` module). Check with `npx course-professor doctor`.
 - **Git** — required for git worktree-based courses.
 - **Notion or Obsidian** — only needed if you want to use the `professor:export` command. See setup sections below.
 
@@ -44,6 +45,28 @@ npx course-professor setup cursor    # Cursor
 npx course-professor setup opencode  # OpenCode
 npx course-professor setup gemini    # Gemini CLI
 ```
+
+To try the **Professor Studio beta** (v1.6, published on the `next` dist-tag):
+
+```bash
+npx course-professor@next studio     # starts the local server + Studio and pairs them
+```
+
+Studio needs **Node 22.5+**. `npx` always runs the latest published version, so no install step is
+required — see [Upgrade & uninstall](#upgrade--uninstall) to manage a global install instead.
+
+### Upgrade & uninstall
+
+```bash
+npx course-professor@latest --version   # run the newest stable without installing
+npm i -g course-professor@latest        # install/upgrade globally
+npm i -g course-professor@next          # install the Studio beta
+npm uninstall -g course-professor       # remove a global install
+```
+
+Your courses (`learning/`, `courses/`) and Studio's database (`~/.professor/professor.db`) live
+outside the package and are **not** removed on uninstall — delete them manually if you want a clean
+slate. `npx` users can clear the cached package with `npm cache clean --force`.
 
 ### Option 2: Manual Install
 
@@ -241,6 +264,50 @@ npx course-professor [command]
 - `--local` — this project only (`.claude/skills/`)
 - `--global` — all projects (default, prompts for scope)
 - `--force` — bypass confirmation prompts
+
+### Dev Fast-path
+
+Check progress, continue, and verify exercises without leaving the terminal:
+
+| Command | Description |
+|---|---|
+| `status [--json]` | Every course on disk: kind, progress, current section, due flashcards, streak |
+| `next [slug]` | Current lecture summary, objectives, exercise path and the agent command to continue |
+| `check [slug]` | Run the active exercise's self-checks with the right toolchain (never reveals solutions) |
+| `doctor` | Environment checklist (Node ≥18, git, agent CLIs, Ollama, port 3000, DB path) with fix hints |
+
+```bash
+npx course-professor status                  # see all courses + overall streak
+npx course-professor status --json           # machine-readable output for scripts
+npx course-professor next                    # what to work on, and how to continue
+npx course-professor check nextjs            # run the active exercise's self-checks
+npx course-professor doctor                  # diagnose your local setup
+```
+
+Add `--dir <path>` to `status`/`next`/`check` to read courses from a directory other than `learning/` and `courses/`.
+
+### Studio, Review & Import
+
+One command starts the whole local platform — the bridge server and the built Studio app — and pairs them for you. `review` and `import` use the same SQLite database (`~/.professor/professor.db`) and the same repository logic as Studio, so your data is identical everywhere.
+
+| Command | Description |
+|---|---|
+| `studio` | Install/build if needed, start the local server + Studio, print a pairing URL and open the browser |
+| `studio --port 5180 --api-port 3000` | Choose the Studio and server ports |
+| `studio --no-open` | Print the pairing URL without opening the browser |
+| `review [--limit 20]` | Review due flashcards in the terminal (Space flips, 1–4 grades, q quits) sharing SM-2 state with Studio |
+| `import [slug\|--all]` | Import CLI courses (`COURSE.md`, `lectures/`, `SCHEDULE.md`, `LEARNING-LOG.md`) into Studio's SQLite DB |
+| `import [slug\|--all] --dry-run` | Print what would be imported without writing |
+
+```bash
+npx course-professor studio                  # server + Studio + pairing, one command
+npx course-professor studio --no-open        # just print the pairing URL
+npx course-professor review                  # review due flashcards in the terminal
+npx course-professor import --all            # import every CLI course into Studio
+npx course-professor import nextjs --dry-run # preview one course's import
+```
+
+`import` is idempotent: re-running updates existing rows (matched by `source: 'cli'` + a stable `external_id`) instead of duplicating, and never overwrites graded cards or existing lecture versions.
 
 ### Web UI
 
