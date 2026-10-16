@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Card } from '../ui/Card.jsx';
 import { Button } from '../ui/Button.jsx';
+import { useT } from '../../lib/i18n/index.js';
 import { exportAll, importAll, getAdapterInfo, listCourses } from '../../lib/repo/index.js';
 import { createIdbAdapter } from '../../lib/repo/idb-adapter.js';
 import { download, exportCourseMarkdown } from '../../lib/course-export.js';
@@ -27,13 +28,9 @@ function tableCounts(dump) {
   return out;
 }
 
-const KIND_LABEL = {
-  remote: 'SQLite file (local server)',
-  indexeddb: 'IndexedDB (this browser)',
-  memory: 'In-memory (not persistent)',
-};
-
 export function DataPanel() {
+  const t = useT();
+  const kindLabel = (kind) => (kind ? t(`data.kind.${kind}`) : t('data.checking'));
   const [adapter, setAdapter] = useState(null);
   const [courses, setCourses] = useState([]);
   const [busy, setBusy] = useState('');
@@ -82,7 +79,7 @@ export function DataPanel() {
       const dump = await exportAll();
       const stamp = new Date().toISOString().slice(0, 10);
       download(`professor-studio-backup-${stamp}.json`, JSON.stringify(dump, null, 2));
-      note(`Backup exported (${countRows(dump)} records). API keys are never included.`);
+      note(t('data.backupExported', { n: countRows(dump) }));
     } catch (err) {
       fail(err);
     } finally {
@@ -99,7 +96,7 @@ export function DataPanel() {
       const dump = JSON.parse(await file.text());
       const result = await importAll(dump);
       await refresh();
-      note(`Restored ${result?.imported ?? countRows(dump)} records from ${file.name}.`);
+      note(t('data.restored', { n: result?.imported ?? countRows(dump), name: file.name }));
     } catch (err) {
       fail(err);
     } finally {
@@ -116,7 +113,7 @@ export function DataPanel() {
       const expected = tableCounts(source);
       const sourceCount = countRows(source);
       if (sourceCount === 0) {
-        note('No browser data found to import.');
+        note(t('data.noBrowserData'));
         return;
       }
       const result = await importAll(source);
@@ -125,9 +122,9 @@ export function DataPanel() {
       setImportResult({ imported: result?.imported ?? sourceCount, total: sourceCount, mismatches });
       await refresh();
       if (mismatches.length) {
-        fail(new Error(`Imported with mismatched counts in: ${mismatches.join(', ')}`));
+        fail(new Error(t('data.importMismatch', { fields: mismatches.join(', ') })));
       } else {
-        note(`Imported ${sourceCount} records from the browser into SQLite — counts verified.`);
+        note(t('data.importedVerified', { n: sourceCount }));
       }
     } catch (err) {
       fail(err);
@@ -137,7 +134,7 @@ export function DataPanel() {
   };
 
   const onClearBrowserCopy = async () => {
-    if (typeof window !== 'undefined' && !window.confirm('Delete the browser (IndexedDB) copy? SQLite is unaffected.')) {
+    if (typeof window !== 'undefined' && !window.confirm(t('data.clearConfirm'))) {
       return;
     }
     try {
@@ -148,7 +145,7 @@ export function DataPanel() {
         req.onblocked = () => resolve();
       });
       setImportResult(null);
-      note('Browser copy cleared. SQLite is unaffected.');
+      note(t('data.cleared'));
     } catch (err) {
       fail(err);
     }
@@ -158,7 +155,7 @@ export function DataPanel() {
     setBusy(`course:${course.id}`);
     try {
       const filename = await exportCourseMarkdown(course);
-      note(`Exported ${filename} — continue it with professor:* commands.`);
+      note(t('data.exported', { name: filename }));
     } catch (err) {
       fail(err);
     } finally {
@@ -171,67 +168,63 @@ export function DataPanel() {
   return (
     <Card className="space-y-4">
       <div>
-        <p className="font-medium">Backup &amp; portability</p>
-        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
-          Your data is never uploaded. Backups contain courses, lessons and progress — never API keys.
-        </p>
+        <p className="font-medium">{t('data.title')}</p>
+        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">{t('data.subtitle')}</p>
       </div>
 
       <div className="rounded-lg bg-neutral-100 p-3 text-sm dark:bg-neutral-800">
         <p>
-          <span className="text-neutral-500">Storage:</span>{' '}
-          <span className="font-medium">{adapter ? KIND_LABEL[adapter.kind] || adapter.kind : 'checking…'}</span>
+          <span className="text-neutral-500">{t('data.storageLabel')}</span>{' '}
+          <span className="font-medium">{adapter ? kindLabel(adapter.kind) : t('data.checking')}</span>
         </p>
         {adapter?.path && <p className="mt-0.5 break-all text-xs text-neutral-500">{adapter.path}</p>}
         <p>
-          <span className="text-neutral-500">Persistent:</span>{' '}
-          <span className="font-medium">{adapter ? (adapter.persistent ? 'granted' : 'best-effort') : '—'}</span>
+          <span className="text-neutral-500">{t('data.persistentLabel')}</span>{' '}
+          <span className="font-medium">
+            {adapter ? (adapter.persistent ? t('data.granted') : t('data.bestEffort')) : '—'}
+          </span>
         </p>
       </div>
 
       <div className="flex flex-wrap gap-2">
         <Button onClick={onExportBackup} disabled={busy === 'export'}>
-          Export backup (JSON)
+          {t('data.exportBackup')}
         </Button>
         <Button variant="secondary" onClick={() => fileRef.current?.click()} disabled={busy === 'restore'}>
-          Restore backup
+          {t('data.restoreBackup')}
         </Button>
         <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={onRestore} />
       </div>
 
       <div className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
-        <p className="text-sm font-medium">Move browser data into SQLite</p>
-        <p className="mt-1 text-xs text-neutral-500">
-          {isRemote
-            ? 'Copy everything from this browser’s IndexedDB into the SQLite file, then keep or clear the browser copy.'
-            : 'Only available when the local server is running and its pairing token is set in Settings → My local agent.'}
-        </p>
+        <p className="text-sm font-medium">{t('data.moveTitle')}</p>
+        <p className="mt-1 text-xs text-neutral-500">{isRemote ? t('data.moveRemote') : t('data.moveLocal')}</p>
         <div className="mt-2 flex flex-wrap gap-2">
           <Button size="sm" variant="secondary" onClick={onImportBrowserData} disabled={!isRemote || busy === 'import'}>
-            Import browser data into SQLite
+            {t('data.importBrowser')}
           </Button>
           {importResult && (
             <Button size="sm" variant="ghost" onClick={onClearBrowserCopy}>
-              Clear browser copy
+              {t('data.clearBrowser')}
             </Button>
           )}
         </div>
       </div>
 
       <div>
-        <p className="text-sm font-medium">Export a course as COURSE.md</p>
+        <p className="text-sm font-medium">{t('data.exportCourseTitle')}</p>
         <p className="mt-1 text-xs text-neutral-500">
-          Plugin-compatible — continue the course with <code>professor:*</code> commands in Claude Code, OpenCode or Cursor.
+          {t('data.exportCourseBody')} <code>professor:*</code> {t('data.exportCourseAfter')}
         </p>
         {courses.length === 0 ? (
-          <p className="mt-2 text-xs text-neutral-500">No courses yet.</p>
+          <p className="mt-2 text-xs text-neutral-500">{t('data.noCourses')}</p>
         ) : (
           <ul className="mt-2 space-y-1">
             {courses.map((course) => (
               <li key={course.id} className="flex items-center justify-between gap-2 text-sm">
                 <span className="truncate">{course.title}</span>
                 <Button size="sm" variant="ghost" onClick={() => onExportCourse(course)} disabled={busy === `course:${course.id}`}>
-                  Export COURSE.md
+                  {t('data.exportCourse')}
                 </Button>
               </li>
             ))}

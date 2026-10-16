@@ -14,6 +14,7 @@ import {
   onChange,
 } from '../lib/repo/index.js';
 import { capstoneUnlocked } from '../lib/capstone.js';
+import { useT } from '../lib/i18n/index.js';
 import { Badge } from '../components/ui/Badge.jsx';
 import { Button } from '../components/ui/Button.jsx';
 import { Card } from '../components/ui/Card.jsx';
@@ -32,6 +33,7 @@ const CodeWorkspace = lazy(() =>
 const STATUS_TONE = { done: 'success', active: 'accent', todo: 'neutral' };
 
 function ReflectionDialog({ lesson, onClose, onSaved }) {
+  const t = useT();
   const [hardest, setHardest] = useState('');
   const [confidence, setConfidence] = useState(3);
   const [saving, setSaving] = useState(false);
@@ -46,30 +48,30 @@ function ReflectionDialog({ lesson, onClose, onSaved }) {
   };
 
   return (
-    <div className="fixed inset-0 z-30 grid place-items-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label="Finish lesson">
+    <div className="fixed inset-0 z-30 grid place-items-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label={t('reflection.aria')}>
       <Card className="w-full max-w-md space-y-4">
-        <h2 className="font-semibold">Finish “{lesson.title}”</h2>
+        <h2 className="font-semibold">{t('reflection.title', { title: lesson.title })}</h2>
         <Textarea
-          label="What was hardest?"
+          label={t('reflection.hardest')}
           name="hardest"
           rows={3}
           value={hardest}
           onChange={(e) => setHardest(e.target.value)}
-          placeholder="The part that took the most effort…"
+          placeholder={t('reflection.hardestPlaceholder')}
         />
-        <Select label="Confidence" name="confidence" value={confidence} onChange={(e) => setConfidence(Number(e.target.value))}>
+        <Select label={t('reflection.confidence')} name="confidence" value={confidence} onChange={(e) => setConfidence(Number(e.target.value))}>
           {[1, 2, 3, 4, 5].map((n) => (
             <option key={n} value={n}>
-              {n} — {['Lost', 'Shaky', 'Okay', 'Solid', 'Could teach it'][n - 1]}
+              {n} — {t(`reflection.confidenceLabels.${n}`)}
             </option>
           ))}
         </Select>
         <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={onClose}>
-            Cancel
+            {t('reflection.cancel')}
           </Button>
           <Button onClick={save} disabled={saving}>
-            {saving ? 'Saving…' : 'Mark done'}
+            {saving ? t('reflection.saving') : t('reflection.markDone')}
           </Button>
         </div>
       </Card>
@@ -78,6 +80,7 @@ function ReflectionDialog({ lesson, onClose, onSaved }) {
 }
 
 export function Lesson({ id, lessonId }) {
+  const t = useT();
   const [course, setCourse] = useState(null);
   const [loaded, setLoaded] = useState(false);
   const [tab, setTab] = useState('practice');
@@ -126,9 +129,9 @@ export function Lesson({ id, lessonId }) {
     };
   }, [course]);
 
-  if (!loaded) return <p className="text-sm text-neutral-500">Loading…</p>;
+  if (!loaded) return <p className="text-sm text-neutral-500">{t('common.loading')}</p>;
   if (!course || !lesson) {
-    return <EmptyState title="Lesson not found" action={<Link to={`/course/${id}`}><Button variant="secondary">Back to course</Button></Link>} />;
+    return <EmptyState title={t('lesson.notFound')} action={<Link to={`/course/${id}`}><Button variant="secondary">{t('lesson.backToCourse')}</Button></Link>} />;
   }
 
   return (
@@ -136,22 +139,22 @@ export function Lesson({ id, lessonId }) {
       <div className="space-y-1">
         <nav className="text-xs text-neutral-500">
           <Link to="/" className="hover:underline">
-            Home
+            {t('lesson.home')}
           </Link>{' '}
           /{' '}
           <Link to={`/course/${course.id}`} className="hover:underline">
             {course.title}
           </Link>{' '}
-          / Lesson {lesson.position}
+          / {t('lesson.breadcrumb', { n: lesson.position })}
         </nav>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h1 className="text-xl font-semibold">{lesson.title}</h1>
           <div className="flex items-center gap-2">
-            <Badge tone={STATUS_TONE[lesson.status]}>{lesson.status}</Badge>
-            {lesson.status !== 'done' && <Button onClick={() => setReflecting(true)}>Mark done</Button>}
+            <Badge tone={STATUS_TONE[lesson.status]}>{t(`lesson.status.${lesson.status}`)}</Badge>
+            {lesson.status !== 'done' && <Button onClick={() => setReflecting(true)}>{t('lesson.markDone')}</Button>}
             {lesson.status === 'done' && (
               <Button variant="secondary" onClick={() => setReflecting(true)}>
-                Revisit reflection
+                {t('lesson.revisit')}
               </Button>
             )}
           </div>
@@ -163,21 +166,21 @@ export function Lesson({ id, lessonId }) {
       <div className="border-b border-neutral-200 dark:border-neutral-800">
         <div className="flex gap-1">
           {[
-            { id: 'practice', label: 'Practice' },
-            { id: 'tutor', label: 'Tutor' },
-            ...(course.kind === 'programming' ? [{ id: 'workspace', label: 'Workspace' }] : []),
-          ].map((t) => (
+            { id: 'practice', label: t('lesson.tabs.practice') },
+            { id: 'tutor', label: t('lesson.tabs.tutor') },
+            ...(course.kind === 'programming' ? [{ id: 'workspace', label: t('lesson.tabs.workspace') }] : []),
+          ].map((item) => (
             <button
-              key={t.id}
+              key={item.id}
               type="button"
-              onClick={() => setTab(t.id)}
+              onClick={() => setTab(item.id)}
               className={`border-b-2 px-3 py-2 text-sm font-medium ${
-                tab === t.id
+                tab === item.id
                   ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
                   : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
               }`}
             >
-              {t.label}
+              {item.label}
             </button>
           ))}
         </div>
@@ -186,7 +189,7 @@ export function Lesson({ id, lessonId }) {
       {tab === 'practice' && <LessonPractice lesson={lesson} course={course} />}
       {tab === 'tutor' && <TutorPanel lesson={lesson} course={course} capstone={capstoneActive} />}
       {tab === 'workspace' && course.kind === 'programming' && (
-        <Suspense fallback={<p className="text-sm text-neutral-500">Loading workspace…</p>}>
+        <Suspense fallback={<p className="text-sm text-neutral-500">{t('lesson.loadingWorkspace')}</p>}>
           <CodeWorkspace lesson={lesson} course={course} />
         </Suspense>
       )}

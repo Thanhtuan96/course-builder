@@ -5,6 +5,7 @@
  */
 import { Badge } from '../ui/Badge.jsx';
 import { Button } from '../ui/Button.jsx';
+import { useT } from '../../lib/i18n/index.js';
 
 /** @param {string} iso */
 function formatTime(iso) {
@@ -14,16 +15,17 @@ function formatTime(iso) {
 }
 
 export function HistoryDrawer({ runs, onRestore, onClose }) {
+  const t = useT();
   const ordered = [...(runs || [])].reverse();
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="font-medium">Run history</h3>
+        <h3 className="font-medium">{t('workspace.runHistory')}</h3>
         <Button variant="ghost" size="sm" onClick={onClose}>
-          Close
+          {t('common.close')}
         </Button>
       </div>
-      {!ordered.length && <p className="text-sm text-neutral-500">No runs yet. Every Run and Check is saved here.</p>}
+      {!ordered.length && <p className="text-sm text-neutral-500">{t('workspace.noRuns')}</p>}
       <ul className="space-y-2">
         {ordered.map((run) => {
           const checkCount = run.checks?.length || 0;
@@ -31,11 +33,11 @@ export function HistoryDrawer({ runs, onRestore, onClose }) {
           return (
             <li key={run.id} className="rounded-lg border border-neutral-200 p-3 text-sm dark:border-neutral-800">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge tone={run.runner === 'local' ? 'accent' : 'neutral'}>{run.runner === 'local' ? 'Local' : 'Browser'}</Badge>
-                {typeof run.exitCode === 'number' && <Badge tone={run.exitCode === 0 ? 'success' : 'warning'}>exit {run.exitCode}</Badge>}
+                <Badge tone={run.runner === 'local' ? 'accent' : 'neutral'}>{run.runner === 'local' ? t('workspace.local') : t('workspace.browser')}</Badge>
+                {typeof run.exitCode === 'number' && <Badge tone={run.exitCode === 0 ? 'success' : 'warning'}>{t('workspace.exit', { code: run.exitCode })}</Badge>}
                 {checkCount > 0 && (
                   <Badge tone={passed === checkCount ? 'success' : 'warning'}>
-                    {passed}/{checkCount} checks
+                    {t('workspace.passedOf', { passed, total: checkCount })}
                   </Badge>
                 )}
                 <span className="text-xs text-neutral-500">{formatTime(run.createdAt)}</span>
@@ -43,7 +45,7 @@ export function HistoryDrawer({ runs, onRestore, onClose }) {
                   {run.hash && <code className="text-xs text-neutral-400">{run.hash}</code>}
                   {run.snapshot && (
                     <Button variant="secondary" size="sm" onClick={() => onRestore(run)}>
-                      Restore
+                      {t('workspace.restore')}
                     </Button>
                   )}
                 </span>

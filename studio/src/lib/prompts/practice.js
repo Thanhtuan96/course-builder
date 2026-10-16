@@ -9,7 +9,7 @@
  * always wrapped with `wrapUntrusted` (prompt-injection aware — Pitfall 13). Quizzes are
  * **retrieval practice**, never a grade: wording is "Check your understanding".
  */
-import { buildSystemPrompt, courseContext, wrapUntrusted } from './base.js';
+import { buildSystemPrompt, courseContext, wrapUntrusted, appendLanguageInstruction } from './base.js';
 
 export const QUIZ_COUNT = 5;
 export const FLASHCARD_MIN = 5;
@@ -46,21 +46,25 @@ Example: [{"front":"Active recall","back":"Reproducing an idea from memory inste
  * @param {{ course?: object, lesson?: object, content?: string, language?: string }} input
  */
 export function buildQuizMessages({ course, lesson, content = '', language } = {}) {
+  const resolvedLanguage = language ?? course?.language;
   return {
     system: buildSystemPrompt({
       rules: QUIZ_RULES,
       context: courseContext(course, lesson),
       extra: QUIZ_SHAPE,
-      language: language ?? course?.language,
+      language: resolvedLanguage,
     }),
-    messages: [
-      {
-        role: 'user',
-        content:
-          `Write a ${QUIZ_COUNT}-question multiple-choice self-check for the lesson below. ` +
-          `Cover the main ideas, not trivia.\n\n${wrapUntrusted(content, 'lesson_content')}`,
-      },
-    ],
+    messages: appendLanguageInstruction(
+      [
+        {
+          role: 'user',
+          content:
+            `Write a ${QUIZ_COUNT}-question multiple-choice self-check for the lesson below. ` +
+            `Cover the main ideas, not trivia.\n\n${wrapUntrusted(content, 'lesson_content')}`,
+        },
+      ],
+      resolvedLanguage
+    ),
   };
 }
 
@@ -70,21 +74,25 @@ export function buildQuizMessages({ course, lesson, content = '', language } = {
  */
 export function buildFlashcardsMessages({ course, lesson, content = '', count = FLASHCARD_DEFAULT, language } = {}) {
   const n = clampCount(count);
+  const resolvedLanguage = language ?? course?.language;
   return {
     system: buildSystemPrompt({
       rules: FLASHCARD_RULES,
       context: courseContext(course, lesson),
       extra: FLASHCARD_SHAPE,
-      language: language ?? course?.language,
+      language: resolvedLanguage,
     }),
-    messages: [
-      {
-        role: 'user',
-        content:
-          `Create about ${n} flashcards for the lesson below. ` +
-          `Return between ${FLASHCARD_MIN} and ${FLASHCARD_MAX} cards.\n\n${wrapUntrusted(content, 'lesson_content')}`,
-      },
-    ],
+    messages: appendLanguageInstruction(
+      [
+        {
+          role: 'user',
+          content:
+            `Create about ${n} flashcards for the lesson below. ` +
+            `Return between ${FLASHCARD_MIN} and ${FLASHCARD_MAX} cards.\n\n${wrapUntrusted(content, 'lesson_content')}`,
+        },
+      ],
+      resolvedLanguage
+    ),
   };
 }
 

@@ -7,6 +7,7 @@ import { Card } from '../ui/Card.jsx';
 import { Button } from '../ui/Button.jsx';
 import { Badge } from '../ui/Badge.jsx';
 import { artifactLabel } from '../../lib/capstone.js';
+import { useT } from '../../lib/i18n/index.js';
 
 function formatDate(iso) {
   if (!iso) return '';
@@ -19,7 +20,8 @@ function formatDate(iso) {
 
 const RATING_TONE = { solid: 'success', partial: 'warning', missing: 'neutral' };
 
-export function CompletionPanel({ course, capstone, submission, attempts = 0, copy = {}, onExport, exporting = false }) {
+export function CompletionPanel({ course, capstone, submission, attempts = 0, onExport, exporting = false }) {
+  const t = useT();
   if (!submission) return null;
   const artifact = capstone?.artifact || null;
   const criteria = Array.isArray(submission.review?.criteria) ? submission.review.criteria : [];
@@ -28,23 +30,27 @@ export function CompletionPanel({ course, capstone, submission, attempts = 0, co
     <Card className="space-y-4 border-green-200 bg-green-50/60 dark:border-green-500/30 dark:bg-green-500/5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className="text-lg font-semibold">🎓 {copy.completion || 'Course complete'}: {course?.title}</p>
+          <p className="text-lg font-semibold">🎓 {t('capstone.completion')}: {course?.title}</p>
           <p className="text-sm text-neutral-600 dark:text-neutral-300">
-            Completed {formatDate(submission.created_at)} · {attempts} attempt{attempts === 1 ? '' : 's'}
+            {t('capstone.completedOn', {
+              date: formatDate(submission.created_at),
+              count: attempts,
+              attemptWord: t('common.attempt', { count: attempts }),
+            })}
           </p>
         </div>
-        <Badge tone="success">{copy.verdictComplete || 'Course Complete'}</Badge>
+        <Badge tone="success">{t('capstone.verdictComplete')}</Badge>
       </div>
 
       {artifact && (
         <p className="text-sm">
-          <span className="font-medium">{copy.yourArtifact || 'Your artifact'}: </span>
+          <span className="font-medium">{t('capstone.yourArtifact')}: </span>
           {artifactLabel(artifact)}
           {submission.repo_url ? (
             <>
               {' · '}
               <a className="underline" href={submission.repo_url} target="_blank" rel="noreferrer">
-                link
+                {t('capstone.link')}
               </a>
             </>
           ) : null}
@@ -53,7 +59,7 @@ export function CompletionPanel({ course, capstone, submission, attempts = 0, co
 
       {criteria.length > 0 && (
         <div>
-          <p className="text-sm font-medium">{copy.rubric || 'Rubric'}</p>
+          <p className="text-sm font-medium">{t('capstone.rubric')}</p>
           <ul className="mt-1 flex flex-wrap gap-2">
             {criteria.map((c, i) => (
               <li key={i}>
@@ -66,13 +72,11 @@ export function CompletionPanel({ course, capstone, submission, attempts = 0, co
         </div>
       )}
 
-      <p className="text-sm text-neutral-700 dark:text-neutral-200">
-        You built this yourself — the whole point. This is your proof you actually learned it.
-      </p>
+      <p className="text-sm text-neutral-700 dark:text-neutral-200">{t('capstone.builtYourself')}</p>
 
       <div>
         <Button onClick={onExport} disabled={exporting}>
-          {exporting ? 'Exporting…' : copy.exportCompletion || 'Export COMPLETION.md'}
+          {exporting ? t('capstone.exporting') : t('capstone.exportCompletion')}
         </Button>
       </div>
     </Card>

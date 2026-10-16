@@ -7,8 +7,21 @@
  * calling a model.
  */
 import { createCourse, listCourses, addCards, getCapstone, createCapstone } from '../lib/repo/index.js';
+import { loadSettings } from '../lib/settings.js';
+import { normalizeLanguage } from '../lib/i18n/languages.js';
+import { DEMO_COURSE_VI, DEMO_CAPSTONE as DEMO_COURSE_VI_CAPSTONE } from './demo-course.vi.js';
 
 export const DEMO_COURSE_ID = 'demo-how-to-learn';
+
+/**
+ * Pick the demo variant for a learning language (LANG-02). Vietnamese ships its own translated
+ * course; every other language uses the bundled English one.
+ * @param {string} [language]
+ */
+export function demoCourseFor(language) {
+  if (normalizeLanguage(language) === 'vi') return { ...DEMO_COURSE_VI, id: DEMO_COURSE_ID };
+  return DEMO_COURSE;
+}
 
 const L1 = `# How learning actually works
 
@@ -365,35 +378,37 @@ let seeding = null;
  * The in-flight promise is memoised so React StrictMode's double-invoke cannot double-seed.
  * @returns {Promise<object|null>} the demo course, or null if seeding was skipped
  */
-export function seedDemoCourse() {
-  if (!seeding) seeding = doSeed();
+export function seedDemoCourse(language) {
+  if (!seeding) seeding = doSeed(language ?? loadSettings().language);
   return seeding;
 }
 
 /** Seed the bundled demo capstone once (idempotent — never overwrites an existing one). */
-async function ensureDemoCapstone(courseId) {
+async function ensureDemoCapstone(courseId, capstone = DEMO_CAPSTONE) {
   const existing = await getCapstone(courseId);
   if (existing) return existing;
   return createCapstone({
     courseId,
-    kind: DEMO_CAPSTONE.kind,
-    brief_md: DEMO_CAPSTONE.brief_md,
-    rubric: DEMO_CAPSTONE.rubric,
-    artifact: DEMO_CAPSTONE.artifact,
+    kind: capstone.kind,
+    brief_md: capstone.brief_md,
+    rubric: capstone.rubric,
+    artifact: capstone.artifact,
     externalId: `demo:${DEMO_COURSE_ID}:capstone`,
   });
 }
 
-async function doSeed() {
+async function doSeed(language) {
+  const variant = demoCourseFor(language);
+  const capstone = normalizeLanguage(language) === 'vi' ? DEMO_COURSE_VI_CAPSTONE : DEMO_CAPSTONE;
   const existing = await listCourses();
   const demo = existing.find((c) => c.id === DEMO_COURSE_ID) || null;
   if (existing.length > 0) {
     // A demo course from before Phase 33 still gets its (bundled, provider-free) capstone.
-    if (demo) await ensureDemoCapstone(demo.id);
+    if (demo) await ensureDemoCapstone(demo.id, capstone);
     return demo;
   }
 
-  const { flashcards = [], ...courseInput } = DEMO_COURSE;
+  const { flashcards = [], ...courseInput } = variant;
   const course = await createCourse(courseInput);
 
   const byPosition = (pos) => course.lessons.find((l) => l.position === pos);
@@ -401,6 +416,6 @@ async function doSeed() {
     const lesson = byPosition(card.lessonPosition);
     if (lesson) await addCards(course.id, lesson.id, [{ front: card.front, back: card.back }]);
   }
-  await ensureDemoCapstone(course.id);
+  await ensureDemoCapstone(course.id, capstone);
   return course;
 }

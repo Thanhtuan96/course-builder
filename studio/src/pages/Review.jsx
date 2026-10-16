@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from '../lib/router.js';
 import { listDueCards, gradeCard, logActivity } from '../lib/repo/index.js';
+import { useT } from '../lib/i18n/index.js';
 import { nextDueAt } from '../components/practice/card-store.js';
 import { Card } from '../components/ui/Card.jsx';
 import { Button } from '../components/ui/Button.jsx';
@@ -16,10 +17,10 @@ import { EmptyState } from '../components/ui/EmptyState.jsx';
 import { ErrorNotice } from '../components/ui/ErrorNotice.jsx';
 
 const GRADES = [
-  { grade: 0, key: 'again', label: 'Again', hint: '1', tone: 'danger' },
-  { grade: 1, key: 'hard', label: 'Hard', hint: '2', tone: 'secondary' },
-  { grade: 2, key: 'good', label: 'Good', hint: '3', tone: 'primary' },
-  { grade: 3, key: 'easy', label: 'Easy', hint: '4', tone: 'secondary' },
+  { grade: 0, key: 'again', labelKey: 'practice.review.again', hint: '1', tone: 'danger' },
+  { grade: 1, key: 'hard', labelKey: 'practice.review.hard', hint: '2', tone: 'secondary' },
+  { grade: 2, key: 'good', labelKey: 'practice.review.good', hint: '3', tone: 'primary' },
+  { grade: 3, key: 'easy', labelKey: 'practice.review.easy', hint: '4', tone: 'secondary' },
 ];
 
 const EMPTY_TALLY = { again: 0, hard: 0, good: 0, easy: 0 };
@@ -36,6 +37,7 @@ function formatDue(ms) {
 }
 
 export function Review() {
+  const t = useT();
   const [cards, setCards] = useState(null); // null = loading
   const [nextDue, setNextDue] = useState(null);
   const [pos, setPos] = useState(0);
@@ -108,8 +110,8 @@ export function Review() {
   if (cards === null) {
     return (
       <div className="space-y-4">
-        <h1 className="text-xl font-semibold">Review</h1>
-        <p className="text-sm text-neutral-500">Loading your queue…</p>
+        <h1 className="text-xl font-semibold">{t('practice.review.title')}</h1>
+        <p className="text-sm text-neutral-500">{t('practice.review.loading')}</p>
       </div>
     );
   }
@@ -122,18 +124,14 @@ export function Review() {
     const due = formatDue(nextDue);
     return (
       <div className="space-y-4">
-        <h1 className="text-xl font-semibold">Review</h1>
+        <h1 className="text-xl font-semibold">{t('practice.review.title')}</h1>
         {error && <ErrorNotice error={error} onDismiss={() => setError(null)} />}
         <EmptyState
-          title="All caught up"
-          description={
-            due
-              ? `Your next card is due ${due}.`
-              : 'No cards are scheduled yet — generate flashcards from a lesson to start reviewing.'
-          }
+          title={t('practice.review.allCaughtUp')}
+          description={due ? t('practice.review.nextCard', { date: due }) : t('practice.review.noCards')}
           action={
             <Link to="/">
-              <Button variant="secondary">Back to courses</Button>
+              <Button variant="secondary">{t('practice.review.backToCourses')}</Button>
             </Link>
           }
         />
@@ -145,26 +143,26 @@ export function Review() {
     const reviewed = total;
     return (
       <div className="space-y-4">
-        <h1 className="text-xl font-semibold">Review</h1>
+        <h1 className="text-xl font-semibold">{t('practice.review.title')}</h1>
         {error && <ErrorNotice error={error} onDismiss={() => setError(null)} />}
         <Card className="space-y-4">
           <div className="space-y-1">
-            <p className="font-semibold">Session complete</p>
+            <p className="font-semibold">{t('practice.review.sessionComplete')}</p>
             <p className="text-sm text-neutral-500">
-              You reviewed {reviewed} card{reviewed === 1 ? '' : 's'}. Nice work.
+              {t('practice.review.reviewed', { count: reviewed, cardWord: t('common.card', { count: reviewed }) })}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             {GRADES.map((g) => (
               <Badge key={g.key} tone={tally[g.key] ? 'accent' : 'neutral'}>
-                {g.label}: {tally[g.key]}
+                {t(g.labelKey)}: {tally[g.key]}
               </Badge>
             ))}
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={load}>Check for more</Button>
+            <Button onClick={load}>{t('practice.review.checkForMore')}</Button>
             <Link to="/">
-              <Button variant="secondary">Back to courses</Button>
+              <Button variant="secondary">{t('practice.review.backToCourses')}</Button>
             </Link>
           </div>
         </Card>
@@ -175,9 +173,9 @@ export function Review() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Review</h1>
+        <h1 className="text-xl font-semibold">{t('practice.review.title')}</h1>
         <span className="text-sm text-neutral-500">
-          Card {pos + 1} of {total}
+          {t('practice.review.cardOf', { n: pos + 1, total })}
         </span>
       </div>
 
@@ -189,12 +187,14 @@ export function Review() {
         onClick={() => setFlipped((f) => !f)}
         className="flex min-h-48 w-full cursor-pointer flex-col items-center justify-center gap-4 text-center"
       >
-        <p className="text-xs uppercase tracking-wide text-neutral-400">{flipped ? 'Answer' : 'Question'}</p>
+        <p className="text-xs uppercase tracking-wide text-neutral-400">
+          {flipped ? t('practice.review.answer') : t('practice.review.question')}
+        </p>
         <p className="text-lg font-medium text-neutral-900 dark:text-neutral-100">{current.front}</p>
         {flipped ? (
           <p className="text-base text-neutral-700 dark:text-neutral-300">{current.back}</p>
         ) : (
-          <p className="text-sm text-neutral-400">Tap or press Space to flip</p>
+          <p className="text-sm text-neutral-400">{t('practice.review.tapFlip')}</p>
         )}
       </Card>
 
@@ -202,13 +202,13 @@ export function Review() {
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {GRADES.map((g) => (
             <Button key={g.key} variant={g.tone} onClick={() => grade(g.grade)} disabled={grading}>
-              {g.label}
+              {t(g.labelKey)}
               <span className="ml-1 text-xs opacity-60">{g.hint}</span>
             </Button>
           ))}
         </div>
       ) : (
-        <p className="text-center text-sm text-neutral-500">Grade yourself after you flip the card.</p>
+        <p className="text-center text-sm text-neutral-500">{t('practice.review.gradeAfter')}</p>
       )}
     </div>
   );

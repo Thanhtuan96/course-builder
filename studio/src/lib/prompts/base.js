@@ -5,6 +5,7 @@
  * prompt that echoes generated/ingested content back to a model must wrap it with
  * `<lesson_content>` / `<course_context>` delimiters and label it as reference material.
  */
+import { isEnglish, languageName } from '../i18n/languages.js';
 
 export const PROFESSOR_PERSONA = `You are "Professor", a Socratic learning coach.
 
@@ -30,10 +31,22 @@ export const LEARNING_CORE_SECTIONS = [
   { id: 'worked-example', title: 'Worked example', guidance: 'One concrete real-world example worked end to end.' },
   { id: 'misconceptions', title: 'Common misconceptions', guidance: 'The wrong mental models learners usually hold, and the correction.' },
   { id: 'check', title: 'Check your understanding', guidance: 'Two or three quick retrieval questions (no answers shown).' },
+  { id: 'verify', title: 'Verify it yourself', guidance: 'A short SIFT checklist (Stop · Investigate · Find better coverage · Trace to the original) the learner can apply to the lesson sources. Keep it ≤ 6 lines.' },
   { id: 'exercise', title: 'Exercise + success criteria', guidance: 'One hands-on task and how the learner will know it is done. Never include the solution.' },
   { id: 'takeaways', title: 'Key takeaways', guidance: 'Three to five one-line takeaways worth remembering.' },
   { id: 'resources', title: 'Resources', guidance: 'Optional further reading or practice, marked optional.' },
 ];
+
+/**
+ * A one-line instruction naming the language, placed at the TOP of every system prompt (LANG-04).
+ * Empty for English, which is the default and needs no instruction.
+ * @param {string} [lang] a BCP-47 code or a legacy display name
+ * @returns {string}
+ */
+export function languageHeadline(lang) {
+  if (!lang || isEnglish(lang)) return '';
+  return `IMPORTANT: Write your entire response in ${languageName(lang)}.`;
+}
 
 /**
  * Append a language instruction when the learner has chosen something other than English.
@@ -41,8 +54,41 @@ export const LEARNING_CORE_SECTIONS = [
  * @param {string} [lang]
  */
 export function withLanguage(text, lang) {
-  if (!lang || /^english$/i.test(lang)) return text;
-  return `${text}\n\nWrite your entire response in ${lang}.`;
+  if (!lang || isEnglish(lang)) return text;
+  return `${text}\n\nWrite your entire response in ${languageName(lang)}.`;
+}
+
+/**
+ * The final one-line instruction appended to the LAST user message of every request (LANG-04).
+ * @param {string} [lang]
+ * @returns {string}
+ */
+export function languageFooter(lang) {
+  return `Answer only in ${languageName(lang)}.`;
+}
+
+/**
+ * Append the language footer to the last user message so the constraint is the most recent thing
+ * the model reads. Returns a new array; the original is left untouched.
+ * @param {{ role: string, content: string }[]} messages
+ * @param {string} [lang]
+ * @returns {{ role: string, content: string }[]}
+ */
+export function appendLanguageInstruction(messages, lang) {
+  const list = Array.isArray(messages) ? messages : [];
+  if (!list.length) return list;
+  return list.map((message, index) =>
+    index === list.length - 1 && message?.role === 'user'
+      ? { ...message, content: `${message.content}\n\n${languageFooter(lang)}` }
+      : message
+  );
+}
+
+/** A stronger language instruction used on the single auto-regenerate retry (LANG-04). */
+export function languageStrictInstruction(lang) {
+  if (!lang || isEnglish(lang)) return '';
+  const name = languageName(lang);
+  return `STRICT LANGUAGE RULE: write every sentence in ${name}. Do not answer in any other language.`;
 }
 
 /**
@@ -87,5 +133,7 @@ export function buildSystemPrompt({ language, rules, context, extra } = {}) {
   if (rules) prompt += `\n\n${rules}`;
   if (context) prompt += `\n\n${wrapUntrusted(context, 'course_context')}`;
   if (extra) prompt += `\n\n${extra}`;
-  return withLanguage(prompt, language);
+  const body = withLanguage(prompt, language);
+  const head = languageHeadline(language);
+  return head ? `${head}\n\n${body}` : body;
 }

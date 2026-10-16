@@ -8,6 +8,7 @@
 import { createIdbAdapter } from './idb-adapter.js';
 import { review as srsReview, newCardState } from '../srs.js';
 import { dayKey } from '../course.js';
+import { normalizeLanguage } from '../i18n/languages.js';
 
 let adapter = createIdbAdapter();
 const changes = new EventTarget();
@@ -86,9 +87,21 @@ function mergeAllowed(prev, patch, allowed) {
 
 /* ------------------------------------------------------------------ courses */
 
+/**
+ * Migrate a stored course row's legacy `language` display name to a BCP-47 code on READ (LANG-01).
+ * Writes keep whatever the caller supplied, so the raw row stays byte-identical for backups.
+ * @param {object|null} row
+ */
+export function decodeCourse(row) {
+  if (!row) return row;
+  if (row.language === null || row.language === undefined) return row;
+  return { ...row, language: normalizeLanguage(row.language) };
+}
+
 /** @returns {Promise<object[]>} */
 export async function listCourses() {
-  return adapter.list('courses', { orderBy: { field: 'updated_at', dir: 'desc' } });
+  const rows = await adapter.list('courses', { orderBy: { field: 'updated_at', dir: 'desc' } });
+  return rows.map(decodeCourse);
 }
 
 /**
@@ -102,7 +115,7 @@ export async function getCourse(id) {
     where: { course_id: id },
     orderBy: { field: 'position', dir: 'asc' },
   });
-  return { ...course, lessons };
+  return { ...decodeCourse(course), lessons };
 }
 
 /**
@@ -233,12 +246,12 @@ export async function updateLesson(id, patch = {}) {
  * @param {{ content_md?: string, model?: string, provider?: string }} data
  * @returns {Promise<object>} the new version row
  */
-export async function addLessonVersion(lessonId, { content_md = '', model = null, provider = null } = {}) {
+export async function addLessonVersion(lessonId, { content_md = '', model = null, provider = null, language = null } = {}) {
   const lesson = await adapter.get('lessons', lessonId);
   if (!lesson || lesson.deleted_at) throw new Error(`Lesson not found: ${lessonId}`);
   const existing = await adapter.list('lesson_versions', { where: { lesson_id: lessonId } });
   const version = existing.reduce((max, v) => Math.max(max, v.version || 0), 0) + 1;
-  const row = stampCreate({ lesson_id: lessonId, version, content_md, model, provider });
+  const row = stampCreate({ lesson_id: lessonId, version, content_md, model, provider, language });
   await adapter.put('lesson_versions', row);
   await adapter.put('lessons', stampUpdate(lesson, { current_version_id: row.id }));
   emit('lesson_versions', row.id, 'create');

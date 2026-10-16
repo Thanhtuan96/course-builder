@@ -17,6 +17,9 @@ import { buildTutorMessages, TUTOR_MODES } from '../../lib/prompts/tutor.js';
 import { useHintLevel } from '../../lib/chat-store.js';
 import { currentCodeBlock } from '../../lib/runner/current-code.js';
 import { useSettings } from '../../lib/settings.js';
+import { useT } from '../../lib/i18n/index.js';
+import { isEnglish, languageName } from '../../lib/i18n/languages.js';
+import { checkLanguage } from '../../lib/i18n/detect.js';
 import { Card } from '../ui/Card.jsx';
 import { Button } from '../ui/Button.jsx';
 import { ErrorNotice } from '../ui/ErrorNotice.jsx';
@@ -40,6 +43,7 @@ function providerReady(settings) {
 }
 
 export function TutorPanel({ lesson, course, capstone = false, capstoneBrief = null }) {
+  const t = useT();
   const [settings] = useSettings();
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
@@ -54,6 +58,7 @@ export function TutorPanel({ lesson, course, capstone = false, capstoneBrief = n
   const [input, setInput] = useState('');
   const [pendingMode, setPendingMode] = useState(null);
   const [dismissedError, setDismissedError] = useState(false);
+  const [langNotice, setLangNotice] = useState(false);
 
   const lessonContentRef = useRef('');
   const scrollRef = useRef(null);
@@ -144,44 +149,58 @@ export function TutorPanel({ lesson, course, capstone = false, capstoneBrief = n
         }
       }
 
-      draftRef.current = '';
-      pendingRef.current = { lessonId: lesson.id, mode };
-      setInput('');
-      setPendingMode(null);
-      setDismissedError(false);
+      const language = course?.language ?? settingsRef.current.language;
 
-      try {
-        await start(async ({ onText, signal }) => {
-          const provider = await getProvider(settingsRef.current);
-          const { system, messages: built } = buildTutorMessages({
-            course,
-            lesson,
-            lessonContent: lessonContentRef.current,
-            history,
-            mode: mode || undefined,
-            hintLevel: level,
-            language: course?.language ?? settingsRef.current.language,
-            learnerCode,
-            capstone,
-            capstoneBrief,
+      const runOnce = async (strict) => {
+        draftRef.current = '';
+        pendingRef.current = { lessonId: lesson.id, mode };
+        setInput('');
+        setPendingMode(null);
+        setDismissedError(false);
+        try {
+          await start(async ({ onText, signal }) => {
+            const provider = await getProvider(settingsRef.current);
+            const { system, messages: built } = buildTutorMessages({
+              course,
+              lesson,
+              lessonContent: lessonContentRef.current,
+              history,
+              mode: mode || undefined,
+              hintLevel: level,
+              language,
+              learnerCode,
+              capstone,
+              capstoneBrief,
+              strict,
+            });
+            return provider.streamText({
+              system,
+              messages: built,
+              signal,
+              maxTokens: MAX_TOKENS.chat,
+              onText: (chunk) => {
+                draftRef.current += chunk;
+                onText(chunk);
+              },
+            });
           });
-          return provider.streamText({
-            system,
-            messages: built,
-            signal,
-            maxTokens: MAX_TOKENS.chat,
-            onText: (chunk) => {
-              draftRef.current += chunk;
-              onText(chunk);
-            },
-          });
-        });
-      } catch {
-        /* error surfaced through `error`; partial text is still persisted below */
+        } catch {
+          /* error surfaced through `error`; partial text is still persisted below */
+        }
+        const saved = await persistDraft();
+        if (saved) applyMessages([...messagesRef.current.filter((m) => m.id !== saved.id), saved]);
+        return saved;
+      };
+
+      setLangNotice(false);
+      const saved = await runOnce(false);
+
+      // LANG-04: enforce a non-English language; on a mismatch ask once more with a stronger
+      // instruction and keep BOTH replies in the transcript.
+      if (!capstone && !isEnglish(language) && saved && !checkLanguage(saved.content, language).ok) {
+        setLangNotice(true);
+        await runOnce(true);
       }
-
-      const saved = await persistDraft();
-      if (saved) applyMessages([...messagesRef.current.filter((m) => m.id !== saved.id), saved]);
     },
     [appendChat, applyMessages, capstone, capstoneBrief, course, hint, lesson, persistDraft, start]
   );
@@ -241,27 +260,25 @@ export function TutorPanel({ lesson, course, capstone = false, capstoneBrief = n
     <Card className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <h2 className="font-semibold">{capstone ? 'Tutor · Capstone mode' : 'Tutor'}</h2>
+          <h2 className="font-semibold">{capstone ? t('tutor.capstoneTitle') : t('tutor.title')}</h2>
           <p className="text-xs text-neutral-500">
-            {capstone
-              ? 'Concepts only — no hints, no code, no answers. The implementation is all you.'
-              : `Socratic help for “${lesson.title}”. The tutor explains ideas and guides the exercise — it never does the work for you.`}
+            {capstone ? t('tutor.capstoneDesc') : t('tutor.desc', { title: lesson.title })}
           </p>
         </div>
         {streaming && (
           <Button variant="secondary" size="sm" onClick={handleStop}>
-            Stop
+            {t('tutor.stop')}
           </Button>
         )}
       </div>
 
       {!ready && !streaming && (
         <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
-          No AI source is configured yet.{' '}
+          {t('tutor.noSource')}{' '}
           <Link to="/settings" className="font-medium underline">
-            Open Settings
+            {t('tutor.openSettings')}
           </Link>{' '}
-          to add a key, use a local model, or run the local agent bridge.
+          {t('tutor.noSourceAfter')}
         </p>
       )}
 
@@ -271,15 +288,11 @@ export function TutorPanel({ lesson, course, capstone = false, capstoneBrief = n
         className="flex max-h-[26rem] min-h-[10rem] flex-col gap-3 overflow-y-auto rounded-lg bg-neutral-50 p-3 dark:bg-neutral-950/40"
         aria-live="polite"
       >
-        {!loaded && <p className="text-sm text-neutral-500">Loading history…</p>}
+        {!loaded && <p className="text-sm text-neutral-500">{t('tutor.loadingHistory')}</p>}
         {loaded && messages.length === 0 && !showDraft && (
           <EmptyState
-            title={capstone ? 'Discuss the concepts' : 'Ask about this lesson'}
-            description={
-              capstone
-                ? 'The capstone is your solo build. Use this chat to think through a concept — not for hints, steps or code.'
-                : 'Stuck on the exercise? Try a hint — the tutor will nudge you one step at a time.'
-            }
+            title={capstone ? t('tutor.capstoneEmpty.title') : t('tutor.empty.title')}
+            description={capstone ? t('tutor.capstoneEmpty.description') : t('tutor.empty.description')}
             className="border-0 bg-transparent"
           />
         )}
@@ -291,10 +304,15 @@ export function TutorPanel({ lesson, course, capstone = false, capstoneBrief = n
 
       {showError && <ErrorNotice error={error} onDismiss={() => setDismissedError(true)} />}
 
+      {langNotice && !streaming && (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+          {t('tutor.languageNotice', { language: languageName(course?.language ?? settings.language) })}
+        </p>
+      )}
+
       {capstone ? (
         <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
-          Capstone mode: the tutor will only discuss concepts. It will not give hints, steps, code or
-          answers — and it will refuse if you ask.
+          {t('tutor.capstoneNotice')}
         </p>
       ) : (
         <QuickActions
@@ -307,7 +325,7 @@ export function TutorPanel({ lesson, course, capstone = false, capstoneBrief = n
 
       <div className="space-y-2">
         <label htmlFor={`tutor-input-${lesson.id}`} className="sr-only">
-          Message the tutor
+          {t('tutor.ariaInput')}
         </label>
         <textarea
           id={`tutor-input-${lesson.id}`}
@@ -318,29 +336,29 @@ export function TutorPanel({ lesson, course, capstone = false, capstoneBrief = n
           onKeyDown={handleKeyDown}
           placeholder={
             capstone
-              ? 'Ask about a concept… (no hints or code in capstone mode)'
+              ? t('tutor.capstonePlaceholder')
               : pendingMode === 'check_answer'
-                ? 'Paste your attempt here, then press Enter — I’ll point out what’s right first.'
-                : 'Ask a question… (Enter to send, Shift+Enter for a new line)'
+                ? t('tutor.checkPlaceholder')
+                : t('tutor.placeholder')
           }
           className="w-full resize-y rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
         />
         <div className="flex items-center justify-between gap-2">
           <p className="text-xs text-neutral-500">
             {capstone
-              ? 'Concepts only — the capstone is your solo build.'
+              ? t('tutor.capstoneFooter')
               : pendingMode === 'check_answer'
-                ? 'Paste your attempt and send it.'
-                : 'You do the work; the tutor guides.'}
+                ? t('tutor.checkHint')
+                : t('tutor.guideHint')}
           </p>
           <div className="flex gap-2">
             {streaming ? (
               <Button variant="secondary" size="sm" onClick={handleStop}>
-                Stop
+                {t('tutor.stop')}
               </Button>
             ) : (
               <Button size="sm" onClick={handleSend} disabled={!canSend}>
-                Send
+                {t('tutor.send')}
               </Button>
             )}
           </div>

@@ -242,6 +242,36 @@ course creation and stored **immutably** (`capstones`), so you always build agai
 Built-in demo: the bundled “How to learn anything” course ships a conceptual capstone and its artifact
 with **no provider needed** — finish the four lessons to unlock it.
 
+## Language
+
+Studio has **one learning language**, stored as a BCP-47 code (`settings.language`). It is chosen
+once at the start of onboarding (preselected from `navigator.language`) and can be changed any time in
+**Settings → Learner → Learning language**. The same choice drives, with no separate “tutor language”:
+
+- **The whole UI.** A tiny dependency-free i18n layer lives in `src/lib/i18n/` (`t(key, params)`,
+  `useT()`, `en.json`, `vi.json`, English fallback, plural-safe params). Every user-facing string —
+  navigation, onboarding, courses, lessons, practice, tutor, capstone, settings, data tools, empty
+  states, workspace and provider-error hints — is translated. A test enforces that every key used in
+  `src/**` exists in **both** catalogs and that the two catalogs define the same keys.
+- **Generated content.** Every prompt builder states the language at the top of the system prompt
+  *and* appends a final one-line instruction to the last user message (“Answer only in Vietnamese.”).
+  After generation a dependency-free detector (`src/lib/i18n/detect.js`) checks the output — for `vi`
+  it measures the ratio of Vietnamese diacritic letters, for `en` the ASCII-letter ratio, with a
+  stopword fallback for other languages. Code fences are ignored so code-heavy programming lessons
+  are not misjudged. Lesson and tutor text that drifts is **regenerated once** with a stronger
+  instruction (both versions are kept and a short notice is shown); JSON (syllabus, quiz, flashcards,
+  capstone) is re-asked through the `generateJson` repair retry with the language instruction.
+- **Lesson & capstone structure.** Lesson section headings (“Objectives”, “Exercise”, “Answers to
+  check yourself”, “Verify it yourself”, “Misconception/Reality”, …) and capstone brief headings are
+  localised by the course language, keyed by stable internal section ids.
+
+**Per-course override.** New-course defaults to the learning language, with a **“Use a different
+language for this course”** disclosure if you want another one. To switch later, use **Change
+language** on the Course page: existing lesson versions keep their language, the next generations use
+the new one, and **Regenerate in <language>** on the Lesson page adds a new version in it.
+
+The bundled demo course ships a **Vietnamese variant** and is seeded in your language on first run.
+
 ## Scripts
 
 ```bash

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useRoute } from '../lib/router.js';
 import { useSettings, STORAGE_BROWSER } from '../lib/settings.js';
+import { useT } from '../lib/i18n/index.js';
 import { PROVIDERS } from '../lib/ai/index.js';
 import { useProviderStatus, providerReadiness } from '../lib/ai/status.js';
 import { DueBadge } from './practice/DueBadge.jsx';
@@ -25,6 +26,7 @@ function NavLink({ to, active, children }) {
 }
 
 export function Layout({ children }) {
+  const t = useT();
   const route = useRoute();
   const [settings] = useSettings();
   const providerStatus = useProviderStatus();
@@ -53,31 +55,31 @@ export function Layout({ children }) {
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
           <Link to="/" className="flex items-center gap-2">
             <span className="grid h-7 w-7 place-items-center rounded-lg bg-indigo-600 text-sm font-bold text-white">P</span>
-            <span className="text-base font-semibold tracking-tight">Professor Studio</span>
+            <span className="text-base font-semibold tracking-tight">{t('nav.brand')}</span>
           </Link>
 
           <nav className="hidden items-center gap-1 sm:flex">
             <NavLink to="/" active={route.name === 'home'}>
-              Home
+              {t('nav.home')}
             </NavLink>
             <span className="flex items-center gap-1">
               <NavLink to="/review" active={route.name === 'review'}>
-                Review
+                {t('nav.review')}
               </NavLink>
               <DueBadge />
             </span>
             <NavLink to="/settings" active={route.name === 'settings'}>
-              Settings
+              {t('nav.settings')}
             </NavLink>
           </nav>
 
           <Link
             to="/settings"
-            title={provider ? `${provider.label} — ${readiness.label}` : 'No AI source selected'}
+            title={provider ? `${provider.label} — ${readiness.label}` : t('nav.noSource')}
             className="flex items-center gap-2 rounded-full border border-neutral-200 px-2.5 py-1 text-xs text-neutral-600 dark:border-neutral-700 dark:text-neutral-300"
           >
             <span className={`h-2 w-2 rounded-full ${readiness.dot}`} aria-hidden="true" />
-            <span className="hidden sm:inline">{provider ? provider.label : 'No provider'}</span>
+            <span className="hidden sm:inline">{provider ? provider.label : t('nav.noProvider')}</span>
             <span className={readiness.state === 'ready' ? 'text-green-600 dark:text-green-400' : 'text-neutral-500'}>
               {readiness.label}
             </span>
@@ -89,14 +91,14 @@ export function Layout({ children }) {
         <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
           <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
             <span>
-              Your data is only in this browser — export a backup in{' '}
+              {t('durability.before')}{' '}
               <Link to="/settings" className="underline">
-                Settings
+                {t('durability.settingsLink')}
               </Link>
               .
             </span>
             <button type="button" onClick={dismiss} className="shrink-0 text-xs opacity-70 hover:opacity-100">
-              Dismiss
+              {t('durability.dismiss')}
             </button>
           </div>
         </div>
@@ -106,9 +108,9 @@ export function Layout({ children }) {
 
       <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-neutral-200 bg-white sm:hidden dark:border-neutral-800 dark:bg-neutral-950">
         {[
-          { to: '/', label: 'Home', name: 'home' },
-          { to: '/review', label: 'Review', name: 'review' },
-          { to: '/settings', label: 'Settings', name: 'settings' },
+          { to: '/', label: t('nav.home'), name: 'home' },
+          { to: '/review', label: t('nav.review'), name: 'review' },
+          { to: '/settings', label: t('nav.settings'), name: 'settings' },
         ].map((item) => (
           <Link
             key={item.to}

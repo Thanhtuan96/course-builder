@@ -14,6 +14,7 @@ import {
   DEFAULT_BRIDGE_AGENT,
 } from '../../lib/ai/index.js';
 import { recordProviderTest } from '../../lib/ai/status.js';
+import { useT } from '../../lib/i18n/index.js';
 import { Card } from '../ui/Card.jsx';
 import { Button } from '../ui/Button.jsx';
 import { Input, Select } from '../ui/Input.jsx';
@@ -21,6 +22,7 @@ import { Spinner } from '../ui/Spinner.jsx';
 import { ErrorNotice } from '../ui/ErrorNotice.jsx';
 
 export function ProviderPicker({ provider, onPick }) {
+  const t = useT();
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       {PROVIDERS.map((p) => {
@@ -37,12 +39,12 @@ export function ProviderPicker({ provider, onPick }) {
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className="font-medium">{p.label}</span>
-              {active && <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">Selected</span>}
+              <span className="font-medium">{t(`providerMeta.${p.id}.label`)}</span>
+              {active && <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">{t('provider.selected')}</span>}
             </div>
-            <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">{p.tagline}</p>
-            <p className="mt-2 text-xs text-green-700 dark:text-green-400">+ {p.pros}</p>
-            <p className="text-xs text-amber-700 dark:text-amber-400">− {p.cons}</p>
+            <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">{t(`providerMeta.${p.id}.tagline`)}</p>
+            <p className="mt-2 text-xs text-green-700 dark:text-green-400">+ {t(`providerMeta.${p.id}.pros`)}</p>
+            <p className="text-xs text-amber-700 dark:text-amber-400">− {t(`providerMeta.${p.id}.cons`)}</p>
           </button>
         );
       })}
@@ -51,6 +53,7 @@ export function ProviderPicker({ provider, onPick }) {
 }
 
 export function ProviderFields({ settings, update, compact = false }) {
+  const t = useT();
   const [testing, setTesting] = useState(false);
   const [output, setOutput] = useState('');
   const [error, setError] = useState(null);
@@ -130,7 +133,7 @@ export function ProviderFields({ settings, update, compact = false }) {
         {provider === 'anthropic' && (
           <>
             <Input
-              label="Anthropic API key"
+              label={t('provider.anthropicKey')}
               name="anthropicKey"
               type="password"
               autoComplete="off"
@@ -139,7 +142,7 @@ export function ProviderFields({ settings, update, compact = false }) {
               onChange={(e) => set({ anthropic: { apiKey: e.target.value } })}
             />
             <Select
-              label="Model"
+              label={t('provider.model')}
               name="anthropicModel"
               value={settings.anthropic.model}
               onChange={(e) => set({ anthropic: { model: e.target.value } })}
@@ -156,7 +159,7 @@ export function ProviderFields({ settings, update, compact = false }) {
         {provider === 'openai' && (
           <>
             <Select
-              label="Preset"
+              label={t('provider.preset')}
               name="openaiPreset"
               value={settings.openai.preset || 'openai'}
               onChange={(e) => {
@@ -177,23 +180,23 @@ export function ProviderFields({ settings, update, compact = false }) {
               ))}
             </Select>
             <Input
-              label="Base URL"
+              label={t('provider.baseUrl')}
               name="openaiBaseUrl"
               placeholder="https://api.openai.com/v1"
               value={settings.openai.baseUrl}
               onChange={(e) => set({ openai: { baseUrl: e.target.value } })}
             />
             <Input
-              label="API key"
+              label={t('provider.apiKey')}
               name="openaiKey"
               type="password"
               autoComplete="off"
-              placeholder={provider === 'openai' ? 'sk-…' : 'optional for local servers'}
+              placeholder={provider === 'openai' ? 'sk-…' : t('provider.apiKeyOptional')}
               value={settings.openai.apiKey}
               onChange={(e) => set({ openai: { apiKey: e.target.value } })}
             />
             <Input
-              label="Model"
+              label={t('provider.model')}
               name="openaiModel"
               value={settings.openai.model}
               onChange={(e) => set({ openai: { model: e.target.value } })}
@@ -204,14 +207,14 @@ export function ProviderFields({ settings, update, compact = false }) {
         {provider === 'ollama' && (
           <>
             <Input
-              label="Ollama base URL"
+              label={t('provider.ollamaBaseUrl')}
               name="ollamaBaseUrl"
               value={settings.ollama.baseUrl}
               onChange={(e) => set({ ollama: { baseUrl: e.target.value } })}
             />
             <div className="flex items-end gap-2">
               <Select
-                label="Model"
+                label={t('provider.model')}
                 name="ollamaModel"
                 className="flex-1"
                 value={settings.ollama.model}
@@ -228,7 +231,7 @@ export function ProviderFields({ settings, update, compact = false }) {
                 )}
               </Select>
               <Button variant="secondary" onClick={loadOllamaModels}>
-                Load installed
+                {t('provider.loadInstalled')}
               </Button>
             </div>
           </>
@@ -237,23 +240,23 @@ export function ProviderFields({ settings, update, compact = false }) {
         {provider === 'bridge' && (
           <>
             <Input
-              label="Bridge URL"
+              label={t('provider.bridgeUrl')}
               name="bridgeUrl"
               value={settings.bridge.bridgeUrl}
               onChange={(e) => set({ bridge: { bridgeUrl: e.target.value } })}
             />
             <Input
-              label="Pairing token"
+              label={t('provider.pairingToken')}
               name="bridgeToken"
               type="password"
               autoComplete="off"
-              hint="Printed by the local server when it starts."
+              hint={t('provider.pairingTokenHint')}
               value={settings.bridge.bridgeToken}
               onChange={(e) => set({ bridge: { bridgeToken: e.target.value } })}
             />
             <div>
               <Select
-                label="Agent"
+                label={t('provider.agent')}
                 name="bridgeAgent"
                 value={bridgeAgent}
                 onChange={(e) => {
@@ -274,13 +277,13 @@ export function ProviderFields({ settings, update, compact = false }) {
               <>
                 <div className="flex items-end gap-2">
                   <Select
-                    label="Model"
+                    label={t('provider.model')}
                     name="bridgeAgentModel"
                     className="flex-1"
                     value={selectedAgentModel}
                     onChange={(e) => setAgentModel(e.target.value)}
                   >
-                    <option value="">Default (let the agent choose)</option>
+                    <option value="">{t('provider.defaultModel')}</option>
                     {storedAgentModel && !selectedAgentModel && (
                       <option value={storedAgentModel}>{storedAgentModel}</option>
                     )}
@@ -294,38 +297,34 @@ export function ProviderFields({ settings, update, compact = false }) {
                   </Select>
                   <Button variant="secondary" onClick={loadAgentModels} disabled={loadingAgentModels}>
                     {loadingAgentModels && <Spinner />}
-                    Load models
+                    {t('provider.loadModels')}
                   </Button>
                 </div>
                 <Input
-                  label="Custom model (optional)"
+                  label={t('provider.customModel')}
                   name="bridgeAgentModelCustom"
                   value={customAgentModel}
                   onChange={(e) => setAgentModel(e.target.value)}
                   placeholder={bridgeAgentMeta.dynamicModels ? 'provider/model' : 'model-id'}
-                  hint="Overrides the dropdown. Leave empty to use “Default”."
+                  hint={t('provider.customModelHint')}
                 />
               </>
             ) : (
-              <p className="text-xs text-neutral-500">
-                {bridgeAgentMeta.label} doesn’t accept a model flag here — it uses your signed-in default.
-              </p>
+              <p className="text-xs text-neutral-500">{t('provider.noModelFlag', { agent: bridgeAgentMeta.label })}</p>
             )}
           </>
         )}
       </div>
 
-      <p className="text-xs text-neutral-500">
-        Using a local agent or Ollama works best when Studio itself runs locally (`npm run dev`).
-      </p>
+      <p className="text-xs text-neutral-500">{t('provider.localHint')}</p>
 
       <div className="flex items-center gap-3">
         <Button onClick={runTest} disabled={testing}>
           {testing && <Spinner />}
-          Test connection
+          {t('provider.test')}
         </Button>
         {(output || testing) && (
-          <span className="text-xs text-neutral-500">{testing ? 'Streaming…' : 'Response'}</span>
+          <span className="text-xs text-neutral-500">{testing ? t('provider.streaming') : t('provider.response')}</span>
         )}
       </div>
 
@@ -343,7 +342,7 @@ export function ProviderFields({ settings, update, compact = false }) {
             setError(null);
           }}
         >
-          Use Ollama through the local server
+          {t('provider.useOllamaServer')}
         </Button>
       )}
 

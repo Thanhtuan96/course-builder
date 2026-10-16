@@ -8,9 +8,9 @@ import { Card } from '../ui/Card.jsx';
 import { Button } from '../ui/Button.jsx';
 import { Input, Textarea } from '../ui/Input.jsx';
 import { ErrorNotice } from '../ui/ErrorNotice.jsx';
+import { useT } from '../../lib/i18n/index.js';
 
 export function SubmissionForm({
-  copy = {},
   programming = false,
   workspaceFiles = [],
   onSubmit,
@@ -18,6 +18,7 @@ export function SubmissionForm({
   error = null,
   onDismissError,
 }) {
+  const t = useT();
   const [content, setContent] = useState('');
   const [repoUrl, setRepoUrl] = useState('');
   const [useFiles, setUseFiles] = useState(false);
@@ -36,23 +37,21 @@ export function SubmissionForm({
   return (
     <Card className="space-y-3">
       <div>
-        <h2 className="font-semibold">{copy.submit || 'Submit for review'}</h2>
-        <p className="mt-1 text-xs text-neutral-500">
-          Share what you built. Submit as many times as you like — every attempt and its review is kept.
-        </p>
+        <h2 className="font-semibold">{t('capstone.submit')}</h2>
+        <p className="mt-1 text-xs text-neutral-500">{t('capstone.submitIntro')}</p>
       </div>
 
       <Textarea
-        label="Your submission"
+        label={t('capstone.submissionLabel')}
         name="capstone-submission"
         rows={6}
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        placeholder="Describe what you shipped, paste key excerpts, or link to your write-up…"
+        placeholder={t('capstone.submissionPlaceholder')}
       />
 
       <Input
-        label="Repo or artifact link (optional)"
+        label={t('capstone.repoLabel')}
         name="capstone-repo"
         value={repoUrl}
         onChange={(e) => setRepoUrl(e.target.value)}
@@ -63,9 +62,12 @@ export function SubmissionForm({
         <label className="flex items-start gap-2 rounded-lg border border-neutral-200 p-3 text-sm dark:border-neutral-800">
           <input type="checkbox" className="mt-0.5" checked={useFiles} onChange={(e) => setUseFiles(e.target.checked)} />
           <span>
-            Use my Workspace files
+            {t('capstone.useFiles')}
             <span className="block text-xs text-neutral-500">
-              Attaches {workspaceFiles.length} saved file{workspaceFiles.length === 1 ? '' : 's'} so the capstone tests run against your code.
+              {t('capstone.useFilesHint', {
+                count: workspaceFiles.length,
+                fileWord: workspaceFiles.length === 1 ? '' : 's',
+              })}
             </span>
           </span>
         </label>
@@ -75,7 +77,7 @@ export function SubmissionForm({
 
       <div className="flex items-center justify-end">
         <Button onClick={submit} disabled={!canSubmit}>
-          {busy ? 'Reviewing…' : copy.submit || 'Submit for review'}
+          {busy ? t('capstone.reviewing') : t('capstone.submit')}
         </Button>
       </div>
     </Card>

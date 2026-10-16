@@ -2,10 +2,13 @@
  * File tab strip for the workspace (CODE-01) — horizontally scrollable on phones.
  * Double-click a tab to rename it.
  */
+import { useT } from '../../lib/i18n/index.js';
+
 export function FileTabs({ files, activePath, onSelect, onAdd, onRename, onDelete }) {
+  const t = useT();
   return (
     <div className="flex items-center gap-2">
-      <div className="flex flex-1 gap-1 overflow-x-auto pb-1" role="tablist" aria-label="Workspace files">
+      <div className="flex flex-1 gap-1 overflow-x-auto pb-1" role="tablist" aria-label={t('workspace.title')}>
         {files.map((file) => {
           const active = file.path === activePath;
           return (
@@ -31,7 +34,7 @@ export function FileTabs({ files, activePath, onSelect, onAdd, onRename, onDelet
               {files.length > 1 && (
                 <button
                   type="button"
-                  aria-label={`Delete ${file.path}`}
+                  aria-label={t('workspace.deleteFile', { path: file.path })}
                   onClick={() => onDelete(file.path)}
                   className="rounded px-1 text-xs text-neutral-400 opacity-0 hover:text-red-600 group-hover:opacity-100"
                 >
@@ -45,9 +48,9 @@ export function FileTabs({ files, activePath, onSelect, onAdd, onRename, onDelet
           type="button"
           onClick={onAdd}
           className="shrink-0 rounded px-2 py-1 text-sm text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
-          aria-label="Add file"
+          aria-label={t('workspace.addFile')}
         >
-          + File
+          {t('workspace.addFile')}
         </button>
       </div>
     </div>

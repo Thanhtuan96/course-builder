@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { configIssue } from './ai/config.js';
 import { loadProviderStatus } from './ai/status.js';
 import { DEFAULT_BRIDGE_AGENT, isAnthropicModelId, isValidAgentModel } from './ai/catalog.js';
+import { DEFAULT_LANGUAGE, isSupportedCode, normalizeLanguage } from './i18n/languages.js';
 
 export const SETTINGS_KEY = 'professor-studio:settings';
 
@@ -51,7 +52,8 @@ export const DEFAULT_SETTINGS = {
     models: { ...DEFAULT_BRIDGE_MODELS },
   },
   learnerName: '',
-  language: 'English',
+  // The ONE learning language (LANG-01): a BCP-47 code. Legacy display names are migrated below.
+  language: DEFAULT_LANGUAGE,
   onboardingDone: false,
   storage: null,
 };
@@ -85,6 +87,11 @@ export function migrateSettings(raw) {
   // STORE-01: keep only a known storage kind; an absent/invalid value means "undecided" so the app
   // can migrate existing users from the store that actually holds their data.
   if (next.storage !== undefined && !STORAGE_KINDS.includes(next.storage)) delete next.storage;
+  // LANG-01: fold the old display-name values ("Vietnamese"/"English") and any unsupported value
+  // into a BCP-47 code so prompts, labels and detection all read one vocabulary.
+  if (next.language !== undefined && !isSupportedCode(next.language)) {
+    next.language = normalizeLanguage(next.language);
+  }
   const legacy = typeof next.model === 'string' ? next.model.trim() : '';
   delete next.model;
   if (!legacy) return next;

@@ -3,20 +3,11 @@
  * and Onboarding. Presentational only: the caller owns the value and any switching flow.
  */
 import { STORAGE_BROWSER, STORAGE_SQLITE } from '../../lib/settings.js';
+import { useT } from '../../lib/i18n/index.js';
 
 const OPTIONS = [
-  {
-    id: STORAGE_SQLITE,
-    label: 'SQLite file (local server)',
-    pros: 'One file on disk, shared with the CLI — easy to back up and keep.',
-    cons: 'Needs the local server running.',
-  },
-  {
-    id: STORAGE_BROWSER,
-    label: 'This browser (IndexedDB)',
-    pros: 'No setup, never leaves this device.',
-    cons: 'Cleared if you clear site data; may be evicted; not shared with the CLI.',
-  },
+  { id: STORAGE_SQLITE, key: 'sqlite' },
+  { id: STORAGE_BROWSER, key: 'browser' },
 ];
 
 /**
@@ -25,17 +16,18 @@ const OPTIONS = [
  *           browserStatus?: { persistent?: boolean, kind?: string }|null }} props
  */
 export function StorageChoice({ value, onSelect, disabled = false, sqliteStatus = null, browserStatus = null }) {
+  const t = useT();
   const status = (id) => {
     if (id === STORAGE_SQLITE) {
-      if (!sqliteStatus) return 'Checking…';
+      if (!sqliteStatus) return t('storage.checking');
       if (sqliteStatus.available) {
-        return `Connected — ${sqliteStatus.path || 'SQLite file'}`;
+        return t('storage.connected', { path: sqliteStatus.path || t('data.kind.remote') });
       }
-      return sqliteStatus.error ? `Offline — ${sqliteStatus.error}` : 'Offline';
+      return sqliteStatus.error ? t('storage.offlineReason', { error: sqliteStatus.error }) : t('storage.offline');
     }
-    if (!browserStatus) return 'Checking…';
-    if (browserStatus.kind === 'memory') return 'Best-effort — this session only (storage unavailable)';
-    return browserStatus.persistent ? 'Persistent' : 'Best-effort (the browser may clear it)';
+    if (!browserStatus) return t('storage.checking');
+    if (browserStatus.kind === 'memory') return t('storage.browserMemory');
+    return browserStatus.persistent ? t('storage.browserPersistent') : t('storage.browserBestEffort');
   };
 
   return (
@@ -61,9 +53,9 @@ export function StorageChoice({ value, onSelect, disabled = false, sqliteStatus 
               onChange={() => onSelect(option.id)}
             />
             <span className="min-w-0 flex-1">
-              <span className="block font-medium">{option.label}</span>
-              <span className="mt-1 block text-xs text-green-700 dark:text-green-400">+ {option.pros}</span>
-              <span className="block text-xs text-amber-700 dark:text-amber-400">− {option.cons}</span>
+              <span className="block font-medium">{t(`storage.${option.key}`)}</span>
+              <span className="mt-1 block text-xs text-green-700 dark:text-green-400">+ {t(`storage.${option.key}Pros`)}</span>
+              <span className="block text-xs text-amber-700 dark:text-amber-400">− {t(`storage.${option.key}Cons`)}</span>
               <span className="mt-1 block text-xs text-neutral-500">{status(option.id)}</span>
             </span>
           </label>

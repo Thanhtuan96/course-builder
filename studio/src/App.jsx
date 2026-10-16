@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { useRoute } from './lib/router.js';
 import { useSettings, loadSettings, saveSettings } from './lib/settings.js';
+import { useT } from './lib/i18n/index.js';
 import {
   initAdapter,
   storageKindFrom,
@@ -32,13 +33,14 @@ const Review = lazy(() => import('./pages/Review.jsx').then((m) => ({ default: m
 const Settings = lazy(() => import('./pages/Settings.jsx').then((m) => ({ default: m.Settings })));
 
 function NotFound() {
+  const t = useT();
   return (
     <EmptyState
-      title="Page not found"
-      description="That route does not exist."
+      title={t('app.notFound.title')}
+      description={t('app.notFound.description')}
       action={
         <Link to="/">
-          <Button variant="secondary">Back home</Button>
+          <Button variant="secondary">{t('app.notFound.back')}</Button>
         </Link>
       }
     />
@@ -68,25 +70,24 @@ function renderRoute(route) {
 
 /** One-time migration when two stores both hold data (STORE-01): ask which is primary. */
 function StorageDecision({ decision, onPick }) {
+  const t = useT();
   const sqlite = decision?.stores?.sqlite || {};
   const browser = decision?.stores?.browser || {};
   return (
     <div className="grid min-h-full place-items-center bg-neutral-50 px-4 py-10 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
       <Card className="w-full max-w-lg space-y-4">
-        <h1 className="text-lg font-semibold">Where should your learning data live?</h1>
-        <p className="text-sm text-neutral-600 dark:text-neutral-300">
-          Your data was found in more than one place. Pick the one Studio should use from now on — nothing is deleted,
-          and you can move or remove the other copy later in Settings.
-        </p>
+        <h1 className="text-lg font-semibold">{t('app.storageDecision.title')}</h1>
+        <p className="text-sm text-neutral-600 dark:text-neutral-300">{t('app.storageDecision.body')}</p>
         <div className="grid gap-3 sm:grid-cols-2">
           <button
             type="button"
             onClick={() => onPick(STORAGE_SQLITE)}
             className="rounded-xl border border-neutral-200 p-4 text-left hover:border-indigo-400 dark:border-neutral-800"
           >
-            <p className="font-medium">SQLite file</p>
+            <p className="font-medium">{t('app.storageDecision.sqlite')}</p>
             <p className="mt-1 text-xs text-neutral-500">
-              {sqlite.total || 0} records{sqlite.path ? ` · ${sqlite.path}` : ''}
+              {t('app.storageDecision.records', { n: sqlite.total || 0 })}
+              {sqlite.path ? ` · ${sqlite.path}` : ''}
             </p>
           </button>
           <button
@@ -94,8 +95,10 @@ function StorageDecision({ decision, onPick }) {
             onClick={() => onPick(STORAGE_BROWSER)}
             className="rounded-xl border border-neutral-200 p-4 text-left hover:border-indigo-400 dark:border-neutral-800"
           >
-            <p className="font-medium">This browser</p>
-            <p className="mt-1 text-xs text-neutral-500">{browser.total || 0} records</p>
+            <p className="font-medium">{t('app.storageDecision.browser')}</p>
+            <p className="mt-1 text-xs text-neutral-500">
+              {t('app.storageDecision.records', { n: browser.total || 0 })}
+            </p>
           </button>
         </div>
       </Card>
@@ -105,24 +108,22 @@ function StorageDecision({ decision, onPick }) {
 
 /** Blocking state when SQLite is chosen but the local server is down (STORE-02). */
 function StorageBlocked({ error, onRetry, onSwitch, busy, switchError }) {
+  const t = useT();
   return (
     <div className="grid min-h-full place-items-center bg-neutral-50 px-4 py-10 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
       <Card className="w-full max-w-lg space-y-4">
-        <h1 className="text-lg font-semibold">Local server isn’t running</h1>
-        <p className="text-sm text-neutral-600 dark:text-neutral-300">
-          You chose to save your learning data in the SQLite file, so Studio won’t touch browser storage. Start the
-          local server, then retry.
-        </p>
+        <h1 className="text-lg font-semibold">{t('app.storageBlocked.title')}</h1>
+        <p className="text-sm text-neutral-600 dark:text-neutral-300">{t('app.storageBlocked.body')}</p>
         <pre className="overflow-auto rounded-lg bg-neutral-100 p-3 text-xs dark:bg-neutral-800">course-professor studio</pre>
         {error && <p className="text-xs text-amber-700 dark:text-amber-300">{error}</p>}
         {switchError && <p className="text-xs text-red-600 dark:text-red-400">{switchError}</p>}
         <div className="flex flex-wrap gap-2">
           <Button onClick={onRetry} disabled={busy}>
             {busy && <Spinner />}
-            Retry
+            {t('app.storageBlocked.retry')}
           </Button>
           <Button variant="secondary" onClick={onSwitch} disabled={busy}>
-            Switch to browser storage…
+            {t('app.storageBlocked.switch')}
           </Button>
         </div>
       </Card>
@@ -131,6 +132,7 @@ function StorageBlocked({ error, onRetry, onSwitch, busy, switchError }) {
 }
 
 export default function App() {
+  const t = useT();
   const route = useRoute();
   const [settings] = useSettings();
   const [ready, setReady] = useState(false);
@@ -220,7 +222,7 @@ export default function App() {
       } else {
         const result = await performStorageMove(STORAGE_BROWSER, { settings: loadSettings(), dump: switchPlan.dump });
         if (!result.switched) {
-          setSwitchError(`Counts didn’t match, so nothing was switched (${result.mismatches.join(', ')}).`);
+          setSwitchError(t('app.storageBlocked.countMismatch', { fields: result.mismatches.join(', ') }));
           return;
         }
       }
@@ -233,7 +235,7 @@ export default function App() {
   }, [switchPlan]);
 
   if (!ready) {
-    return <div className="grid min-h-full place-items-center text-sm text-neutral-500">Loading Professor Studio…</div>;
+    return <div className="grid min-h-full place-items-center text-sm text-neutral-500">{t('app.loading')}</div>;
   }
 
   if (decision) return <StorageDecision decision={decision} onPick={onDecide} />;
@@ -265,7 +267,7 @@ export default function App() {
   return (
     <Layout>
       <Suspense
-        fallback={<div className="grid min-h-full place-items-center text-sm text-neutral-500">Loading…</div>}
+        fallback={<div className="grid min-h-full place-items-center text-sm text-neutral-500">{t('app.loadingShort')}</div>}
       >
         {renderRoute(route)}
       </Suspense>
