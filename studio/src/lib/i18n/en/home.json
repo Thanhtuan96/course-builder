@@ -1,0 +1,18 @@
+{
+  "title": "Your courses",
+  "newCourse": "New course",
+  "loading": "Loading…",
+  "empty": {
+    "title": "No courses yet",
+    "description": "Create your first course from a prompt, or open the bundled demo course to see how Studio works — no AI provider needed.",
+    "createFirst": "Create your first course",
+    "openDemo": "Open demo course"
+  },
+  "continue": "Continue learning",
+  "lessonOf": "Lesson {n}: {title}",
+  "complete": "Complete",
+  "demo": "demo",
+  "delete": "Delete",
+  "deleteConfirm": "Delete “{title}”? Lessons and progress are kept as a soft-deleted record.",
+  "continueButton": "Continue"
+}

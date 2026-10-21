@@ -3,7 +3,7 @@
  * `generateJson` is built from any provider's `streamText` so all four sources behave identically.
  */
 import { extractJson } from '../json.js';
-import { providerError, isAbortError } from './errors.js';
+import { providerError, isAbortError, wrongLanguageError } from './errors.js';
 import { checkJsonLanguage } from '../i18n/detect.js';
 import { languageFooter } from '../prompts/base.js';
 
@@ -59,7 +59,8 @@ export function createGenerateJson(streamText) {
     const value = await coerceWithRepair();
 
     // LANG-04: validate the output language on every string field. A mismatch triggers ONE repair
-    // retry with the language instruction; if that still mismatches we keep the second result.
+    // retry with the language instruction; a still-wrong or invalid repair becomes a retryable
+    // `wrong_language` error — the wrong-language value is never returned.
     if (language) {
       const verdict = checkJsonLanguage(value, language);
       if (!verdict.ok) {
@@ -69,12 +70,15 @@ export function createGenerateJson(streamText) {
           { role: 'user', content: languageRepairInstruction(language) },
         ];
         const second = await streamText({ system, messages: repair, signal, effort: 'low', maxTokens: MAX_TOKENS.json });
+        let repaired;
         try {
-          return coerce(second, validate);
+          repaired = coerce(second, validate);
         } catch (err) {
           if (isAbortError(err)) throw err;
-          return value;
+          throw wrongLanguageError(err);
         }
+        if (!checkJsonLanguage(repaired, language).ok) throw wrongLanguageError();
+        return repaired;
       }
     }
 

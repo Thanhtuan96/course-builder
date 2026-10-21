@@ -153,3 +153,60 @@ describe('installPairingWatcher', () => {
     expect(installPairingWatcher({})).toBeTypeOf('function');
   });
 });
+
+describe('bare fragment pairing (SEC-12)', () => {
+  it('parses a bare #token=<value> fragment', () => {
+    expect(parsePairingHash('#token=abc123')).toEqual({ bridgeUrl: '', token: 'abc123', path: '/' });
+  });
+
+  it('parses a bare #bridge=…&token=… fragment', () => {
+    expect(parsePairingHash('#bridge=http%3A%2F%2Flocalhost%3A3000&token=abc123')).toEqual({
+      bridgeUrl: 'http://localhost:3000',
+      token: 'abc123',
+      path: '/',
+    });
+  });
+
+  it('stores a bare token with the default bridge URL and scrubs the fragment', () => {
+    const replaceState = vi.fn();
+    const stored = applyPairingFromUrl({
+      location: { hash: '#token=abc123', pathname: '/', search: '' },
+      history: { replaceState },
+    });
+
+    expect(stored.bridge).toMatchObject({ bridgeUrl: 'http://localhost:3000', bridgeToken: 'abc123' });
+    expect(replaceState).toHaveBeenCalledWith(null, '', '/');
+    expect(loadSettings().bridge).toMatchObject({ bridgeUrl: 'http://localhost:3000', bridgeToken: 'abc123' });
+  });
+
+  it('scrubs a bare fragment even when the hash is on another route', () => {
+    const replaceState = vi.fn();
+    applyPairingFromUrl({
+      location: { hash: '#token=abc123', pathname: '/review', search: '?x=1' },
+      history: { replaceState },
+    });
+    expect(replaceState).toHaveBeenCalledWith(null, '', '/review?x=1');
+  });
+
+  it('rejects a non-loopback pairing without saving anything and still scrubs', () => {
+    globalThis.localStorage.setItem(
+      SETTINGS_KEY,
+      JSON.stringify({ provider: 'anthropic', onboardingDone: true, storage: 'browser' })
+    );
+    const before = globalThis.localStorage.getItem(SETTINGS_KEY);
+    const replaceState = vi.fn();
+
+    const result = applyPairingFromUrl({
+      location: {
+        hash: '#bridge=https%3A%2F%2Fevil.example&token=abc123',
+        pathname: '/',
+        search: '',
+      },
+      history: { replaceState },
+    });
+
+    expect(result).toBeNull();
+    expect(globalThis.localStorage.getItem(SETTINGS_KEY)).toBe(before);
+    expect(replaceState).toHaveBeenCalledWith(null, '', '/');
+  });
+});

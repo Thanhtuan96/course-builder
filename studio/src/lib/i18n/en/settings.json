@@ -1,0 +1,12 @@
+{
+  "title": "Settings",
+  "subtitle": "Keys stay in this browser and are sent only to the provider you choose.",
+  "aiSource": "AI source",
+  "clearKeys": "Clear keys",
+  "learner": "Learner",
+  "name": "Your name",
+  "namePlaceholder": "Optional — used to greet you",
+  "learningLanguage": "Learning language",
+  "languageHint": "Every course, lesson, quiz and tutor reply uses this language unless a course overrides it.",
+  "storage": "Storage"
+}

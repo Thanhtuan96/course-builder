@@ -69,3 +69,25 @@ describe('local runner client (CODE-04)', () => {
     expect(urls.some((u) => u.endsWith('/api/studio/run'))).toBe(true);
   });
 });
+
+describe('runner loopback guard (SEC-12)', () => {
+  it('refuses a non-loopback runner URL before any fetch', () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    expect(() => runnerBase({ bridge: { bridgeUrl: 'http://192.168.1.5:3000', bridgeToken: 'tok' } })).toThrow(
+      expect.objectContaining({ code: 'loopback_required' })
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('still attaches the pairing token to a loopback runner', async () => {
+    const fetchMock = vi.fn(async () => sse([{ stdout: 'ok\n' }, { exit: 0 }, '[DONE]']));
+    vi.stubGlobal('fetch', fetchMock);
+    await runLocal({
+      settings: { bridge: { bridgeUrl: 'http://127.0.0.1:3000', bridgeToken: 'tok' } },
+      language: 'javascript',
+      files: { 'main.js': 'console.log(1)' },
+    });
+    expect(fetchMock.mock.calls[0][1].headers['X-Studio-Token']).toBe('tok');
+  });
+});

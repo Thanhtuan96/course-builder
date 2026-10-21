@@ -1,0 +1,32 @@
+{
+  "home": "Trang chủ",
+  "breadcrumb": "Bài {n}",
+  "markDone": "Đánh dấu xong",
+  "revisit": "Xem lại ghi chú",
+  "tabs": {
+    "practice": "Luyện tập",
+    "tutor": "Gia sư",
+    "workspace": "Không gian làm việc"
+  },
+  "status": {
+    "todo": "Chưa bắt đầu",
+    "active": "Đang học",
+    "done": "Đã xong"
+  },
+  "loading": "Đang tải bài học…",
+  "loadingWorkspace": "Đang tải không gian làm việc…",
+  "notFound": "Không tìm thấy bài học",
+  "backToCourse": "Về khoá học",
+  "noContent": {
+    "title": "Chưa có nội dung bài học",
+    "description": "Tạo bài học này từ bối cảnh khoá học và trình độ của bạn. Bạn có thể tạo lại sau — các phiên bản cũ không bao giờ bị ghi đè.",
+    "action": "Tạo bài học"
+  },
+  "version": "Phiên bản bài học",
+  "generated": "tạo lúc {time}",
+  "regenerate": "Tạo lại",
+  "regenerateConfirm": "Tạo lại bài học này? Việc này gọi AI lần nữa và tốn token. Phiên bản hiện tại được giữ lại.",
+  "generating": "Đang tạo bài học…",
+  "regenerateIn": "Tạo lại bằng {language}",
+  "languageNotice": "Bài học trả về bằng ngôn ngữ khác, nên Professor đã tạo lại một lần bằng {language}."
+}

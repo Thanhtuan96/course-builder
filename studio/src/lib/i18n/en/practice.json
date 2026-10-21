@@ -1,0 +1,79 @@
+{
+  "quiz": {
+    "title": "Check your understanding",
+    "subtitle": "Five quick questions, explained as you go.",
+    "intro": "Answer 5 quick questions to check what stuck. You will see the reasoning after each one — this is a self-check, not a grade.",
+    "start": "Check your understanding",
+    "startShort": "Start self-check",
+    "generating": "Generating questions",
+    "writing": "Writing your 5 questions…",
+    "stop": "Stop",
+    "tryAgain": "Try again",
+    "youGot": "You got {score} of {total} correct.",
+    "saving": "Saving your attempt…",
+    "saved": "Saved to your attempts.",
+    "retake": "Retake",
+    "newQuiz": "New quiz",
+    "questionOf": "Question {n} of {total}",
+    "demoQuiz": "demo quiz",
+    "correct": "Correct",
+    "notQuite": "Not quite — the answer is {letter}.",
+    "seeScore": "See score",
+    "nextQuestion": "Next question",
+    "noContent": "This lesson has no content yet.",
+    "noContentHint": "Generate or open the lesson first, then try again."
+  },
+  "flashcards": {
+    "title": "Flashcards",
+    "subtitle": "Add cards from this lesson to your review queue.",
+    "intro": "Turn this lesson into a few flashcards and they will enter your spaced-repetition queue.",
+    "generating": "Generating flashcards",
+    "writing": "Writing flashcards…",
+    "stop": "Stop",
+    "added": "Added {count} {cardWord} to your review queue.",
+    "alreadyInDeck": "Everything from this lesson is already in your deck.",
+    "skipped": "{count} {cardWord} already in your deck were skipped.",
+    "save": "Save {count} {cardWord}",
+    "generate": "Generate flashcards",
+    "generateAgain": "Generate again",
+    "front": "Front",
+    "back": "Back",
+    "delete": "Delete",
+    "noContent": "This lesson has no content yet.",
+    "noContentHint": "Generate or open the lesson first, then try again."
+  },
+  "past": {
+    "title": "Past attempts",
+    "empty": "No attempts yet — finish a self-check to see it here."
+  },
+  "due": {
+    "badge": "{count} due",
+    "title": "{count} {cardWord} due for review"
+  },
+  "streak": {
+    "none": "No streak yet",
+    "one": "1-day streak",
+    "many": "{count}-day streak",
+    "title": "Studied on {studied} of the last {total} days"
+  },
+  "review": {
+    "title": "Review",
+    "loading": "Loading your queue…",
+    "allCaughtUp": "All caught up",
+    "nextCard": "Your next card is due {date}.",
+    "noCards": "No cards are scheduled yet — generate flashcards from a lesson to start reviewing.",
+    "backToCourses": "Back to courses",
+    "sessionComplete": "Session complete",
+    "reviewed": "You reviewed {count} {cardWord}. Nice work.",
+    "checkForMore": "Check for more",
+    "cardOf": "Card {n} of {total}",
+    "question": "Question",
+    "answer": "Answer",
+    "tapFlip": "Tap or press Space to flip",
+    "gradeAfter": "Grade yourself after you flip the card.",
+    "again": "Again",
+    "hard": "Hard",
+    "good": "Good",
+    "easy": "Easy"
+  }
+}

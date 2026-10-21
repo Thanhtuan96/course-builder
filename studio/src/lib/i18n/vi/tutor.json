@@ -1,0 +1,38 @@
+{
+  "title": "Gia sư",
+  "capstoneTitle": "Gia sư · Chế độ capstone",
+  "desc": "Trợ giúp kiểu Socrates cho “{title}”. Gia sư giải thích ý tưởng và hướng dẫn bài tập — không bao giờ làm hộ bạn.",
+  "capstoneDesc": "Chỉ bàn khái niệm — không gợi ý, không code, không đáp án. Phần triển khai hoàn toàn là của bạn.",
+  "noSource": "Chưa cấu hình nguồn AI nào.",
+  "openSettings": "Mở Cài đặt",
+  "noSourceAfter": "để thêm khoá, dùng mô hình cục bộ, hoặc chạy cầu nối agent cục bộ.",
+  "loadingHistory": "Đang tải lịch sử…",
+  "stop": "Dừng",
+  "send": "Gửi",
+  "empty": {
+    "title": "Hỏi về bài học này",
+    "description": "Bị mắc ở bài tập? Hãy thử một gợi ý — gia sư sẽ dẫn bạn từng bước một."
+  },
+  "capstoneEmpty": {
+    "title": "Bàn về các khái niệm",
+    "description": "Capstone là phần bạn tự làm. Dùng trò chuyện này để suy nghĩ về khái niệm — không phải để xin gợi ý, các bước hay code."
+  },
+  "capstoneNotice": "Chế độ capstone: gia sư chỉ bàn về khái niệm. Sẽ không đưa gợi ý, các bước, code hay đáp án — và sẽ từ chối nếu bạn xin.",
+  "placeholder": "Đặt một câu hỏi… (Enter để gửi, Shift+Enter để xuống dòng)",
+  "capstonePlaceholder": "Hỏi về một khái niệm… (không gợi ý hay code ở chế độ capstone)",
+  "checkPlaceholder": "Dán bài làm của bạn vào đây rồi nhấn Enter — tôi sẽ chỉ ra phần đúng trước.",
+  "checkHint": "Dán bài làm của bạn và gửi.",
+  "guideHint": "Bạn làm việc; gia sư hướng dẫn.",
+  "capstoneFooter": "Chỉ bàn khái niệm — capstone là phần bạn tự làm.",
+  "ariaInput": "Nhắn cho gia sư",
+  "thinking": "đang suy nghĩ…",
+  "quickAria": "Thao tác nhanh của gia sư",
+  "hintLabel": "Gợi ý {n}/{total}",
+  "mode": {
+    "explain_simpler": "Giải thích đơn giản hơn",
+    "hint": "Cho tôi một gợi ý",
+    "check_answer": "Kiểm tra bài của tôi",
+    "quiz": "Đố tôi"
+  },
+  "languageNotice": "Trả lời về bằng ngôn ngữ khác, nên Professor đã hỏi lại gia sư bằng {language}."
+}

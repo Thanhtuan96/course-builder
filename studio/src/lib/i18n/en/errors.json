@@ -1,0 +1,19 @@
+{
+  "auth": "Check the API key — it was rejected. Re-enter it in Settings.",
+  "network": "Could not reach the provider. Check your internet connection and try again.",
+  "cors": "The provider blocked the browser request (CORS). Try a different source or run the app locally with `npm run dev`.",
+  "local_network_blocked": "Your browser blocked access to a local server (Local Network Access). Allow the local-network permission prompt, or run Studio itself locally with `npm run dev`.",
+  "rate_limit": "The provider is rate limiting you. Wait a moment, or switch to a local source.",
+  "billing": "The provider rejected the request for billing reasons (out of credit or unpaid). Top up your account, or switch to a local source.",
+  "refusal": "The model declined to answer this request. Rephrase it, or try a different model.",
+  "bad_json": "The model did not return valid JSON. Try again, or use a larger model.",
+  "not_running": "The local server is not reachable. Start it and try again.",
+  "aborted": "Stopped.",
+  "server": "The local agent failed while running. Check its terminal output, then try again.",
+  "config": "That AI source or agent is not supported. Pick a valid agent in Settings.",
+  "model_not_found": "That model is not available. Pick a model in Settings.",
+  "unknown": "Something went wrong talking to the provider.",
+  "wrong_language": "The model answered in the wrong language twice. Try again, or pick a stronger model.",
+  "loopback_required": "Studio only connects to a bridge or runner on this machine. Use http://localhost:…, not a LAN IP or tunnel.",
+  "csp_blocked": "The Content-Security-Policy blocks that provider origin. Use a built-in preset or a loopback endpoint."
+}

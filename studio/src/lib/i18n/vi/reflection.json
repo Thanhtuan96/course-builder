@@ -1,0 +1,17 @@
+{
+  "aria": "Hoàn thành bài học",
+  "title": "Hoàn thành “{title}”",
+  "hardest": "Phần nào khó nhất?",
+  "hardestPlaceholder": "Phần tốn nhiều công sức nhất…",
+  "confidence": "Độ tự tin",
+  "confidenceLabels": {
+    "1": "Mất gốc",
+    "2": "Chưa chắc",
+    "3": "Tạm ổn",
+    "4": "Vững",
+    "5": "Có thể dạy lại"
+  },
+  "cancel": "Huỷ",
+  "markDone": "Đánh dấu xong",
+  "saving": "Đang lưu…"
+}

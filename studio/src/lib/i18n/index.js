@@ -6,16 +6,36 @@
  *   t('review.cardOf', { n: 2, total: 5 })
  *   t('common.cards', { count: 3 })   // "3 cards" / "1 card" via the "one|other" form
  *
- * Catalogs are plain JSON (`en.json`, `vi.json`). The active learning language is
+ * Catalogs are one JSON file per namespace per language (`<lang>/<namespace>.json`), auto-merged
+ * through an eager glob so a new namespace only needs new files. The active learning language is
  * `settings.language` (a BCP-47 code); missing keys fall back to English, then to the key itself.
  */
 import { useCallback } from 'react';
 import { useSettings } from '../settings.js';
 import { DEFAULT_LANGUAGE, normalizeLanguage } from './languages.js';
-import en from './en.json';
-import vi from './vi.json';
+/**
+ * Merge Vite's eager JSON module map into `{ [lang]: { [namespace]: catalog } }`.
+ * Exported for the pair/parity tests; paths are the literal `./<lang>/<namespace>.json` keys.
+ * @param {Record<string, { default?: object } | object>} modules
+ * @param {Record<string, object>} [base]
+ */
+export function mergeCatalogModules(modules = {}, base = {}) {
+  const out = {};
+  for (const [path, mod] of Object.entries(modules)) {
+    const match = String(path).match(/^\.\/([^/]+)\/([^/]+)\.json$/);
+    if (!match) continue;
+    const [, lang, namespace] = match;
+    out[lang] = { ...(out[lang] || {}), [namespace]: mod?.default ?? mod };
+  }
+  for (const [lang, catalog] of Object.entries(base)) {
+    out[lang] = { ...(out[lang] || {}), ...catalog };
+  }
+  return out;
+}
 
-const CATALOGS = { en, vi };
+const modules = import.meta.glob('./{en,vi}/*.json', { eager: true });
+
+const CATALOGS = mergeCatalogModules(modules);
 
 /** Languages that currently ship a UI catalog. Others fall back to English. */
 export const UI_LANGUAGES = Object.keys(CATALOGS);
@@ -120,6 +140,5 @@ export function catalogKeys(language) {
 export function useT() {
   const [settings] = useSettings();
   const language = normalizeLanguage(settings?.language);
-  currentLanguage = language;
   return useCallback((key, params) => translate(language, key, params), [language]);
 }

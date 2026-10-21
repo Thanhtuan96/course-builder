@@ -1,0 +1,35 @@
+{
+  "step": "Bước {n}/{total} · {name}",
+  "steps": {
+    "welcome": "Chào mừng",
+    "storage": "Nơi lưu dữ liệu",
+    "source": "Chọn nguồn AI",
+    "connect": "Kết nối",
+    "ready": "Bạn đã sẵn sàng"
+  },
+  "skip": "Bỏ qua",
+  "back": "Quay lại",
+  "next": "Tiếp",
+  "tryDemo": "Thử khoá học mẫu",
+  "createFirst": "Tạo khoá học đầu tiên",
+  "welcome": {
+    "title": "Học bất cứ điều gì cùng một giáo sư kiểu Socrates",
+    "body": "Tạo một khoá học, học các bài giảng được tạo ra, luyện tập bằng quiz và thẻ ghi nhớ, và hỏi một gia sư hướng dẫn bạn thay vì làm hộ bạn.",
+    "privacy": "Mọi thứ ở lại trên thiết bị của bạn. Khoá API của bạn không bao giờ bị tải lên hay đưa vào bản sao lưu.",
+    "language": "Ngôn ngữ học"
+  },
+  "storage": {
+    "title": "Dữ liệu học tập của bạn nên được lưu ở đâu?",
+    "body": "Bạn có thể đổi sau trong Cài đặt — Studio sẽ giúp bạn chuyển dữ liệu."
+  },
+  "source": {
+    "title": "Bài giảng nên đến từ đâu?"
+  },
+  "connect": {
+    "title": "Kết nối và kiểm tra"
+  },
+  "ready": {
+    "title": "Bạn đã sẵn sàng",
+    "body": "Tạo khoá học đầu tiên, hoặc khám phá khoá học mẫu có sẵn — nó chạy được mà không cần nguồn AI nào."
+  }
+}

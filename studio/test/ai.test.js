@@ -1,10 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
-import { ProviderError, providerError, isAbortError } from '../src/lib/ai/errors.js';
+import { ProviderError, providerError, isAbortError, ERROR_HINTS, wrongLanguageError } from '../src/lib/ai/errors.js';
 import { createGenerateJson, MAX_TOKENS } from '../src/lib/ai/provider-utils.js';
 import { classifyNetworkError, mapHttpError } from '../src/lib/ai/fetch-local.js';
 import { getProvider } from '../src/lib/ai/index.js';
 import { configIssue, isConfigured } from '../src/lib/ai/config.js';
 import { mapAnthropicError } from '../src/lib/ai/anthropic.js';
+import { translate } from '../src/lib/i18n/index.js';
 
 function fakeResponse(status, body = '') {
   return { status, ok: status >= 200 && status < 300, text: async () => body };
@@ -135,5 +136,71 @@ describe('Anthropic SDK error mapping', () => {
     expect(mapAnthropicError({ status: 401, message: 'no' }).code).toBe('auth');
     expect(mapAnthropicError({ status: 429, message: 'slow' }).code).toBe('rate_limit');
     expect(mapAnthropicError({ status: 500, message: 'boom' }).code).toBe('network');
+  });
+});
+
+
+describe('generateJson wrong-language handling (DEBT-01)', () => {
+  const EN = '{"title":"Learning is not reading — it is retrieval."}';
+  const VI = '{"title":"Học tập không phải là đọc — mà là truy hồi."}';
+
+  it('throws a retryable wrong_language error when the repair is still English', async () => {
+    const streamText = vi.fn().mockResolvedValueOnce(EN).mockResolvedValueOnce(EN);
+    const generateJson = createGenerateJson(streamText);
+    const err = await generateJson({ messages: [], language: 'vi' }).catch((e) => e);
+
+    expect(err).toBeInstanceOf(ProviderError);
+    expect(err.code).toBe('wrong_language');
+    expect(streamText).toHaveBeenCalledTimes(2);
+  });
+
+  it('returns the repaired value when the repair is in the requested language', async () => {
+    const streamText = vi.fn().mockResolvedValueOnce(EN).mockResolvedValueOnce(VI);
+    const generateJson = createGenerateJson(streamText);
+    await expect(generateJson({ messages: [], language: 'vi' })).resolves.toEqual({
+      title: 'Học tập không phải là đọc — mà là truy hồi.',
+    });
+    expect(streamText).toHaveBeenCalledTimes(2);
+  });
+
+  it('turns an invalid repair into wrong_language (not bad_json) with the cause', async () => {
+    const streamText = vi.fn().mockResolvedValueOnce(EN).mockResolvedValueOnce('not json at all');
+    const generateJson = createGenerateJson(streamText);
+    const err = await generateJson({ messages: [], language: 'vi' }).catch((e) => e);
+
+    expect(err.code).toBe('wrong_language');
+    expect(err.cause).toBeTruthy();
+    expect(streamText).toHaveBeenCalledTimes(2);
+  });
+
+  it('re-throws an abort from the repair unchanged', async () => {
+    const abort = Object.assign(new Error('aborted'), { name: 'AbortError' });
+    const streamText = vi.fn().mockResolvedValueOnce(EN).mockRejectedValueOnce(abort);
+    const generateJson = createGenerateJson(streamText);
+    await expect(generateJson({ messages: [], language: 'vi' })).rejects.toBe(abort);
+  });
+
+  it('propagates a transport error from the repair unchanged', async () => {
+    const offline = providerError('network', 'offline');
+    const streamText = vi.fn().mockResolvedValueOnce(EN).mockRejectedValueOnce(offline);
+    const generateJson = createGenerateJson(streamText);
+    await expect(generateJson({ messages: [], language: 'vi' })).rejects.toMatchObject({ code: 'network' });
+  });
+
+  it('keeps the existing return path when no language is requested', async () => {
+    const streamText = vi.fn(async () => EN);
+    const generateJson = createGenerateJson(streamText);
+    await expect(generateJson({ messages: [] })).resolves.toEqual({
+      title: 'Learning is not reading — it is retrieval.',
+    });
+    expect(streamText).toHaveBeenCalledTimes(1);
+  });
+
+  it('wires the localized copy through both catalogs', () => {
+    expect(ERROR_HINTS.wrong_language).toBeTruthy();
+    expect(translate('en', 'errors.wrong_language')).toBe(ERROR_HINTS.wrong_language);
+    expect(translate('vi', 'errors.wrong_language')).toBeTruthy();
+    expect(translate('vi', 'errors.wrong_language')).not.toBe(translate('en', 'errors.wrong_language'));
+    expect(wrongLanguageError().message).toBe(ERROR_HINTS.wrong_language);
   });
 });

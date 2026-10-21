@@ -1,0 +1,17 @@
+{
+  "aria": "Finish lesson",
+  "title": "Finish “{title}”",
+  "hardest": "What was hardest?",
+  "hardestPlaceholder": "The part that took the most effort…",
+  "confidence": "Confidence",
+  "confidenceLabels": {
+    "1": "Lost",
+    "2": "Shaky",
+    "3": "Okay",
+    "4": "Solid",
+    "5": "Could teach it"
+  },
+  "cancel": "Cancel",
+  "markDone": "Mark done",
+  "saving": "Saving…"
+}

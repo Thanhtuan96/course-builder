@@ -1,0 +1,27 @@
+{
+  "goal": "Goal: {goal}",
+  "exportMd": "Export COURSE.md",
+  "delete": "Delete",
+  "deleteConfirm": "Delete “{title}”? This cannot be undone.",
+  "complete": "🎓 Complete",
+  "notFound": {
+    "title": "Course not found",
+    "description": "It may have been deleted.",
+    "back": "Back home"
+  },
+  "lessonLabel": {
+    "done": "Reopen",
+    "active": "Continue",
+    "todo": "Start"
+  },
+  "completedOn": "Completed {date}",
+  "hardest": "Hardest: {text}",
+  "changeLanguage": "Change language",
+  "languageDialog": {
+    "title": "Course language",
+    "body": "Existing lessons keep their language. New lessons, quizzes, flashcards and tutor replies use the course language you pick here.",
+    "label": "Language",
+    "confirm": "Change language",
+    "changed": "Course language is now {name}."
+  }
+}

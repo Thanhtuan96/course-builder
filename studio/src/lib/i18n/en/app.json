@@ -1,0 +1,23 @@
+{
+  "loading": "Loading Professor Studio…",
+  "loadingShort": "Loading…",
+  "notFound": {
+    "title": "Page not found",
+    "description": "That route does not exist.",
+    "back": "Back home"
+  },
+  "storageDecision": {
+    "title": "Where should your learning data live?",
+    "body": "Your data was found in more than one place. Pick the one Studio should use from now on — nothing is deleted, and you can move or remove the other copy later in Settings.",
+    "sqlite": "SQLite file",
+    "browser": "This browser",
+    "records": "{n} records"
+  },
+  "storageBlocked": {
+    "title": "Local server isn’t running",
+    "body": "You chose to save your learning data in the SQLite file, so Studio won’t touch browser storage. Start the local server, then retry.",
+    "retry": "Retry",
+    "switch": "Switch to browser storage…",
+    "countMismatch": "Counts didn’t match, so nothing was switched ({fields})."
+  }
+}

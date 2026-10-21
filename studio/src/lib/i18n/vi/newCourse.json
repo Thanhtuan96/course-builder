@@ -1,0 +1,45 @@
+{
+  "title": "Khoá học mới",
+  "subtitle": "Mô tả điều bạn muốn học. Professor sẽ đề xuất một đề cương để bạn chỉnh trước khi bắt đầu.",
+  "topic": {
+    "label": "Bạn muốn học gì?",
+    "placeholder": "ví dụ: Mạng Kubernetes, Nhạc lý, Đại số tuyến tính"
+  },
+  "level": "Trình độ",
+  "language": "Ngôn ngữ bài giảng",
+  "useDifferent": "Dùng ngôn ngữ khác cho khoá học này",
+  "goal": {
+    "label": "Mục tiêu của bạn",
+    "placeholder": "ví dụ: Đỗ kỳ thi CKA, sáng tác bài hát đầu tiên"
+  },
+  "propose": "Đề xuất đề cương",
+  "proposing": "Đang đề xuất…",
+  "stop": "Dừng",
+  "skipAi": "Bỏ qua AI — bắt đầu khoá học trống",
+  "hint": {
+    "before": "Dùng nguồn AI không cần khoá? Hãy cấu hình trong",
+    "settingsLink": "Cài đặt",
+    "after": ", hoặc mở khoá học mẫu trước."
+  },
+  "courseTitle": "Tên khoá học",
+  "description": "Mô tả",
+  "courseKind": "Loại khoá học",
+  "detected": "Nhận diện: {reason}",
+  "yourArtifact": "Sản phẩm của bạn",
+  "addToDo": "Thêm vào “{label}”",
+  "artifactTitle": "Tên sản phẩm",
+  "artifactTitlePlaceholder": "ví dụ: Một URL shortener đã triển khai + repo",
+  "deliverable": "Bạn sẽ tạo ra gì",
+  "deliverablePlaceholder": "MỘT thứ cụ thể, thật, mà khoá học này hướng tới.",
+  "definitionOfDone": "Định nghĩa hoàn thành",
+  "doneBulletPlaceholder": "Một gạch đầu dòng trạng thái hoàn thành có thể kiểm tra",
+  "removeItem": "Xoá mục",
+  "syllabus": "Đề cương · {count} {lessonWord}",
+  "lessonNTitle": "Tên bài {n}",
+  "summary": "Tóm tắt",
+  "moveUp": "Di chuyển lên",
+  "moveDown": "Di chuyển xuống",
+  "addLesson": "Thêm bài học",
+  "start": "Bắt đầu khoá học",
+  "starting": "Đang bắt đầu…"
+}

@@ -1,0 +1,79 @@
+{
+  "quiz": {
+    "title": "Kiểm tra hiểu biết",
+    "subtitle": "Năm câu hỏi nhanh, có giải thích ngay.",
+    "intro": "Trả lời 5 câu hỏi nhanh để xem bạn nhớ được gì. Bạn sẽ thấy lý do sau mỗi câu — đây là tự kiểm tra, không phải chấm điểm.",
+    "start": "Kiểm tra hiểu biết",
+    "startShort": "Bắt đầu tự kiểm tra",
+    "generating": "Đang tạo câu hỏi",
+    "writing": "Đang viết 5 câu hỏi của bạn…",
+    "stop": "Dừng",
+    "tryAgain": "Thử lại",
+    "youGot": "Bạn đúng {score} trên {total} câu.",
+    "saving": "Đang lưu lần làm của bạn…",
+    "saved": "Đã lưu vào các lần làm của bạn.",
+    "retake": "Làm lại",
+    "newQuiz": "Quiz mới",
+    "questionOf": "Câu {n} trên {total}",
+    "demoQuiz": "quiz mẫu",
+    "correct": "Đúng",
+    "notQuite": "Chưa đúng — đáp án là {letter}.",
+    "seeScore": "Xem điểm",
+    "nextQuestion": "Câu tiếp theo",
+    "noContent": "Bài học này chưa có nội dung.",
+    "noContentHint": "Hãy tạo hoặc mở bài học trước, rồi thử lại."
+  },
+  "flashcards": {
+    "title": "Thẻ ghi nhớ",
+    "subtitle": "Thêm thẻ từ bài học này vào hàng đợi ôn tập.",
+    "intro": "Biến bài học này thành vài thẻ ghi nhớ và chúng sẽ vào hàng đợi ôn tập cách quãng của bạn.",
+    "generating": "Đang tạo thẻ ghi nhớ",
+    "writing": "Đang viết thẻ ghi nhớ…",
+    "stop": "Dừng",
+    "added": "Đã thêm {count} {cardWord} vào hàng đợi ôn tập.",
+    "alreadyInDeck": "Mọi thứ từ bài học này đã có trong bộ thẻ của bạn.",
+    "skipped": "Đã bỏ qua {count} {cardWord} đã có trong bộ thẻ.",
+    "save": "Lưu {count} {cardWord}",
+    "generate": "Tạo thẻ ghi nhớ",
+    "generateAgain": "Tạo lại",
+    "front": "Mặt trước",
+    "back": "Mặt sau",
+    "delete": "Xoá",
+    "noContent": "Bài học này chưa có nội dung.",
+    "noContentHint": "Hãy tạo hoặc mở bài học trước, rồi thử lại."
+  },
+  "past": {
+    "title": "Các lần làm trước",
+    "empty": "Chưa có lần làm nào — hoàn thành một lần tự kiểm tra để thấy ở đây."
+  },
+  "due": {
+    "badge": "{count} đến hạn",
+    "title": "{count} {cardWord} đến hạn ôn"
+  },
+  "streak": {
+    "none": "Chưa có chuỗi ngày",
+    "one": "Chuỗi 1 ngày",
+    "many": "Chuỗi {count} ngày",
+    "title": "Đã học {studied} trong {total} ngày gần nhất"
+  },
+  "review": {
+    "title": "Ôn tập",
+    "loading": "Đang tải hàng đợi của bạn…",
+    "allCaughtUp": "Đã ôn hết",
+    "nextCard": "Thẻ tiếp theo đến hạn vào {date}.",
+    "noCards": "Chưa có thẻ nào được lên lịch — hãy tạo thẻ ghi nhớ từ một bài học để bắt đầu ôn tập.",
+    "backToCourses": "Về danh sách khoá học",
+    "sessionComplete": "Hoàn thành phiên ôn",
+    "reviewed": "Bạn đã ôn {count} {cardWord}. Làm tốt lắm.",
+    "checkForMore": "Kiểm tra thêm",
+    "cardOf": "Thẻ {n} trên {total}",
+    "question": "Câu hỏi",
+    "answer": "Trả lời",
+    "tapFlip": "Chạm hoặc nhấn Space để lật thẻ",
+    "gradeAfter": "Tự đánh giá sau khi lật thẻ.",
+    "again": "Lại",
+    "hard": "Khó",
+    "good": "Được",
+    "easy": "Dễ"
+  }
+}

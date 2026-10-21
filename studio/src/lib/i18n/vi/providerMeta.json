@@ -1,0 +1,26 @@
+{
+  "anthropic": {
+    "label": "Anthropic (Claude)",
+    "tagline": "Chất lượng bài giảng tốt nhất với khoá API của riêng bạn.",
+    "pros": "Bài giảng và JSON chất lượng cao nhất",
+    "cons": "Cần khoá API trả phí"
+  },
+  "openai": {
+    "label": "Tương thích OpenAI",
+    "tagline": "OpenAI, OpenRouter, Groq, LM Studio…",
+    "pros": "Nhiều nhà cung cấp và mô hình",
+    "cons": "Một số endpoint chặn CORS trình duyệt"
+  },
+  "ollama": {
+    "label": "Ollama (miễn phí, cục bộ)",
+    "tagline": "Chạy trên máy bạn, không khoá, không tốn phí.",
+    "pros": "Miễn phí và riêng tư",
+    "cons": "Cần cài đặt cục bộ"
+  },
+  "bridge": {
+    "label": "Agent cục bộ của tôi",
+    "tagline": "Dùng Claude Code, OpenCode, Cursor, Gemini, Antigravity hoặc Ollama.",
+    "pros": "Miễn phí với gói đăng ký sẵn có của bạn",
+    "cons": "Cần máy chủ cục bộ đang chạy"
+  }
+}

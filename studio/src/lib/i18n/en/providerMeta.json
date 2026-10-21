@@ -1,0 +1,26 @@
+{
+  "anthropic": {
+    "label": "Anthropic (Claude)",
+    "tagline": "Best lesson quality with your own API key.",
+    "pros": "Highest-quality lessons and JSON",
+    "cons": "Needs a paid API key"
+  },
+  "openai": {
+    "label": "OpenAI-compatible",
+    "tagline": "OpenAI, OpenRouter, Groq, LM Studio…",
+    "pros": "Many providers and models",
+    "cons": "Some endpoints block browser CORS"
+  },
+  "ollama": {
+    "label": "Ollama (free, local)",
+    "tagline": "Runs on your machine, no key, no cost.",
+    "pros": "Free and private",
+    "cons": "Needs a local install"
+  },
+  "bridge": {
+    "label": "My local agent",
+    "tagline": "Use Claude Code, OpenCode, Cursor, Gemini, Antigravity or Ollama.",
+    "pros": "Free with your existing subscription",
+    "cons": "Needs the local server running"
+  }
+}

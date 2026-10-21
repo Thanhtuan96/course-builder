@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Studio preview</title>
+  </head>
+  <body>
+    <script>
+      // The workspace HTML preview runs here instead of in a srcdoc iframe: a same-origin document
+      // loaded by URL does not inherit the app's meta CSP, so learner inline <script> tags execute.
+      // The parent posts { type: 'preview-html', html } after load and on every new run.
+      window.addEventListener('message', function (event) {
+        var data = event && event.data;
+        if (!data || data.type !== 'preview-html' || typeof data.html !== 'string') return;
+        document.open();
+        document.write(data.html);
+        document.close();
+      });
+    </script>
+  </body>
+</html>

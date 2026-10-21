@@ -17,6 +17,9 @@ export const ERROR_CODES = [
   'server',
   'config',
   'model_not_found',
+  'wrong_language',
+  'loopback_required',
+  'csp_blocked',
   'unknown',
 ];
 
@@ -36,6 +39,10 @@ export const ERROR_HINTS = {
   server: 'The local agent failed while running. Check its terminal output, then try again.',
   config: 'That AI source or agent is not supported. Pick a valid agent in Settings.',
   model_not_found: 'That model is not available. Pick a model in Settings.',
+  wrong_language: 'The model answered in the wrong language twice. Try again, or pick a stronger model.',
+  loopback_required:
+    'Studio only connects to a bridge or runner on this machine. Use http://localhost:…, not a LAN IP or tunnel.',
+  csp_blocked: 'The Content-Security-Policy blocks that provider origin. Use a built-in preset or a loopback endpoint.',
   unknown: 'Something went wrong talking to the provider.',
 };
 
@@ -53,6 +60,21 @@ export class ProviderError extends Error {
     this.hint = hint || ERROR_HINTS[this.code];
     if (opts.cause) this.cause = opts.cause;
   }
+}
+
+/** A JSON generation that came back in the wrong language after the one repair retry. */
+export class WrongLanguageError extends ProviderError {
+  /** @param {{ cause?: unknown }} [opts] */
+  constructor(opts = {}) {
+    super('wrong_language');
+    this.name = 'WrongLanguageError';
+    if (opts.cause) this.cause = opts.cause;
+  }
+}
+
+/** @param {unknown} [cause] */
+export function wrongLanguageError(cause) {
+  return new WrongLanguageError({ cause });
 }
 
 /**

@@ -29,6 +29,8 @@
  * -------------------------------------------------------------------------------------------
  */
 import { tableSpec, assertIndexedField } from './schema.js';
+import { isLoopbackBridgeUrl } from '../settings.js';
+import { providerError } from '../ai/errors.js';
 
 /** Raised when the Studio server rejects a request (used so callers can distinguish from network). */
 export class RemoteAdapterError extends Error {
@@ -54,7 +56,12 @@ export function createRemoteAdapter({ baseUrl, token, fetchImpl = globalThis.fet
   /** @type {{ path?: string, schemaVersion?: number }|null} */
   let cachedHealth = null;
 
+  function assertLocalEndpoint() {
+    if (!isLoopbackBridgeUrl(root)) throw providerError('loopback_required');
+  }
+
   async function post(op, table, args = []) {
+    assertLocalEndpoint();
     let res;
     try {
       res = await fetchImpl(`${root}/api/studio/db`, {
@@ -89,6 +96,7 @@ export function createRemoteAdapter({ baseUrl, token, fetchImpl = globalThis.fet
   }
 
   async function health() {
+    assertLocalEndpoint();
     let res;
     try {
       res = await fetchImpl(`${root}/api/studio/db/health`, { headers });

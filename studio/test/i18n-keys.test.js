@@ -45,14 +45,14 @@ describe('i18n catalogs', () => {
   it('used keys exist in both en and vi', () => {
     const missingEn = [...used].filter((k) => !en.has(k));
     const missingVi = [...used].filter((k) => !vi.has(k));
-    expect(missingEn, `missing from en.json: ${missingEn.join(', ')}`).toEqual([]);
-    expect(missingVi, `missing from vi.json: ${missingVi.join(', ')}`).toEqual([]);
+    expect(missingEn, `missing from the English catalogs: ${missingEn.join(', ')}`).toEqual([]);
+    expect(missingVi, `missing from the Vietnamese catalogs: ${missingVi.join(', ')}`).toEqual([]);
   });
 
   it('en and vi define the same keys', () => {
     const onlyEn = [...en].filter((k) => !vi.has(k));
     const onlyVi = [...vi].filter((k) => !en.has(k));
-    expect(onlyEn, `only in en.json: ${onlyEn.join(', ')}`).toEqual([]);
-    expect(onlyVi, `only in vi.json: ${onlyVi.join(', ')}`).toEqual([]);
+    expect(onlyEn, `only in the English catalogs: ${onlyEn.join(', ')}`).toEqual([]);
+    expect(onlyVi, `only in the Vietnamese catalogs: ${onlyVi.join(', ')}`).toEqual([]);
   });
 });

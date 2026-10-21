@@ -1,0 +1,18 @@
+{
+  "title": "Khoá học của bạn",
+  "newCourse": "Khoá học mới",
+  "loading": "Đang tải…",
+  "empty": {
+    "title": "Chưa có khoá học nào",
+    "description": "Tạo khoá học đầu tiên từ một câu mô tả, hoặc mở khoá học mẫu để xem Studio hoạt động thế nào — không cần nguồn AI.",
+    "createFirst": "Tạo khoá học đầu tiên",
+    "openDemo": "Mở khoá học mẫu"
+  },
+  "continue": "Tiếp tục học",
+  "lessonOf": "Bài {n}: {title}",
+  "complete": "Hoàn thành",
+  "demo": "mẫu",
+  "delete": "Xoá",
+  "deleteConfirm": "Xoá “{title}”? Bài học và tiến độ được giữ lại dưới dạng bản ghi đã xoá mềm.",
+  "continueButton": "Tiếp tục"
+}

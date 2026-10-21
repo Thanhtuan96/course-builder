@@ -7,10 +7,47 @@
 import { useCallback, useEffect, useState } from 'react';
 import { configIssue } from './ai/config.js';
 import { loadProviderStatus } from './ai/status.js';
-import { DEFAULT_BRIDGE_AGENT, isAnthropicModelId, isValidAgentModel } from './ai/catalog.js';
+import { BRIDGE_DEFAULT_URL, DEFAULT_BRIDGE_AGENT, isAnthropicModelId, isValidAgentModel } from './ai/catalog.js';
 import { DEFAULT_LANGUAGE, isSupportedCode, normalizeLanguage } from './i18n/languages.js';
+import { providerError } from './ai/errors.js';
 
 export const SETTINGS_KEY = 'professor-studio:settings';
+
+/**
+ * Whether a bridge/runner URL is a loopback endpoint (SEC-12). Parses with WHATWG `URL` so alternate
+ * IPv4 spellings (`127.1`, `2130706433`, `0x7f000001`) normalize before the check. Accepts
+ * `localhost`, `*.localhost` and the whole `127.0.0.0/8` range over http(s); rejects IPv6 literals
+ * (`[::1]`, `[::]`, `[::ffff:…]` — CSP cannot express them), `0.0.0.0`, LAN IPs, domains and
+ * non-http(s) schemes.
+ * @param {unknown} value
+ * @returns {boolean}
+ */
+export function isLoopbackBridgeUrl(value) {
+  let url;
+  try {
+    url = new URL(String(value ?? ''));
+  } catch {
+    return false;
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
+  const host = url.hostname.toLowerCase();
+  // IPv6 literals are not expressible as a CSP host-source (Chrome ignores `http://[::1]:*`), so a
+  // bridge on them would pass the guard and then be blocked in the browser. Reject them here.
+  if (host.startsWith('[')) return false;
+  if (host === 'localhost' || host.endsWith('.localhost')) return true;
+  const match = host.match(/^127\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  return Boolean(match) && match.slice(1).every((part) => Number(part) <= 255);
+}
+
+/**
+ * Throw a localizable `loopback_required` error unless `value` is a loopback bridge/runner URL.
+ * @param {unknown} value
+ * @returns {unknown} the input, unchanged, on success
+ */
+export function assertLoopbackBridgeUrl(value) {
+  if (!isLoopbackBridgeUrl(value)) throw providerError('loopback_required');
+  return value;
+}
 
 export const DEFAULT_PROVIDER = 'anthropic';
 
@@ -79,9 +116,10 @@ function deepMerge(base, patch) {
  * removed so no provider ever reads it again.
  *
  * @param {object} raw stored settings (parsed JSON)
+ * @param {{ sanitizeBridge?: boolean }} [opts]
  * @returns {object} settings without a top-level `model`
  */
-export function migrateSettings(raw) {
+export function migrateSettings(raw, { sanitizeBridge = true } = {}) {
   if (!raw || typeof raw !== 'object') return raw;
   const next = { ...raw };
   // STORE-01: keep only a known storage kind; an absent/invalid value means "undecided" so the app
@@ -94,21 +132,42 @@ export function migrateSettings(raw) {
   }
   const legacy = typeof next.model === 'string' ? next.model.trim() : '';
   delete next.model;
-  if (!legacy) return next;
 
   const provider = next.provider || DEFAULT_PROVIDER;
-  if (provider === 'anthropic') {
-    if (isAnthropicModelId(legacy)) next.anthropic = { ...(next.anthropic || {}), model: legacy };
-  } else if (provider === 'openai') {
-    next.openai = { ...(next.openai || {}), model: legacy };
-  } else if (provider === 'ollama') {
-    next.ollama = { ...(next.ollama || {}), model: legacy };
-  } else if (provider === BRIDGE_PROVIDER) {
-    const agent = next.bridge?.agent || DEFAULT_BRIDGE_AGENT;
-    if (isValidAgentModel(agent, legacy)) {
-      next.bridge = { ...(next.bridge || {}), models: { ...(next.bridge?.models || {}), [agent]: legacy } };
+  if (legacy) {
+    if (provider === 'anthropic') {
+      if (isAnthropicModelId(legacy)) next.anthropic = { ...(next.anthropic || {}), model: legacy };
+    } else if (provider === 'openai') {
+      next.openai = { ...(next.openai || {}), model: legacy };
+    } else if (provider === 'ollama') {
+      next.ollama = { ...(next.ollama || {}), model: legacy };
+    } else if (provider === BRIDGE_PROVIDER) {
+      const agent = next.bridge?.agent || DEFAULT_BRIDGE_AGENT;
+      if (isValidAgentModel(agent, legacy)) {
+        next.bridge = { ...(next.bridge || {}), models: { ...(next.bridge?.models || {}), [agent]: legacy } };
+      }
     }
   }
+  return sanitizeBridge ? sanitizeBridgeSettings(next) : next;
+}
+
+/**
+ * Drop a non-loopback bridge URL together with its pairing token (SEC-12). Used on read/migration
+ * and before persisting, so a rejected URL never leaves its token in localStorage.
+ * @param {object} next
+ * @returns {object} the same settings object, sanitized in place
+ */
+function sanitizeBridgeSettings(next) {
+  const url = next?.bridge?.bridgeUrl || next?.bridgeUrl;
+  if (!url || isLoopbackBridgeUrl(url)) return next;
+  if (next.bridge) {
+    const bridge = { ...next.bridge };
+    delete bridge.bridgeUrl;
+    delete bridge.bridgeToken;
+    next.bridge = bridge;
+  }
+  delete next.bridgeUrl;
+  delete next.bridgeToken;
   return next;
 }
 
@@ -133,10 +192,11 @@ export function loadSettings() {
  * @returns {typeof DEFAULT_SETTINGS}
  */
 export function saveSettings(patch) {
-  const next = migrateSettings(deepMerge(read(), patch));
+  const next = migrateSettings(deepMerge(read(), patch), { sanitizeBridge: false });
+  const persisted = sanitizeBridgeSettings({ ...next, bridge: { ...(next.bridge || {}) } });
   if (typeof localStorage !== 'undefined') {
     try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(persisted));
     } catch {
       /* storage full — settings will simply not persist */
     }
@@ -168,7 +228,16 @@ function rawStoredSettings() {
 export function parsePairingHash(hash = '') {
   const raw = String(hash || '').replace(/^#/, '');
   const queryAt = raw.indexOf('?');
-  if (queryAt === -1) return null;
+  if (queryAt === -1) {
+    // SEC-12: Phase 2 prints a bare `#token=<value>` fragment; accept a bare `bridge=…&token=…` too.
+    const firstKey = raw.split('=')[0];
+    if (!raw || (firstKey !== 'token' && firstKey !== 'bridge')) return null;
+    const params = new URLSearchParams(raw);
+    const bridgeUrl = (params.get('bridge') || '').trim();
+    const token = (params.get('token') || '').trim();
+    if (!bridgeUrl && !token) return null;
+    return { bridgeUrl, token, path: '/' };
+  }
   const params = new URLSearchParams(raw.slice(queryAt + 1));
   const bridgeUrl = (params.get('bridge') || '').trim();
   const token = (params.get('token') || '').trim();
@@ -219,9 +288,28 @@ export function applyPairingFromUrl(env = {}) {
   const pairing = parsePairingHash(loc.hash);
   if (!pairing) return null;
 
+  const scrub = () => {
+    if (!hist || typeof hist.replaceState !== 'function') return;
+    const search = loc.search || '';
+    const hash = pairing.path === '/' ? '' : `#${pairing.path}`;
+    try {
+      hist.replaceState(null, '', `${loc.pathname || '/'}${search}${hash}`);
+    } catch {
+      /* some embedded webviews disallow replaceState — nothing else to do */
+    }
+  };
+
+  // SEC-12: never save a pairing that points the token at a non-loopback host. Still scrub the URL
+  // so a malicious/prefilled fragment does not linger in the address bar.
+  const targetBridge = pairing.bridgeUrl || BRIDGE_DEFAULT_URL;
+  if (!isLoopbackBridgeUrl(targetBridge)) {
+    scrub();
+    return null;
+  }
+
   const stored = rawStoredSettings();
   const patch = { bridge: {} };
-  if (pairing.bridgeUrl) patch.bridge.bridgeUrl = pairing.bridgeUrl;
+  patch.bridge.bridgeUrl = targetBridge;
   if (pairing.token) patch.bridge.bridgeToken = pairing.token;
   // Choose the local agent unless the learner already has a ready provider: `course-professor
   // studio` exists to hand them a working local setup, so an unconfigured/untested provider yields.
@@ -232,17 +320,7 @@ export function applyPairingFromUrl(env = {}) {
   if (!stored || !STORAGE_KINDS.includes(stored.storage)) patch.storage = STORAGE_SQLITE;
 
   const next = saveSettings(patch);
-
-  if (hist && typeof hist.replaceState === 'function') {
-    const search = loc.search || '';
-    const hash = pairing.path === '/' ? '' : `#${pairing.path}`;
-    try {
-      hist.replaceState(null, '', `${loc.pathname || '/'}${search}${hash}`);
-    } catch {
-      /* some embedded webviews disallow replaceState — the settings are already saved */
-    }
-  }
-
+  scrub();
   return next;
 }
 

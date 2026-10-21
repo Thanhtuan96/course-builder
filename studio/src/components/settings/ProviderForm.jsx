@@ -14,6 +14,7 @@ import {
   DEFAULT_BRIDGE_AGENT,
 } from '../../lib/ai/index.js';
 import { recordProviderTest } from '../../lib/ai/status.js';
+import { isLoopbackBridgeUrl } from '../../lib/settings.js';
 import { useT } from '../../lib/i18n/index.js';
 import { Card } from '../ui/Card.jsx';
 import { Button } from '../ui/Button.jsx';
@@ -77,6 +78,7 @@ export function ProviderFields({ settings, update, compact = false }) {
   const bridgeAgent = settings.bridge?.agent || DEFAULT_BRIDGE_AGENT;
   const bridgeAgentMeta = BRIDGE_AGENTS.find((a) => a.id === bridgeAgent) || BRIDGE_AGENTS[0];
   const storedAgentModel = settings.bridge?.models?.[bridgeAgent] || '';
+  const bridgeUrlInvalid = Boolean(settings.bridge?.bridgeUrl) && !isLoopbackBridgeUrl(settings.bridge.bridgeUrl);
   const knownModel = agentModels ? agentModels.some((m) => m.id === storedAgentModel) : false;
   const selectedAgentModel = knownModel ? storedAgentModel : '';
   const customAgentModel = selectedAgentModel ? '' : storedAgentModel;
@@ -245,6 +247,11 @@ export function ProviderFields({ settings, update, compact = false }) {
               value={settings.bridge.bridgeUrl}
               onChange={(e) => set({ bridge: { bridgeUrl: e.target.value } })}
             />
+            {bridgeUrlInvalid && (
+              <p role="status" className="text-sm text-amber-700 dark:text-amber-400">
+                {t('provider.loopbackOnly')}
+              </p>
+            )}
             <Input
               label={t('provider.pairingToken')}
               name="bridgeToken"

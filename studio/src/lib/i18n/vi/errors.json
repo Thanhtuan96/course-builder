@@ -1,0 +1,19 @@
+{
+  "auth": "Hãy kiểm tra khoá API — nó bị từ chối. Nhập lại trong Cài đặt.",
+  "network": "Không kết nối được tới nhà cung cấp. Kiểm tra mạng và thử lại.",
+  "cors": "Nhà cung cấp đã chặn yêu cầu từ trình duyệt (CORS). Hãy thử nguồn khác hoặc chạy ứng dụng cục bộ với `npm run dev`.",
+  "local_network_blocked": "Trình duyệt đã chặn truy cập tới máy chủ cục bộ (Local Network Access). Hãy cho phép lời nhắc quyền mạng cục bộ, hoặc chạy Studio cục bộ với `npm run dev`.",
+  "rate_limit": "Nhà cung cấp đang giới hạn tốc độ. Chờ một chút, hoặc chuyển sang nguồn cục bộ.",
+  "billing": "Nhà cung cấp từ chối yêu cầu vì lý do thanh toán (hết tín dụng hoặc chưa trả). Nạp thêm tài khoản, hoặc chuyển sang nguồn cục bộ.",
+  "refusal": "Mô hình từ chối trả lời yêu cầu này. Hãy diễn đạt lại, hoặc thử mô hình khác.",
+  "bad_json": "Mô hình không trả về JSON hợp lệ. Thử lại, hoặc dùng mô hình lớn hơn.",
+  "not_running": "Không kết nối được máy chủ cục bộ. Hãy khởi động rồi thử lại.",
+  "aborted": "Đã dừng.",
+  "server": "Agent cục bộ gặp lỗi khi chạy. Kiểm tra đầu ra terminal của nó, rồi thử lại.",
+  "config": "Nguồn AI hoặc agent đó không được hỗ trợ. Hãy chọn agent hợp lệ trong Cài đặt.",
+  "model_not_found": "Mô hình đó không khả dụng. Hãy chọn một mô hình trong Cài đặt.",
+  "unknown": "Đã xảy ra lỗi khi trao đổi với nhà cung cấp.",
+  "wrong_language": "Mô hình đã trả lời sai ngôn ngữ hai lần. Hãy thử lại, hoặc chọn mô hình mạnh hơn.",
+  "loopback_required": "Studio chỉ kết nối tới bridge hoặc runner trên máy này. Hãy dùng http://localhost:…, không dùng IP LAN hay tunnel.",
+  "csp_blocked": "Content-Security-Policy đang chặn origin của nhà cung cấp đó. Hãy dùng preset có sẵn hoặc endpoint cục bộ."
+}

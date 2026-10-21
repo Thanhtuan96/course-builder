@@ -1,0 +1,27 @@
+{
+  "goal": "Mục tiêu: {goal}",
+  "exportMd": "Xuất COURSE.md",
+  "delete": "Xoá",
+  "deleteConfirm": "Xoá “{title}”? Không thể hoàn tác.",
+  "complete": "🎓 Hoàn thành",
+  "notFound": {
+    "title": "Không tìm thấy khoá học",
+    "description": "Có thể nó đã bị xoá.",
+    "back": "Về trang chủ"
+  },
+  "lessonLabel": {
+    "done": "Mở lại",
+    "active": "Tiếp tục",
+    "todo": "Bắt đầu"
+  },
+  "completedOn": "Hoàn thành {date}",
+  "hardest": "Khó nhất: {text}",
+  "changeLanguage": "Đổi ngôn ngữ",
+  "languageDialog": {
+    "title": "Ngôn ngữ khoá học",
+    "body": "Các bài học hiện có giữ nguyên ngôn ngữ. Bài học mới, quiz, thẻ ghi nhớ và trả lời của gia sư sẽ dùng ngôn ngữ bạn chọn ở đây.",
+    "label": "Ngôn ngữ",
+    "confirm": "Đổi ngôn ngữ",
+    "changed": "Ngôn ngữ khoá học giờ là {name}."
+  }
+}

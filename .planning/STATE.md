@@ -4,17 +4,17 @@ milestone: v3.0
 current_phase: 2
 current_phase_name: Security Release Gate and Legacy Gating
 status: planning
-stopped_at: Wave 1 in progress (Phases 2-6 in parallel workers); Phase 3 merged
+stopped_at: Wave 1 in progress (Phases 2-6 in parallel workers); Phases 3, 6 merged
 last_updated: "2026-10-16T17:59:55.029Z"
 last_activity: 2026-10-22
-last_activity_desc: Phase 3 Plugin Drift Guard squash-merged into develop
+last_activity_desc: Phase 6 Studio Beta Debt squash-merged into develop
 state_head: b17f055b1e3396a76cff241fa525f4ea00d2e194
 progress:
   total_phases: 13
-  completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
-  percent: 15
+  completed_phases: 3
+  total_plans: 9
+  completed_plans: 9
+  percent: 23
 ---
 
 # Project State
@@ -29,11 +29,11 @@ See: .planning/PROJECT.md (updated 2026-10-17)
 ## Current Position
 
 Phase: Wave 1 (Phases 2–6) of 13 — running in parallel OpenCode workers
-Plan: Phase 3 complete; Phases 2, 4, 5, 6 in progress
+Plan: Phases 3, 6 complete; Phases 2, 4, 5 in progress
 Status: In progress
-Last activity: 2026-10-22 — Phase 3 Plugin Drift Guard merged (root 311, studio 372, drift clean)
+Last activity: 2026-10-22 — Phase 6 Studio Beta Debt merged (root 311, studio 439, CSP probed in Chromium)
 
-Progress: [██░░░░░░░░] 15%
+Progress: [██░░░░░░░░] 23%
 
 ## Performance Metrics
 

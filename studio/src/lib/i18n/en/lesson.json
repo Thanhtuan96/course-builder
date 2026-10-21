@@ -1,0 +1,32 @@
+{
+  "home": "Home",
+  "breadcrumb": "Lesson {n}",
+  "markDone": "Mark done",
+  "revisit": "Revisit reflection",
+  "tabs": {
+    "practice": "Practice",
+    "tutor": "Tutor",
+    "workspace": "Workspace"
+  },
+  "status": {
+    "todo": "Not started",
+    "active": "In progress",
+    "done": "Done"
+  },
+  "loading": "Loading lesson…",
+  "loadingWorkspace": "Loading workspace…",
+  "notFound": "Lesson not found",
+  "backToCourse": "Back to course",
+  "noContent": {
+    "title": "No lesson content yet",
+    "description": "Generate this lesson from the course context and your level. You can regenerate later — older versions are never overwritten.",
+    "action": "Generate lesson"
+  },
+  "version": "Lesson version",
+  "generated": "generated {time}",
+  "regenerate": "Regenerate",
+  "regenerateConfirm": "Regenerate this lesson? This calls the AI again and costs tokens. Your current version is kept.",
+  "generating": "Generating lesson…",
+  "regenerateIn": "Regenerate in {language}",
+  "languageNotice": "The lesson came back in another language, so Professor regenerated it once in {language}."
+}

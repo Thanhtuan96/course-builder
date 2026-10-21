@@ -1,0 +1,12 @@
+{
+  "title": "Cài đặt",
+  "subtitle": "Khoá được giữ trong trình duyệt này và chỉ gửi tới nhà cung cấp bạn chọn.",
+  "aiSource": "Nguồn AI",
+  "clearKeys": "Xoá khoá",
+  "learner": "Người học",
+  "name": "Tên của bạn",
+  "namePlaceholder": "Tuỳ chọn — dùng để chào bạn",
+  "learningLanguage": "Ngôn ngữ học",
+  "languageHint": "Mọi khoá học, bài giảng, quiz và trả lời của gia sư dùng ngôn ngữ này trừ khi khoá học ghi đè.",
+  "storage": "Lưu trữ"
+}

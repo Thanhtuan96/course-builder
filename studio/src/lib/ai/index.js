@@ -10,6 +10,7 @@
  */
 import { providerError } from './errors.js';
 import { configIssue } from './config.js';
+import { isLoopbackBridgeUrl } from '../settings.js';
 import { MAX_TOKENS } from './provider-utils.js';
 import { ProviderError } from './errors.js';
 import {
@@ -96,6 +97,25 @@ export const PROVIDERS = [
 
 export const PROVIDER_IDS = PROVIDERS.map((p) => p.id);
 
+/** Origins the Studio CSP allows for BYOK API providers (mirrors studio/index.html). */
+const CSP_PROVIDER_ORIGINS = new Set(['https://api.openai.com', 'https://openrouter.ai', 'https://api.groq.com']);
+
+/**
+ * Fail fast when a configured base URL cannot be reached under the shipped CSP. A malformed URL is
+ * a configuration error; a well-formed but unlisted origin is a CSP limitation.
+ * @param {unknown} value
+ */
+function assertCspAllowedBaseUrl(value) {
+  let url;
+  try {
+    url = new URL(String(value));
+  } catch {
+    throw providerError('config');
+  }
+  if (isLoopbackBridgeUrl(url.href) || CSP_PROVIDER_ORIGINS.has(url.origin)) return;
+  throw providerError('csp_blocked');
+}
+
 /**
  * Build the provider for the active settings, loading its adapter on demand.
  * @param {object} settings
@@ -106,6 +126,11 @@ export async function getProvider(settings = {}) {
 
   const issue = configIssue(settings, provider);
   if (issue) throw providerError(issue.code, issue.message, issue.hint);
+  if (provider === 'openai') assertCspAllowedBaseUrl(settings.openai?.baseUrl);
+  if (provider === 'ollama') {
+    const ollamaUrl = settings.ollama?.baseUrl || OLLAMA_DEFAULT_BASE_URL;
+    if (!isLoopbackBridgeUrl(ollamaUrl)) throw providerError('csp_blocked');
+  }
 
   switch (provider) {
     case 'anthropic': {

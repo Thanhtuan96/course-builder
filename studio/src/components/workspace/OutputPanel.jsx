@@ -2,6 +2,7 @@
  * Output panel for the workspace (CODE-02, CODE-03) — stdout, stderr, per-check pass/fail,
  * SQL result tables and a sandboxed HTML preview.
  */
+import { useEffect, useRef } from 'react';
 import { Badge } from '../ui/Badge.jsx';
 import { useT } from '../../lib/i18n/index.js';
 
@@ -31,6 +32,31 @@ function CheckList({ checks }) {
         ))}
       </ul>
     </div>
+  );
+}
+
+function HtmlPreview({ html }) {
+  const t = useT();
+  const frameRef = useRef(null);
+
+  const post = () => {
+    frameRef.current?.contentWindow?.postMessage({ type: 'preview-html', html }, '*');
+  };
+
+  useEffect(() => {
+    post();
+  }, [html]);
+
+  return (
+    <iframe
+      key={html}
+      ref={frameRef}
+      title={t('workspace.preview')}
+      sandbox="allow-scripts"
+      src="./preview.html"
+      onLoad={post}
+      className="h-64 w-full rounded-lg border border-neutral-200 bg-white dark:border-neutral-800"
+    />
   );
 }
 
@@ -123,12 +149,7 @@ export function OutputPanel({ output, runnerInfo = null }) {
       {output.preview?.html ? (
         <div>
           <p className="mb-1 text-xs font-medium uppercase tracking-wide text-neutral-500">{t('workspace.preview')}</p>
-          <iframe
-            title={t('workspace.preview')}
-            sandbox="allow-scripts"
-            srcDoc={output.preview.html}
-            className="h-64 w-full rounded-lg border border-neutral-200 bg-white dark:border-neutral-800"
-          />
+          <HtmlPreview html={output.preview.html} />
         </div>
       ) : null}
 

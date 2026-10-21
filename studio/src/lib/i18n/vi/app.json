@@ -1,0 +1,23 @@
+{
+  "loading": "Đang tải Professor Studio…",
+  "loadingShort": "Đang tải…",
+  "notFound": {
+    "title": "Không tìm thấy trang",
+    "description": "Đường dẫn này không tồn tại.",
+    "back": "Về trang chủ"
+  },
+  "storageDecision": {
+    "title": "Dữ liệu học tập của bạn nên nằm ở đâu?",
+    "body": "Dữ liệu của bạn được tìm thấy ở nhiều nơi. Hãy chọn nơi Studio dùng từ giờ — không có gì bị xoá, và bạn có thể chuyển hoặc xoá bản còn lại sau trong Cài đặt.",
+    "sqlite": "Tệp SQLite",
+    "browser": "Trình duyệt này",
+    "records": "{n} bản ghi"
+  },
+  "storageBlocked": {
+    "title": "Máy chủ cục bộ chưa chạy",
+    "body": "Bạn đã chọn lưu dữ liệu học tập vào tệp SQLite, nên Studio sẽ không đụng đến bộ nhớ trình duyệt. Hãy khởi động máy chủ cục bộ rồi thử lại.",
+    "retry": "Thử lại",
+    "switch": "Chuyển sang bộ nhớ trình duyệt…",
+    "countMismatch": "Số lượng không khớp nên chưa chuyển gì ({fields})."
+  }
+}

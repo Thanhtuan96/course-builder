@@ -1,0 +1,45 @@
+{
+  "title": "New course",
+  "subtitle": "Describe what you want to learn. Professor proposes a syllabus you can edit before starting.",
+  "topic": {
+    "label": "What do you want to learn?",
+    "placeholder": "e.g. Kubernetes networking, Music theory, Linear algebra"
+  },
+  "level": "Level",
+  "language": "Lesson language",
+  "useDifferent": "Use a different language for this course",
+  "goal": {
+    "label": "Your goal",
+    "placeholder": "e.g. Pass the CKA exam, compose my first song"
+  },
+  "propose": "Propose syllabus",
+  "proposing": "Proposing…",
+  "stop": "Stop",
+  "skipAi": "Skip AI — start an empty course",
+  "hint": {
+    "before": "Using a no-key AI source? Configure it in",
+    "settingsLink": "Settings",
+    "after": ", or open the demo course first."
+  },
+  "courseTitle": "Course title",
+  "description": "Description",
+  "courseKind": "Course kind",
+  "detected": "Detected: {reason}",
+  "yourArtifact": "Your artifact",
+  "addToDo": "Add to “{label}”",
+  "artifactTitle": "Artifact title",
+  "artifactTitlePlaceholder": "e.g. A deployed URL shortener + repo",
+  "deliverable": "What you'll ship",
+  "deliverablePlaceholder": "The ONE concrete, real thing this course builds toward.",
+  "definitionOfDone": "Definition of Done",
+  "doneBulletPlaceholder": "A checkable finished-state bullet",
+  "removeItem": "Remove item",
+  "syllabus": "Syllabus · {count} {lessonWord}",
+  "lessonNTitle": "Lesson {n} title",
+  "summary": "Summary",
+  "moveUp": "Move up",
+  "moveDown": "Move down",
+  "addLesson": "Add lesson",
+  "start": "Start course",
+  "starting": "Starting…"
+}

@@ -1,0 +1,38 @@
+{
+  "title": "Tutor",
+  "capstoneTitle": "Tutor · Capstone mode",
+  "desc": "Socratic help for “{title}”. The tutor explains ideas and guides the exercise — it never does the work for you.",
+  "capstoneDesc": "Concepts only — no hints, no code, no answers. The implementation is all you.",
+  "noSource": "No AI source is configured yet.",
+  "openSettings": "Open Settings",
+  "noSourceAfter": "to add a key, use a local model, or run the local agent bridge.",
+  "loadingHistory": "Loading history…",
+  "stop": "Stop",
+  "send": "Send",
+  "empty": {
+    "title": "Ask about this lesson",
+    "description": "Stuck on the exercise? Try a hint — the tutor will nudge you one step at a time."
+  },
+  "capstoneEmpty": {
+    "title": "Discuss the concepts",
+    "description": "The capstone is your solo build. Use this chat to think through a concept — not for hints, steps or code."
+  },
+  "capstoneNotice": "Capstone mode: the tutor will only discuss concepts. It will not give hints, steps, code or answers — and it will refuse if you ask.",
+  "placeholder": "Ask a question… (Enter to send, Shift+Enter for a new line)",
+  "capstonePlaceholder": "Ask about a concept… (no hints or code in capstone mode)",
+  "checkPlaceholder": "Paste your attempt here, then press Enter — I’ll point out what’s right first.",
+  "checkHint": "Paste your attempt and send it.",
+  "guideHint": "You do the work; the tutor guides.",
+  "capstoneFooter": "Concepts only — the capstone is your solo build.",
+  "ariaInput": "Message the tutor",
+  "thinking": "thinking…",
+  "quickAria": "Tutor quick actions",
+  "hintLabel": "Hint {n} of {total}",
+  "mode": {
+    "explain_simpler": "Explain simpler",
+    "hint": "Give me a hint",
+    "check_answer": "Check my answer",
+    "quiz": "Quiz me"
+  },
+  "languageNotice": "The reply came back in another language, so Professor asked the tutor again in {language}."
+}

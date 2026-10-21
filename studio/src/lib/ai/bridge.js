@@ -16,6 +16,7 @@ import { parseSSE } from './sse.js';
 import { createGenerateJson, MAX_TOKENS } from './provider-utils.js';
 import { providerError, isAbortError, ProviderError } from './errors.js';
 import { localFetch, classifyNetworkError, mapHttpError } from './fetch-local.js';
+import { assertLoopbackBridgeUrl } from '../settings.js';
 
 export const DEFAULT_BRIDGE_URL = 'http://localhost:3000';
 const RUN_HINT = 'Run `npx course-professor web` (or `npm start` in the repo), then retry.';
@@ -25,6 +26,8 @@ const RUN_HINT = 'Run `npx course-professor web` (or `npm start` in the repo), t
  */
 export function createBridgeProvider({ bridgeUrl = DEFAULT_BRIDGE_URL, bridgeToken, agent, model } = {}) {
   const root = String(bridgeUrl || '').replace(/\/$/, '');
+  // SEC-12: refuse to attach the pairing token to anything but a loopback endpoint.
+  assertLoopbackBridgeUrl(root);
   const headers = {
     'Content-Type': 'application/json',
     ...(bridgeToken ? { 'X-Studio-Token': bridgeToken } : {}),

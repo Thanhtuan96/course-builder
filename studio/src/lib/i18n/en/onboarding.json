@@ -1,0 +1,35 @@
+{
+  "step": "Step {n} of {total} · {name}",
+  "steps": {
+    "welcome": "Welcome",
+    "storage": "Where data is saved",
+    "source": "Choose an AI source",
+    "connect": "Connect",
+    "ready": "You are ready"
+  },
+  "skip": "Skip",
+  "back": "Back",
+  "next": "Next",
+  "tryDemo": "Try the demo course",
+  "createFirst": "Create your first course",
+  "welcome": {
+    "title": "Learn anything with a Socratic professor",
+    "body": "Create a course, study generated lessons, practise with quizzes and flashcards, and ask a tutor that guides you instead of doing the work for you.",
+    "privacy": "Everything stays on your device. Your API keys are never uploaded or included in backups.",
+    "language": "Learning language"
+  },
+  "storage": {
+    "title": "Where should your learning data be saved?",
+    "body": "You can change this later in Settings — Studio will offer to move your data for you."
+  },
+  "source": {
+    "title": "Where should lessons come from?"
+  },
+  "connect": {
+    "title": "Connect and test"
+  },
+  "ready": {
+    "title": "You are all set",
+    "body": "Create your first course, or explore the bundled demo course — it works with no provider at all."
+  }
+}
