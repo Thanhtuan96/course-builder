@@ -1,9 +1,10 @@
 /**
  * useSSE.js - POST-based streaming hook for chat responses
- * Uses fetch() with ReadableStream instead of EventSource (which only supports GET)
+ * Uses fetch() with ReadableStream so custom auth headers can be sent.
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { authHeaders, resolveApiUrl } from '../api/client.js';
 
 /**
  * Custom hook for streaming chat responses via POST + SSE
@@ -38,9 +39,9 @@ export function useSSE(url, options = {}) {
     setIsConnected(true);
 
     try {
-      const response = await fetch(requestUrl, {
+      const response = await fetch(resolveApiUrl(requestUrl), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
         body: body ? JSON.stringify(body) : null,
         signal: abortController.signal,
       });

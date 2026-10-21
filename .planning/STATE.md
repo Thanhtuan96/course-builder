@@ -4,17 +4,17 @@ milestone: v3.0
 current_phase: 2
 current_phase_name: Security Release Gate and Legacy Gating
 status: planning
-stopped_at: Wave 1 in progress (Phases 2-6 in parallel workers); Phases 3, 5, 6 merged
+stopped_at: Wave 1 in progress (Phases 2-6 in parallel workers); Phases 2, 3, 5, 6 merged
 last_updated: "2026-10-16T17:59:55.029Z"
 last_activity: 2026-10-22
-last_activity_desc: Phase 5 Beta Data Foundation squash-merged into develop
+last_activity_desc: Phase 2 Security Release Gate squash-merged into develop
 state_head: b17f055b1e3396a76cff241fa525f4ea00d2e194
 progress:
   total_phases: 13
-  completed_phases: 4
-  total_plans: 15
-  completed_plans: 15
-  percent: 31
+  completed_phases: 5
+  total_plans: 20
+  completed_plans: 20
+  percent: 38
 ---
 
 # Project State
@@ -29,11 +29,11 @@ See: .planning/PROJECT.md (updated 2026-10-17)
 ## Current Position
 
 Phase: Wave 1 (Phases 2–6) of 13 — running in parallel OpenCode workers
-Plan: Phases 3, 5, 6 complete; Phase 4 reviewed (merges after Phase 2); Phase 2 in progress
+Plan: Phases 2, 3, 5, 6 complete; Phase 4 merging next
 Status: In progress
-Last activity: 2026-10-22 — Phase 5 Beta Data Foundation merged (root 364, studio 527); Wave 2 API frozen
+Last activity: 2026-10-22 — Phase 2 Security Release Gate merged (root 570 incl. security suite, studio 527)
 
-Progress: [███░░░░░░░] 31%
+Progress: [████░░░░░░] 38%
 
 ## Performance Metrics
 

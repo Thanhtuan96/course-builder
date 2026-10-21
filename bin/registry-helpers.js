@@ -3,7 +3,7 @@
  * These functions are imported by bin/cli.js and test/cli.test.js.
  */
 import { existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync, statSync } from 'fs';
-import { join, dirname, basename } from 'path';
+import { join, dirname } from 'path';
 import os from 'os';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
@@ -84,12 +84,15 @@ export function style(type, text) {
 
 // ─── Input validation ────────────────────────────────────────────────────────
 
+const ITEM_NAME = /^[a-z0-9][a-z0-9-]*$/;
+
 /**
- * Reject names that are empty, contain path separators, or are just ".".
+ * Reject names that are not lowercase kebab-case slugs. This blocks `.`, `..`, `...`, `a..b`,
+ * uppercase, `%`, path separators, leading separators and anything else outside `[a-z0-9-]`.
  * @param {string} name
  */
 export function validateItemName(name) {
-  if (!name || basename(name) !== name || name === '.') {
+  if (typeof name !== 'string' || !ITEM_NAME.test(name)) {
     console.error(style('error', 'Invalid name'));
     process.exit(1);
   }

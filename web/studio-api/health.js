@@ -5,10 +5,12 @@
  * routes live in `bridge.js`. Everything that shells out (`which`, model probes) is best-effort and
  * never throws.
  */
-import { execSync, execFileSync } from 'child_process';
-import { existsSync } from 'fs';
-import { homedir } from 'os';
+import { execFileSync } from 'child_process';
+import { existsSync, mkdtempSync, rmSync } from 'fs';
+import { homedir, tmpdir } from 'os';
 import { join } from 'path';
+
+import * as security from '../security.js';
 
 /**
  * The six local agents the bridge can drive. `binaries` lists every executable name accepted for
@@ -80,12 +82,35 @@ const OLLAMA_PROBE_TIMEOUT_MS = 700;
 /* ------------------------------------------------------------------ helpers */
 
 function commandExists(command) {
+  return Boolean(security.resolveExecutable(command));
+}
+
+const LOOPBACK_OLLAMA_HOSTS = new Set(['127.0.0.1', 'localhost', '::1']);
+
+/**
+ * Resolve and validate `OLLAMA_HOST`. A non-loopback host is refused unless the user explicitly
+ * opted in with `PROFESSOR_ALLOW_NON_LOOPBACK_OLLAMA=1` (D-15).
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {{ ok: true, base: string } | { ok: false, base: string, error: string }}
+ */
+export function ollamaBase(env = process.env) {
+  const base = String(env.OLLAMA_HOST || 'http://127.0.0.1:11434').replace(/\/$/, '');
+  let url;
   try {
-    execSync(`which ${command}`, { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] });
-    return true;
+    url = new URL(base);
   } catch {
-    return false;
+    return { ok: false, base, error: `OLLAMA_HOST is not a valid URL: ${base}` };
   }
+  const hostname = String(url.hostname || '').replace(/^\[|\]$/g, '').toLowerCase();
+  if (LOOPBACK_OLLAMA_HOSTS.has(hostname)) return { ok: true, base };
+  if (env.PROFESSOR_ALLOW_NON_LOOPBACK_OLLAMA === '1') return { ok: true, base };
+  return {
+    ok: false,
+    base,
+    error:
+      `OLLAMA_HOST must point to a loopback address (127.0.0.1, localhost or [::1]); ` +
+      `refusing non-loopback host ${hostname || base}.`,
+  };
 }
 
 function homeFile(...parts) {
@@ -142,7 +167,9 @@ export function detectAgents(env = process.env) {
 
 /** Probe the local Ollama daemon (short timeout). Returns whether `/api/tags` answers. */
 export async function probeOllama(env = process.env) {
-  const base = String(env.OLLAMA_HOST || 'http://127.0.0.1:11434').replace(/\/$/, '');
+  const host = ollamaBase(env);
+  if (!host.ok) return false;
+  const base = host.base;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), OLLAMA_PROBE_TIMEOUT_MS);
   try {
@@ -157,18 +184,35 @@ export async function probeOllama(env = process.env) {
 
 /* ------------------------------------------------------------------ model lists */
 
-/** Run a CLI command synchronously with a timeout; never throws. */
-function runCommand(command, args, { timeout = MODEL_PROBE_TIMEOUT_MS, env } = {}) {
+/**
+ * Run a CLI command synchronously with a timeout; never throws. Uses the same agent contract as
+ * the bridge: scrubbed allowlisted env, a throwaway cwd, shell-less execFile, and the argv deny
+ * check (SEC-09). A model probe must never inherit the server's full environment or run in the repo.
+ */
+function runCommand(command, args, { timeout = MODEL_PROBE_TIMEOUT_MS, env, agent = command } = {}) {
+  let cwd;
   try {
+    cwd = mkdtempSync(join(tmpdir(), 'professor-'));
+    const childEnv = security.buildAgentEnv(agent, env || process.env);
+    security.assertSafeAgentInvocation(agent, args, childEnv);
     const stdout = execFileSync(command, args, {
+      cwd,
       encoding: 'utf-8',
       timeout,
       stdio: ['ignore', 'pipe', 'pipe'],
-      env: env || process.env,
+      env: childEnv,
     });
     return { ok: true, stdout: String(stdout), stderr: '' };
   } catch (err) {
     return { ok: false, stdout: String(err.stdout || ''), stderr: String(err.stderr || err.message || '') };
+  } finally {
+    if (cwd) {
+      try {
+        rmSync(cwd, { recursive: true, force: true });
+      } catch {
+        /* best-effort temp cleanup */
+      }
+    }
   }
 }
 
@@ -227,7 +271,9 @@ export function curatedAgentModels(agent) {
 }
 
 async function listOllamaModels(env = process.env) {
-  const base = String(env.OLLAMA_HOST || 'http://127.0.0.1:11434').replace(/\/$/, '');
+  const host = ollamaBase(env);
+  if (!host.ok) throw Object.assign(new Error(host.error), { code: 'config' });
+  const base = host.base;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), MODEL_PROBE_TIMEOUT_MS);
   try {
@@ -278,7 +324,7 @@ export async function listAgentModels(agent, { env = process.env, installed = tr
   }
 
   if (agent === 'opencode') {
-    const res = run('opencode', ['models'], { env });
+    const res = run('opencode', ['models'], { env, agent: 'opencode' });
     const models = parseOpencodeModels(res.stdout);
     if (models.length) return { ok: true, agent, models: withDefault(agent, models), source: 'opencode' };
     return { ok: true, agent, models: curated, source: 'curated' };
@@ -286,7 +332,7 @@ export async function listAgentModels(agent, { env = process.env, installed = tr
 
   if (agent === 'cursor') {
     for (const bin of AGENT_BINARIES.cursor) {
-      const res = run(bin, ['models'], { env });
+      const res = run(bin, ['models'], { env, agent: 'cursor' });
       const models = parseCursorModels(res.stdout);
       if (models.length) return { ok: true, agent, models: withDefault(agent, models), source: bin };
     }
@@ -294,7 +340,7 @@ export async function listAgentModels(agent, { env = process.env, installed = tr
   }
 
   if (agent === 'antigravity') {
-    const res = run('agy', ['models'], { env });
+    const res = run('agy', ['models'], { env, agent: 'antigravity' });
     const models = parseAntigravityModels(res.stdout);
     if (models.length) return { ok: true, agent, models: withDefault(agent, models), source: 'agy' };
     return { ok: true, agent, models: curated, source: 'curated' };

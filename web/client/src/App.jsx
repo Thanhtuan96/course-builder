@@ -8,7 +8,10 @@ import SplitPane from './components/SplitPane.jsx';
 import LecturePanel from './components/LecturePanel.jsx';
 import ChatPanel from './components/ChatPanel.jsx';
 import MobileTabSwitcher from './components/MobileTabSwitcher.jsx';
-import { fetchCourses } from './api/client.js';
+import DeprecationBanner from './components/DeprecationBanner.jsx';
+import { fetchCourses, initPairing } from './api/client.js';
+
+initPairing();
 
 /**
  * Main App component - wires all components together
@@ -102,6 +105,7 @@ export default function App() {
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-slate-100">
+      <DeprecationBanner />
       <Header 
         selectedCourse={selectedCourse} 
         onCourseSelect={handleCourseSelect}

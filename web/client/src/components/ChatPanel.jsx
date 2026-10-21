@@ -5,6 +5,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import CommandPills from './CommandPills.jsx';
 import { useSSE } from '../hooks/useSSE.js';
+import { apiBase, authHeaders, hasToken, pairingError } from '../api/client.js';
 import { Badge } from './ui/badge.jsx';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert.jsx';
 import { Button } from './ui/button.jsx';
@@ -42,6 +43,8 @@ export default function ChatPanel({ courseSlug, currentPhase = 'idle', onSendMes
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [phase, setPhase] = useState(currentPhase);
+  const pairingRequired = !hasToken();
+  const pairingMessage = pairingError();
   const messagesEndRef = useRef(null);
   const lastCommandRef = useRef('');
 
@@ -83,8 +86,11 @@ export default function ChatPanel({ courseSlug, currentPhase = 'idle', onSendMes
 
   useEffect(() => {
     async function loadCapabilities() {
+      if (!hasToken()) return;
       try {
-        const res = await fetch('/api/agents/capabilities');
+        const res = await fetch(`${apiBase()}/agents/capabilities`, {
+          headers: authHeaders(),
+        });
         if (!res.ok) return;
         const json = await res.json();
         setCapabilities(json.capabilities || null);
@@ -97,8 +103,12 @@ export default function ChatPanel({ courseSlug, currentPhase = 'idle', onSendMes
 
   useEffect(() => {
     async function loadModels() {
+      if (!hasToken()) return;
       try {
-        const res = await fetch(`/api/agents/models?provider=${encodeURIComponent(provider)}`);
+        const res = await fetch(
+          `${apiBase()}/agents/models?provider=${encodeURIComponent(provider)}`,
+          { headers: authHeaders() }
+        );
         if (!res.ok) return;
         const json = await res.json();
         setResolvedProvider(json.provider || provider);
@@ -180,7 +190,7 @@ export default function ChatPanel({ courseSlug, currentPhase = 'idle', onSendMes
   }, [streamedData, isStreaming]);
 
   const sendMessage = useCallback(async (text) => {
-    if (!text.trim() || isStreaming) return;
+    if (!text.trim() || isStreaming || pairingRequired) return;
     lastCommandRef.current = text.trim();
 
     const userMessage = { role: 'user', content: text };
@@ -243,6 +253,7 @@ export default function ChatPanel({ courseSlug, currentPhase = 'idle', onSendMes
     sessionId,
     provider,
     model,
+    pairingRequired,
   ]);
 
   function handleKeyDown(e) {
@@ -346,6 +357,15 @@ export default function ChatPanel({ courseSlug, currentPhase = 'idle', onSendMes
         )}
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 py-3 md:px-4 md:py-4">
+        {pairingRequired && (
+          <Alert variant="destructive" className="max-w-[92%]">
+            <AlertTitle>Pair this browser</AlertTitle>
+            <AlertDescription>
+              {pairingMessage ||
+                'Open the pairing URL printed by `course-professor web` to load the token.'}
+            </AlertDescription>
+          </Alert>
+        )}
         {messages.map((msg, i) => (
           <div
             key={i}
@@ -371,21 +391,21 @@ export default function ChatPanel({ courseSlug, currentPhase = 'idle', onSendMes
         <div ref={messagesEndRef} />
       </div>
 
-      <CommandPills phase={phase} onCommandClick={handleCommandClick} disabled={isStreaming} />
+      <CommandPills phase={phase} onCommandClick={handleCommandClick} disabled={isStreaming || pairingRequired} />
 
       <div className="flex gap-2 border-t border-slate-800 bg-slate-900 px-3 py-2 md:px-4 md:py-3">
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Type a message or command... (Enter to send)"
-          disabled={isStreaming}
+          placeholder={pairingRequired ? 'Pair this browser to chat' : 'Type a message or command... (Enter to send)'}
+          disabled={isStreaming || pairingRequired}
           rows={2}
           className="min-h-[44px] flex-1 resize-none rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus-visible:ring-2 focus-visible:ring-indigo-500"
         />
         <Button
           onClick={() => sendMessage(input)}
-          disabled={isStreaming || !input.trim()}
+          disabled={isStreaming || pairingRequired || !input.trim()}
           className="h-auto min-w-11 px-3"
           title="Send message"
         >

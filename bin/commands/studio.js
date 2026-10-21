@@ -5,19 +5,21 @@
  *   2. starts the local server (`web/server.js`, production, on `--api-port`) with a pairing token
  *   3. serves `studio/dist` on `--port` (tiny static server, loopback only)
  *   4. waits for `/api/studio/health`, then opens
- *      `http://localhost:<port>/#/settings?bridge=…&token=…` (unless `--no-open`)
+ *      `http://localhost:<port>/#token=…` (plus `&bridge=…` for a non-default API port)
+ *      (unless `--no-open`)
  *
  * Inherited `CLAUDECODE` / `CLAUDE_CODE_*` env vars are stripped from the child so a nested agent
  * CLI (spawned by the bridge) behaves like a normal terminal.
  */
 import { spawn, execSync } from 'child_process';
-import { existsSync, readFileSync, statSync, readdirSync } from 'fs';
+import { createServer } from 'http';
+import { existsSync, statSync, readdirSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
-import { randomBytes } from 'crypto';
-import { startStaticServer } from '../static-server.js';
+import { createStaticHandler } from '../static-server.js';
 import { requireStudioNode } from '../node-version.js';
+import * as security from '../../web/security.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = join(__dirname, '..', '..');
@@ -29,7 +31,7 @@ export const HEALTH_PATH = '/api/studio/health';
 /**
  * Parse `--port`, `--api-port`, `--no-open` (both `--flag value` and `--flag=value` forms).
  * @param {string[]} [args]
- * @returns {{ port: number, apiPort: number, open: boolean }}
+ * @returns {{ port: number, apiPort: number, open: boolean, rotateToken: boolean }}
  */
 export function parseStudioArgs(args = []) {
   const valueOf = (name, fallback) => {
@@ -47,6 +49,7 @@ export function parseStudioArgs(args = []) {
     port: asPort(valueOf('--port', String(DEFAULT_PORT)), DEFAULT_PORT),
     apiPort: asPort(valueOf('--api-port', String(DEFAULT_API_PORT)), DEFAULT_API_PORT),
     open: !args.includes('--no-open'),
+    rotateToken: args.includes('--rotate-token'),
   };
 }
 
@@ -136,29 +139,38 @@ export function mergeOrigins(existing, port) {
 }
 
 /**
- * @param {{ studioPort: number, apiPort: number, token: string }} opts
+ * Build the fragment pairing URL (D-03):
+ *   <studio-url>/#token=<encoded token>[&bridge=<encoded apiUrl>]
+ * The bridge parameter is only present when the API port is not the default 3000. Ports are
+ * compared numerically because `parseWebArgs().port` is a string such as `'3000'`.
+ *
+ * @param {{ studioPort: number|string, apiPort: number|string, token: string }} opts
  * @returns {{ apiUrl: string, studioUrl: string, pairingUrl: string }}
  */
 export function buildPairingUrl({ studioPort, apiPort, token }) {
   const apiUrl = `http://localhost:${apiPort}`;
   const studioUrl = `http://localhost:${studioPort}`;
-  const query = `bridge=${encodeURIComponent(apiUrl)}&token=${encodeURIComponent(token)}`;
-  return { apiUrl, studioUrl, pairingUrl: `${studioUrl}/#/settings?${query}` };
+  let pairingUrl = `${studioUrl}/#token=${encodeURIComponent(token)}`;
+  if (Number(apiPort) !== DEFAULT_API_PORT) {
+    pairingUrl += `&bridge=${encodeURIComponent(apiUrl)}`;
+  }
+  return { apiUrl, studioUrl, pairingUrl };
 }
 
-/** Token: env override → persisted `web/.studio-token` → freshly generated (hex). */
-export function resolveStudioToken({ repoRoot = REPO_ROOT, env = process.env } = {}) {
-  if (env.STUDIO_BRIDGE_TOKEN) return env.STUDIO_BRIDGE_TOKEN;
-  const tokenFile = join(repoRoot, 'web', '.studio-token');
-  try {
-    if (existsSync(tokenFile)) {
-      const token = readFileSync(tokenFile, 'utf-8').trim();
-      if (token) return token;
-    }
-  } catch {
-    /* fall through */
-  }
-  return randomBytes(24).toString('hex');
+/**
+ * Resolve the pairing token through the shared helper (D-01/D-02). `repoRoot` is still accepted for
+ * tests but only supplies the one-time legacy `web/.studio-token` migration path; the token itself
+ * always lives under `PROFESSOR_HOME`.
+ *
+ * @param {{ repoRoot?: string, env?: Record<string,string|undefined>, home?: string }} [opts]
+ * @returns {string}
+ */
+export function resolveStudioToken({ repoRoot = REPO_ROOT, env = process.env, home } = {}) {
+  return security.ensureStudioToken({
+    env,
+    home: home || env.PROFESSOR_HOME,
+    legacyFile: security.legacyTokenPath(repoRoot),
+  });
 }
 
 /**
@@ -185,6 +197,48 @@ export async function waitForHealth({
     await new Promise((r) => setTimeout(r, intervalMs));
   }
   throw new Error(`Studio server did not become healthy at ${url} (${lastError})`);
+}
+
+/**
+ * Host-validating Studio static server. `bin/static-server.js` itself is not owned by Phase 2, so
+ * this thin wrapper rejects a spoofed/missing Host before delegating to its static handler (SEC-03).
+ *
+ * @param {{ root: string, host?: string, port?: number, extraHosts?: string[] }} opts
+ * @returns {Promise<{ server: import('http').Server, url: string, port: number,
+ *                     close: () => Promise<void> }>}
+ */
+export async function createStudioStaticServer({
+  root,
+  host = '127.0.0.1',
+  port = 0,
+  extraHosts = [],
+} = {}) {
+  const handler = createStaticHandler({ root, spaFallback: true });
+  const server = createServer((req, res) => {
+    if (!security.isAllowedHost(req.headers?.host, { extraHosts })) {
+      res.writeHead(403, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ ok: false, error: 'Forbidden host', code: 'forbidden_host' }));
+      return;
+    }
+    handler(req, res);
+  });
+
+  await new Promise((resolveListen, reject) => {
+    server.once('error', reject);
+    server.listen(port, host, () => {
+      server.removeListener('error', reject);
+      resolveListen();
+    });
+  });
+
+  const address = server.address();
+  const actualPort = typeof address === 'object' && address ? address.port : port;
+  return {
+    server,
+    port: actualPort,
+    url: `http://localhost:${actualPort}`,
+    close: () => new Promise((done) => server.close(() => done())),
+  };
 }
 
 /** Open a URL in the OS browser. Never throws. */
@@ -279,7 +333,28 @@ export async function run(ctx = {}) {
   requireStudioNode(ctx.nodeVersion);
 
   const ora = ctx.ora || (await import('ora')).default;
-  const { port, apiPort, open } = parseStudioArgs(args);
+  const { port, apiPort, open, rotateToken } = parseStudioArgs(args);
+
+  const hasStartRequest = args.some((arg) => arg !== '--rotate-token');
+  let rotatedToken = null;
+  if (rotateToken) {
+    try {
+      rotatedToken = security.rotateStudioToken({ env: process.env });
+    } catch (err) {
+      if (err.code === 'env_token_immutable') {
+        console.error(style('error', err.message));
+      } else {
+        console.error(style('error', `Could not rotate token: ${err.message}`));
+      }
+      throw err;
+    }
+    const { pairingUrl } = buildPairingUrl({ studioPort: port, apiPort, token: rotatedToken });
+    console.log('');
+    console.log(`  Pairing token: ${security.maskToken(rotatedToken)}`);
+    console.log(`  Pairing URL:   ${pairingUrl}`);
+    console.log('');
+    if (!hasStartRequest) return 0;
+  }
 
   const webDir = join(repoRoot, 'web');
   const studioDir = join(repoRoot, 'studio');
@@ -306,13 +381,15 @@ export async function run(ctx = {}) {
     throw new Error(`Studio build missing at ${distDir}. Run: cd ${studioDir} && npm run build`);
   }
 
-  const token = resolveStudioToken({ repoRoot });
+  const token = rotatedToken || resolveStudioToken({ repoRoot });
   const { apiUrl, studioUrl, pairingUrl } = buildPairingUrl({ studioPort: port, apiPort, token });
 
   const env = stripAgentEnv(process.env);
   env.NODE_ENV = 'production';
   env.PORT = String(apiPort);
-  env.STUDIO_BRIDGE_TOKEN = token;
+  if (process.env.STUDIO_BRIDGE_TOKEN) {
+    env.STUDIO_BRIDGE_TOKEN = process.env.STUDIO_BRIDGE_TOKEN;
+  }
   env.STUDIO_ORIGINS = mergeOrigins(process.env.STUDIO_ORIGINS, port);
 
   const serverSpinner = ora(`Starting local server on ${apiUrl}…`).start();
@@ -360,8 +437,9 @@ export async function run(ctx = {}) {
     }
   });
 
+  const extraHosts = security.resolveExtraHosts({ env: process.env, host: process.env.HOST });
   try {
-    staticServer = await startStaticServer({ root: distDir, port });
+    staticServer = await createStudioStaticServer({ root: distDir, port, extraHosts });
   } catch (err) {
     serverSpinner.fail('Could not serve Studio.');
     console.error(style('error', `Static server failed on port ${port}: ${err.message}`));

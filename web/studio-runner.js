@@ -21,9 +21,12 @@
  */
 import express from 'express';
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { constants as fsConstants } from 'node:fs';
+import { mkdir, open } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { dirname, join, resolve, sep } from 'node:path';
+import { dirname, join } from 'node:path';
+
+import * as security from './security.js';
 
 export const DEFAULT_TIMEOUT_MS = 20_000;
 export const MAX_TIMEOUT_MS = 30_000;
@@ -39,6 +42,84 @@ export const COMMANDS = {
   rust: "rustc",
   bash: "bash",
 };
+
+/**
+ * Commands that must never become reachable through this runner, even if a future language mapping
+ * is added. Checked by `buildPipeline` and again in `runStep` (defense in depth).
+ */
+export const COMMAND_DENYLIST = new Set([
+  'npm',
+  'npx',
+  'pnpm',
+  'yarn',
+  'playwright',
+  'sh',
+  'bash',
+  'zsh',
+  'fish',
+  'cmd',
+  'powershell',
+]);
+
+/**
+ * Reject a deny-listed command. Bash is the single exception and only for the explicit `bash`
+ * language with `allowBash` true.
+ * @param {string} command
+ * @param {{ allowBash?: boolean }} [opts]
+ * @returns {true}
+ */
+export function assertCommandAllowed(command, { allowBash = false } = {}) {
+  const name = String(command || '')
+    .split(/[\\/]/)
+    .pop()
+    .toLowerCase();
+  if (!name) {
+    const err = new Error('No command supplied.');
+    err.code = 'command_denied';
+    throw err;
+  }
+  if (name === 'bash' && allowBash) return true;
+  if (COMMAND_DENYLIST.has(name)) {
+    const err = new Error(`Command "${name}" is not allowed by the local runner.`);
+    err.code = 'command_denied';
+    throw err;
+  }
+  return true;
+}
+
+/**
+ * Pure concurrency counter. `tryAcquire` returns false when saturated; `release` never drops below
+ * zero, so an extra release from a close/error handler is harmless.
+ * @param {{ max?: number }} [opts]
+ * @returns {{ tryAcquire: () => boolean, release: () => void, readonly size: number, readonly max: number }}
+ */
+export function createRunLimiter({ max = 2 } = {}) {
+  const limit = Math.min(8, Math.max(1, Math.trunc(Number(max) || 1)));
+  let active = 0;
+  return {
+    tryAcquire() {
+      if (active >= limit) return false;
+      active += 1;
+      return true;
+    },
+    release() {
+      if (active > 0) active -= 1;
+    },
+    get size() {
+      return active;
+    },
+    get max() {
+      return limit;
+    },
+  };
+}
+
+/** Clamp PROFESSOR_MAX_RUNS / options.maxRuns to 1-8, defaulting to 2. */
+function resolveMaxRuns(value) {
+  const n = Math.trunc(Number(value));
+  if (!Number.isFinite(n) || n < 1) return 2;
+  return Math.min(8, n);
+}
 
 const CONTROL_CHARS = /[\u0000-\u001f\u007f]/;
 
@@ -82,35 +163,44 @@ export function defaultWorkspacesRoot() {
  * @returns {Array<{ cmd: string, args: string[] }>}
  */
 export function buildPipeline(language, entry, files, { allowBash = false } = {}) {
+  let steps;
   switch (language) {
     case 'javascript':
-      return [{ cmd: 'node', args: [entry] }];
+      steps = [{ cmd: 'node', args: [entry] }];
+      break;
     case 'python':
-      return [{ cmd: 'python3', args: [entry] }];
+      steps = [{ cmd: 'python3', args: [entry] }];
+      break;
     case 'go':
-      return [{ cmd: 'go', args: ['run', entry] }];
+      steps = [{ cmd: 'go', args: ['run', entry] }];
+      break;
     case 'java': {
       const sources = Object.keys(files).filter((f) => f.endsWith('.java'));
       const list = sources.length ? sources : [entry];
       const className = entry.replace(/\.java$/i, '');
-      return [
+      steps = [
         { cmd: 'javac', args: list },
         { cmd: 'java', args: [className] },
       ];
+      break;
     }
     case 'rust': {
       const bin = `./${entry.replace(/\.rs$/i, '')}`;
-      return [
+      steps = [
         { cmd: 'rustc', args: [entry, '-o', entry.replace(/\.rs$/i, '')] },
         { cmd: bin, args: [] },
       ];
+      break;
     }
     case 'bash':
       if (!allowBash) throw new Error('Bash is not enabled on this server (set PROFESSOR_ALLOW_BASH=1 to allow it).');
-      return [{ cmd: 'bash', args: [entry] }];
+      steps = [{ cmd: 'bash', args: [entry] }];
+      break;
     default:
       throw new Error(`No local toolchain for "${language}". Supported locally: node, python3, go, javac/java, rustc${allowBash ? ', bash' : ''}.`);
   }
+  for (const step of steps) assertCommandAllowed(step.cmd, { allowBash });
+  return steps;
 }
 
 /**
@@ -152,14 +242,21 @@ export function killTree(child) {
 }
 
 /**
- * @param {{ workspacesRoot?: string, allowBash?: boolean }} [options]
+ * @param {{ workspacesRoot?: string, allowBash?: boolean,
+ *           spawnImpl?: typeof spawn, maxRuns?: number,
+ *           mintLimiter?: (max: number) => ReturnType<typeof createRunLimiter> }} [options]
  * @returns {import('express').Router}
  */
 export function createRunnerRouter(options = {}) {
   const workspacesRoot = options.workspacesRoot || defaultWorkspacesRoot();
   const allowBash = options.allowBash ?? process.env.PROFESSOR_ALLOW_BASH === '1';
+  const maxRuns = resolveMaxRuns(options.maxRuns ?? process.env.PROFESSOR_MAX_RUNS);
+  const spawnImpl = options.spawnImpl || spawn;
+  const mintLimiter = options.mintLimiter || ((max) => createRunLimiter({ max }));
+  const limiter = mintLimiter(maxRuns);
   const router = express.Router();
   router.use(express.json({ limit: '4mb' }));
+  router.runLimiter = limiter;
 
   router.get('/toolchains', (_req, res) => {
     const result = {};
@@ -169,7 +266,8 @@ export function createRunnerRouter(options = {}) {
     res.json(result);
   });
 
-  const runHandler = (req, res) => handleRun(req, res, { workspacesRoot, allowBash });
+  const runHandler = (req, res) =>
+    handleRun(req, res, { workspacesRoot, allowBash, spawnImpl, limiter });
   router.post('/', runHandler);
   router.post('/run', runHandler);
 
@@ -183,9 +281,10 @@ export function createRunnerRouter(options = {}) {
 /**
  * @param {import('express').Request} req
  * @param {import('express').Response} res
- * @param {{ workspacesRoot: string, allowBash: boolean }} opts
+ * @param {{ workspacesRoot: string, allowBash: boolean, spawnImpl: typeof spawn,
+ *           limiter: ReturnType<typeof createRunLimiter> }} opts
  */
-async function handleRun(req, res, { workspacesRoot, allowBash }) {
+async function handleRun(req, res, { workspacesRoot, allowBash, spawnImpl, limiter }) {
   const body = req.body || {};
   const courseSlug = String(body.courseSlug || 'workspace');
   const language = String(body.language || '').toLowerCase();
@@ -202,7 +301,7 @@ async function handleRun(req, res, { workspacesRoot, allowBash }) {
     return;
   }
   for (const file of files) {
-    if (!isSafeRelPath(file.path)) {
+    if (!isSafeRelPath(file.path) || !security.isSafeWorkspaceRelPath(file.path)) {
       res.status(400).json({ error: `Unsafe file path: ${file.path}` });
       return;
     }
@@ -213,26 +312,12 @@ async function handleRun(req, res, { workspacesRoot, allowBash }) {
     return;
   }
   const entryPath = entry || files[0].path;
-  if (!isSafeRelPath(entryPath) || !files.some((f) => f.path === entryPath)) {
+  if (
+    !isSafeRelPath(entryPath) ||
+    !security.isSafeWorkspaceRelPath(entryPath) ||
+    !files.some((f) => f.path === entryPath)
+  ) {
     res.status(400).json({ error: `Entry file is missing or unsafe: ${entryPath}` });
-    return;
-  }
-
-  const courseDir = join(workspacesRoot, courseSlug);
-  try {
-    await mkdir(workspacesRoot, { recursive: true });
-    await mkdir(courseDir, { recursive: true });
-    for (const file of files) {
-      const target = resolve(courseDir, file.path);
-      if (target !== courseDir && !target.startsWith(courseDir + sep)) {
-        res.status(400).json({ error: `Refusing to write outside the workspace: ${file.path}` });
-        return;
-      }
-      await mkdir(dirname(target), { recursive: true });
-      await writeFile(target, file.content, 'utf8');
-    }
-  } catch (err) {
-    res.status(500).json({ error: `Could not prepare workspace: ${err.message}` });
     return;
   }
 
@@ -240,19 +325,89 @@ async function handleRun(req, res, { workspacesRoot, allowBash }) {
   try {
     pipeline = buildPipeline(language, entryPath, Object.fromEntries(files.map((f) => [f.path, f.content])), { allowBash });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(400).json({ error: err.message, ...(err.code ? { code: err.code } : {}) });
     return;
   }
 
-  startStream(res);
-  streamPipeline(pipeline, { cwd: courseDir, timeoutMs, res });
+  // Realpath containment is validated before the limiter and before any filesystem side effect.
+  let courseDir;
+  const targets = [];
+  try {
+    courseDir = security.resolveInside(workspacesRoot, courseSlug);
+    for (const file of files) {
+      targets.push({
+        file,
+        target: security.resolveInside(workspacesRoot, courseSlug, ...file.path.split('/')),
+      });
+    }
+  } catch (err) {
+    res.status(400).json({ error: err.message, code: err.code || 'unsafe_path' });
+    return;
+  }
+
+  if (!limiter.tryAcquire()) {
+    res.setHeader('Retry-After', '1');
+    res.status(429).json({ error: 'Too many concurrent runs', code: 'busy' });
+    return;
+  }
+
+  let released = false;
+  const release = () => {
+    if (released) return;
+    released = true;
+    limiter.release();
+  };
+  res.on('close', release);
+
+  const learnerEnv = {
+    ...security.buildLearnerEnv(process.env),
+    PYTHONUNBUFFERED: '1',
+    PYTHONIOENCODING: 'utf-8',
+  };
+
+  try {
+    try {
+      await mkdir(workspacesRoot, { recursive: true });
+      await mkdir(courseDir, { recursive: true });
+      const flags =
+        fsConstants.O_WRONLY |
+        fsConstants.O_CREAT |
+        fsConstants.O_TRUNC |
+        (fsConstants.O_NOFOLLOW || 0);
+      for (const { file, target } of targets) {
+        await mkdir(dirname(target), { recursive: true });
+        const handle = await open(target, flags, 0o600);
+        try {
+          await handle.writeFile(file.content, 'utf8');
+        } finally {
+          await handle.close();
+        }
+      }
+    } catch (err) {
+      res.status(500).json({ error: `Could not prepare workspace: ${err.message}` });
+      return;
+    }
+
+    startStream(res);
+    await streamPipeline(pipeline, {
+      cwd: courseDir,
+      timeoutMs,
+      res,
+      spawnImpl,
+      allowBash,
+      env: learnerEnv,
+    });
+  } finally {
+    release();
+  }
 }
 
 /**
  * @param {Array<{cmd:string,args:string[]}>} pipeline
- * @param {{ cwd: string, timeoutMs: number, res: import('express').Response }} ctx
+ * @param {{ cwd: string, timeoutMs: number, res: import('express').Response,
+ *           spawnImpl: typeof spawn, allowBash: boolean, env: Record<string,string> }} ctx
  */
-async function streamPipeline(pipeline, { cwd, timeoutMs, res }) {
+async function streamPipeline(pipeline, { cwd, timeoutMs, res, spawnImpl, allowBash, env }) {
   let outputBytes = 0;
   let truncated = false;
   let killed = false;
@@ -314,7 +469,7 @@ async function streamPipeline(pipeline, { cwd, timeoutMs, res }) {
   for (let i = 0; i < pipeline.length; i++) {
     const step = pipeline[i];
     if (killed) break;
-    const code = await runStep(step, { cwd, capture, out: children, send });
+    const code = await runStep(step, { cwd, capture, out: children, send, spawnImpl, allowBash, env });
     if (killed) {
       clearTimeout(timer);
       finish(truncated ? 1 : 124);
@@ -333,18 +488,25 @@ async function streamPipeline(pipeline, { cwd, timeoutMs, res }) {
 
 /**
  * @param {{ cmd: string, args: string[] }} step
- * @param {{ cwd: string, capture: Function, out: any[], send: Function }} ctx
+ * @param {{ cwd: string, capture: Function, out: any[], send: Function,
+ *           spawnImpl: typeof spawn, allowBash: boolean, env: Record<string,string> }} ctx
  * @returns {Promise<number>}
  */
-function runStep(step, { cwd, capture, out, send }) {
+function runStep(step, { cwd, capture, out, send, spawnImpl, allowBash, env }) {
+  try {
+    assertCommandAllowed(step.cmd, { allowBash });
+  } catch (err) {
+    send({ stderr: `Refusing to run ${step.cmd}: ${err.message}\n` });
+    return Promise.resolve(126);
+  }
   return new Promise((resolvePromise) => {
     let child;
     try {
-      child = spawn(step.cmd, step.args, {
+      child = spawnImpl(step.cmd, step.args, {
         cwd,
         shell: false,
         detached: process.platform !== 'win32',
-        env: { ...process.env, PYTHONUNBUFFERED: '1' },
+        env,
       });
     } catch (err) {
       send({ stderr: `Failed to start ${step.cmd}: ${err.message}\n` });

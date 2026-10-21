@@ -1,8 +1,8 @@
 /**
  * @vitest-environment node
  */
-import { describe, it, expect, afterEach } from 'vitest';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync, utimesSync } from 'fs';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, utimesSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { tmpdir } from 'os';
@@ -44,7 +44,7 @@ function mkTemp(prefix = 'cp-studio-') {
 
 describe('parseStudioArgs', () => {
   it('reads defaults', () => {
-    expect(parseStudioArgs([])).toEqual({ port: 5180, apiPort: 3000, open: true });
+    expect(parseStudioArgs([])).toEqual({ port: 5180, apiPort: 3000, open: true, rotateToken: false });
   });
 
   it('reads --port/--api-port in both forms and --no-open', () => {
@@ -52,7 +52,9 @@ describe('parseStudioArgs', () => {
       port: 6000,
       apiPort: 4000,
       open: false,
+      rotateToken: false,
     });
+    expect(parseStudioArgs(['--rotate-token']).rotateToken).toBe(true);
   });
 
   it('falls back on invalid ports', () => {
@@ -111,19 +113,102 @@ describe('mergeOrigins / buildPairingUrl / resolveStudioToken', () => {
     expect(mergeOrigins('http://other:1', 5180)).toBe('http://other:1,http://localhost:5180,http://127.0.0.1:5180');
   });
 
-  it('builds an encoded pairing URL', () => {
-    const { pairingUrl } = buildPairingUrl({ studioPort: 5180, apiPort: 3000, token: 'a b/c' });
-    expect(pairingUrl).toBe('http://localhost:5180/#/settings?bridge=http%3A%2F%2Flocalhost%3A3000&token=a%20b%2Fc');
+  it('builds a fragment pairing URL and only adds &bridge= for a non-default API port', () => {
+    const defaultPort = buildPairingUrl({ studioPort: 5180, apiPort: 3000, token: 'a b/c' });
+    expect(defaultPort.pairingUrl).toBe('http://localhost:5180/#token=a%20b%2Fc');
+    expect(defaultPort.pairingUrl).not.toContain('?token=');
+
+    const stringDefault = buildPairingUrl({ studioPort: 5180, apiPort: '3000', token: 't' });
+    expect(stringDefault.pairingUrl).toBe('http://localhost:5180/#token=t');
+
+    const custom = buildPairingUrl({ studioPort: 5180, apiPort: '4000', token: 't' });
+    expect(custom.pairingUrl).toBe(
+      'http://localhost:5180/#token=t&bridge=http%3A%2F%2Flocalhost%3A4000'
+    );
   });
 
-  it('prefers STUDIO_BRIDGE_TOKEN, then the token file, then generates', () => {
+  it('prefers STUDIO_BRIDGE_TOKEN, then the PROFESSOR_HOME token file, then migrates/generates', () => {
     const root = mkTemp();
-    expect(resolveStudioToken({ repoRoot: root, env: { STUDIO_BRIDGE_TOKEN: 'env-token' } })).toBe('env-token');
-    mkdirSync(join(root, 'web'), { recursive: true });
-    writeFileSync(join(root, 'web', '.studio-token'), 'file-token\n');
-    expect(resolveStudioToken({ repoRoot: root, env: {} })).toBe('file-token');
-    const generated = resolveStudioToken({ repoRoot: mkTemp(), env: {} });
+    const home = mkTemp();
+    expect(
+      resolveStudioToken({ repoRoot: root, env: { STUDIO_BRIDGE_TOKEN: 'env-token', PROFESSOR_HOME: home } })
+    ).toBe('env-token');
+
+    writeFileSync(join(home, 'studio-token'), 'file-token\n');
+    expect(resolveStudioToken({ repoRoot: root, env: { PROFESSOR_HOME: home } })).toBe('file-token');
+
+    const legacyRoot = mkTemp();
+    const legacyHome = mkTemp();
+    mkdirSync(join(legacyRoot, 'web'), { recursive: true });
+    writeFileSync(join(legacyRoot, 'web', '.studio-token'), 'legacy-token\n');
+    expect(
+      resolveStudioToken({ repoRoot: legacyRoot, env: { PROFESSOR_HOME: legacyHome } })
+    ).toBe('legacy-token');
+    expect(readFileSync(join(legacyHome, 'studio-token'), 'utf8').trim()).toBe('legacy-token');
+    expect(existsSync(join(legacyRoot, 'web', '.studio-token'))).toBe(false);
+
+    const generatedHome = mkTemp();
+    const generated = resolveStudioToken({
+      repoRoot: mkTemp(),
+      env: { PROFESSOR_HOME: generatedHome },
+    });
     expect(generated).toMatch(/^[0-9a-f]{48}$/);
+    expect(readFileSync(join(generatedHome, 'studio-token'), 'utf8').trim()).toBe(generated);
+  });
+});
+
+describe('studio --rotate-token', () => {
+  const envKeys = ['PROFESSOR_HOME', 'STUDIO_BRIDGE_TOKEN'];
+
+  async function withEnv(values, fn) {
+    const saved = {};
+    for (const key of envKeys) saved[key] = process.env[key];
+    try {
+      for (const key of envKeys) delete process.env[key];
+      Object.assign(process.env, values);
+      return await fn();
+    } finally {
+      for (const key of envKeys) {
+        if (saved[key] === undefined) delete process.env[key];
+        else process.env[key] = saved[key];
+      }
+    }
+  }
+
+  it('rotates, prints only a mask and exits without starting when used alone', async () => {
+    const home = mkTemp();
+    const logs = [];
+    const logSpy = vi.spyOn(console, 'log').mockImplementation((...args) => {
+      logs.push(args.join(' '));
+    });
+    try {
+      const code = await withEnv({ PROFESSOR_HOME: home }, async () =>
+        run({ repoRoot: mkTemp(), args: ['--rotate-token'], nodeVersion: process.version })
+      );
+      expect(code).toBe(0);
+      const token = readFileSync(join(home, 'studio-token'), 'utf8').trim();
+      expect(token).toMatch(/^[0-9a-f]{48}$/);
+      const output = logs.join('\n');
+      expect(output).toContain('#token=');
+      expect(output).not.toMatch(new RegExp(`^${token}$`, 'm'));
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it('refuses rotation when STUDIO_BRIDGE_TOKEN is set and writes nothing', async () => {
+    const home = mkTemp();
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await withEnv({ PROFESSOR_HOME: home, STUDIO_BRIDGE_TOKEN: 'env-token' }, async () => {
+        await expect(
+          run({ repoRoot: mkTemp(), args: ['--rotate-token'], nodeVersion: process.version })
+        ).rejects.toMatchObject({ code: 'env_token_immutable' });
+      });
+      expect(existsSync(join(home, 'studio-token'))).toBe(false);
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 });
 

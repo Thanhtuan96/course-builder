@@ -5,20 +5,22 @@
  * verbatim from `web/studio-api.js` (Phase 1 seam split). Phase 2 will extend this module with the
  * permission-flag denylist (`buildAgentArgs`).
  */
-import { spawn, execSync } from 'child_process';
+import { spawn } from 'child_process';
 import { mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
 
-import { AGENT_BINARIES, describeNoOutput } from './health.js';
+import { AGENT_BINARIES, describeNoOutput, ollamaBase } from './health.js';
+import * as security from '../security.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-// agent CLIs run in the web/ directory (the historical cwd), not web/studio-api/.
-const WEB_DIR = join(__dirname, '..');
-
-// Permission map injected into OpenCode so the tutor cannot read/edit the learner's files.
-const OPENCODE_PERMISSION_DENY = { edit: 'deny', bash: 'deny', webfetch: 'deny' };
+// Permission map injected into OpenCode so the tutor cannot touch the learner's files.
+const OPENCODE_PERMISSION_DENY = {
+  edit: 'deny',
+  bash: 'deny',
+  webfetch: 'deny',
+  websearch: 'deny',
+  task: 'deny',
+};
 
 /* ------------------------------------------------------------------ process isolation */
 
@@ -49,12 +51,14 @@ function cleanupTempCwd(dir, log) {
 }
 
 /**
- * Environment for the OpenCode CLI: deny edit/bash/webfetch so the tutor cannot touch the learner's
- * files, merged with any OPENCODE_CONFIG_CONTENT the user already set.
- * @returns {NodeJS.ProcessEnv}
+ * Environment for the OpenCode CLI: the allowlisted env plus a server-built deny permission profile
+ * so the tutor cannot touch the learner's files. An inherited `OPENCODE_CONFIG_CONTENT` is never
+ * copied; only a server/test `extraEnv` value may contribute extra config.
+ * @param {Record<string, string|undefined>} [extraEnv]
+ * @returns {Record<string, string>}
  */
-function opencodeEnv() {
-  const env = { ...process.env };
+function opencodeEnv(extraEnv = {}) {
+  const env = security.buildAgentEnv('opencode', process.env, { extraEnv });
   let config = {};
   if (env.OPENCODE_CONFIG_CONTENT) {
     try {
@@ -66,6 +70,24 @@ function opencodeEnv() {
   config.permission = { ...(config.permission || {}), ...OPENCODE_PERMISSION_DENY };
   env.OPENCODE_CONFIG_CONTENT = JSON.stringify(config);
   return env;
+}
+
+/**
+ * Resolve an agent binary without a shell and bail out on a Windows `.cmd`/`.bat` shim (D-16).
+ * @param {string} command
+ * @param {{ platform?: string, pathValue?: string, fs?: object, pathext?: string }} [opts]
+ * @returns {string|null}
+ */
+export function resolveAgentCommand(command, opts = {}) {
+  const platform = opts.platform || process.platform;
+  const resolved = security.resolveExecutable(command, { ...opts, platform });
+  if (resolved && security.isWindowsCommandShim(resolved, platform)) {
+    const err = new Error(security.unsupportedWindowsShimMessage(command, resolved));
+    err.code = 'unsupported_windows_shim';
+    err.path = resolved;
+    throw err;
+  }
+  return resolved;
 }
 
 /* ------------------------------------------------------------------ agent runners */
@@ -103,6 +125,17 @@ function attachStreams(proc, { onLine, onStderr, log }) {
   };
 }
 
+/** Map an unexpected Windows spawn failure to the documented shim/beta error (D-16). */
+function spawnFailure(spec, err) {
+  if (process.platform === 'win32' && ['EINVAL', 'ENOENT', 'EPERM'].includes(err?.code)) {
+    return {
+      message: security.unsupportedWindowsShimMessage(spec.label, spec.command),
+      code: 'unsupported_windows_shim',
+    };
+  }
+  return { message: `${spec.label} failed to start: ${err.message}`, code: 'server' };
+}
+
 /**
  * Shared runner for CLI agents that emit newline-delimited JSON. Handles the temp cwd, stderr
  * capture, the "streamed nothing" fallback and the actionable diagnosis on a non-zero exit.
@@ -110,17 +143,41 @@ function attachStreams(proc, { onLine, onStderr, log }) {
 function runJsonCli(ctx, spec) {
   const { onText, onError, onDone, log } = ctx;
   const args = spec.args(ctx);
+  const env = spec.env || {};
+
+  try {
+    security.assertSafeAgentInvocation(spec.agent, args, env);
+  } catch (err) {
+    onError({ message: err.message, code: 'unsafe_invocation' });
+    onDone();
+    return { kill() {} };
+  }
+
   const cwd = spec.tempCwd === false ? undefined : makeTempCwd(log);
+
+  let command = spec.command;
+  try {
+    const resolved = resolveAgentCommand(spec.command);
+    if (resolved) command = resolved;
+  } catch (err) {
+    cleanupTempCwd(cwd, log);
+    onError({ message: err.message, code: err.code || 'unsupported_windows_shim' });
+    onDone();
+    return { kill() {} };
+  }
+
   let proc;
   try {
-    proc = spawn(spec.command, args, {
-      cwd: cwd || spec.cwd || WEB_DIR,
-      env: spec.env || process.env,
+    proc = spawn(command, args, {
+      cwd: cwd || spec.cwd,
+      env,
+      shell: false,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
   } catch (err) {
     cleanupTempCwd(cwd, log);
-    onError({ message: `${spec.label} failed to start: ${err.message}`, code: 'server' });
+    const failure = spawnFailure(spec, err);
+    onError(failure);
     onDone();
     return { kill() {} };
   }
@@ -171,7 +228,7 @@ function runJsonCli(ctx, spec) {
     },
   });
 
-  proc.on('error', (err) => finish({ message: `${spec.label} failed to start: ${err.message}`, code: 'server' }));
+  proc.on('error', (err) => finish(spawnFailure(spec, err)));
   proc.on('close', (code) => {
     io.flush();
     if (!streamed && resultText) onText(resultText);
@@ -285,48 +342,74 @@ export function geminiErrorText(event) {
   return event.message || 'Gemini reported an error';
 }
 
-function cursorBinary() {
-  return AGENT_BINARIES.cursor.find((b) => commandExists(b)) || 'agent';
-}
-
-// `which`-style presence check (kept local so agents.js stays self-contained).
-function commandExists(command) {
-  try {
-    execSync(`which ${command}`, { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] });
-    return true;
-  } catch {
-    return false;
+/**
+ * The exact safe argv for an agent. This is the single place that builds flags; no bypass flag is
+ * ever added, and `assertSafeAgentInvocation` re-checks the result immediately before spawn (D-15).
+ * @param {string} agent
+ * @param {{ system?: string, prompt: string, model?: string }} ctx
+ * @returns {string[]}
+ */
+export function buildAgentArgs(agent, ctx) {
+  const { system, prompt, model } = ctx || {};
+  switch (agent) {
+    case 'claude': {
+      const args = [
+        '--print',
+        '--output-format',
+        'stream-json',
+        '--include-partial-messages',
+        '--verbose',
+      ];
+      if (system) args.push('--system-prompt', system);
+      args.push(prompt);
+      return args;
+    }
+    case 'cursor': {
+      const args = ['--print', '--output-format', 'stream-json', '--stream-partial-output'];
+      if (model) args.push('--model', model);
+      args.push(prompt);
+      return args;
+    }
+    case 'opencode': {
+      const args = ['run', '--format', 'json'];
+      if (model) args.push('--model', model);
+      args.push(prompt);
+      return args;
+    }
+    case 'gemini': {
+      const args = ['-p', prompt, '-o', 'stream-json', '--approval-mode', 'plan'];
+      if (model) args.push('-m', model);
+      return args;
+    }
+    case 'antigravity':
+      return antigravityArgs(ctx || {});
+    default:
+      throw new Error(`Unknown agent: ${agent}`);
   }
 }
 
-function spawnClaude(ctx) {
-  const { system, prompt } = ctx;
-  const args = ['--print', '--output-format', 'stream-json', '--include-partial-messages', '--verbose'];
-  if (system) args.push('--system-prompt', system);
-  args.push(prompt);
-  const env = { ...process.env };
-  delete env.CLAUDECODE;
-  delete env.CLAUDE_CODE_ENTRYPOINT;
+function cursorBinary() {
+  for (const binary of AGENT_BINARIES.cursor) {
+    const resolved = security.resolveExecutable(binary);
+    if (resolved) return resolved;
+  }
+  return 'agent';
+}
+
+function spawnClaude({ extraEnv, ...ctx }) {
   return runJsonCli(ctx, {
     agent: 'claude',
     label: 'Claude Code CLI',
     command: 'claude',
-    args: () => args,
-    env,
-    cwd: WEB_DIR,
-    tempCwd: false,
+    args: () => buildAgentArgs('claude', ctx),
+    env: security.buildAgentEnv('claude', process.env, { extraEnv }),
     extract: extractClaudeText,
     finalText: resultText,
     errorText: claudeErrorText,
   });
 }
 
-function spawnCursor(ctx) {
-  const { prompt, model } = ctx;
-  const args = ['--print', '--output-format', 'stream-json', '--stream-partial-output'];
-  if (model) args.push('--model', model);
-  args.push(prompt);
-
+function spawnCursor({ extraEnv, ...ctx }) {
   // Cursor streams deltas like Claude; if it only sends a cumulative `assistant` message, emit the
   // delta once. Prefer deltas, and never double-emit.
   let sawStream = false;
@@ -361,7 +444,8 @@ function spawnCursor(ctx) {
     agent: 'cursor',
     label: 'Cursor CLI',
     command: cursorBinary(),
-    args: () => args,
+    args: () => buildAgentArgs('cursor', ctx),
+    env: security.buildAgentEnv('cursor', process.env, { extraEnv }),
     tempCwd: true,
     extract,
     finalText: resultText,
@@ -369,17 +453,13 @@ function spawnCursor(ctx) {
   });
 }
 
-function spawnOpencode(ctx) {
-  const { prompt, model } = ctx;
-  const args = ['run', '--format', 'json'];
-  if (model) args.push('--model', model);
-  args.push(prompt);
+function spawnOpencode({ extraEnv, ...ctx }) {
   return runJsonCli(ctx, {
     agent: 'opencode',
     label: 'OpenCode',
     command: 'opencode',
-    args: () => args,
-    env: opencodeEnv(),
+    args: () => buildAgentArgs('opencode', ctx),
+    env: opencodeEnv(extraEnv),
     tempCwd: true,
     textOnNonJson: true,
     extract: extractOpencodeText,
@@ -387,22 +467,20 @@ function spawnOpencode(ctx) {
   });
 }
 
-function spawnGemini(ctx) {
-  const { prompt, model } = ctx;
-  const args = ['-p', prompt, '-o', 'stream-json', '--approval-mode', 'plan'];
-  if (model) args.push('-m', model);
+function spawnGemini({ extraEnv, ...ctx }) {
   return runJsonCli(ctx, {
     agent: 'gemini',
     label: 'Gemini CLI',
     command: 'gemini',
-    args: () => args,
+    args: () => buildAgentArgs('gemini', ctx),
+    env: security.buildAgentEnv('gemini', process.env, { extraEnv }),
     tempCwd: true,
     extract: extractGeminiText,
     errorText: geminiErrorText,
   });
 }
 
-function spawnAntigravity(ctx) {
+function spawnAntigravity({ extraEnv, ...ctx }) {
   // `--mode plan` keeps the run read-only; `antigravityArgs` also appends the plain-text instruction
   // that stops agy from burning the turn on a tool headless mode would auto-deny (see below).
   // `--disable-slash-commands` cancels plan mode and `--sandbox` made no difference, so neither is used.
@@ -410,7 +488,8 @@ function spawnAntigravity(ctx) {
     agent: 'antigravity',
     label: 'Antigravity',
     command: 'agy',
-    args: () => antigravityArgs(ctx),
+    args: () => buildAgentArgs('antigravity', ctx),
+    env: security.buildAgentEnv('antigravity', process.env, { extraEnv }),
     tempCwd: true,
     extract: extractAntigravityText,
     finalText: antigravityResultText,
@@ -421,7 +500,17 @@ function spawnAntigravity(ctx) {
 
 function runOllama(ctx) {
   const { messages, system, model, onText, onError, onDone, log } = ctx;
-  const base = (process.env.OLLAMA_HOST || 'http://127.0.0.1:11434').replace(/\/$/, '');
+  const host = ollamaBase();
+  if (!host.ok) {
+    onError({
+      message: host.error,
+      code: 'config',
+      hint: 'Point OLLAMA_HOST at 127.0.0.1, localhost or [::1], or set PROFESSOR_ALLOW_NON_LOOPBACK_OLLAMA=1.',
+    });
+    onDone();
+    return { kill() {} };
+  }
+  const base = host.base;
   const selected = model || process.env.OLLAMA_MODEL || 'llama3.2';
   const chatMessages = [];
   if (system) chatMessages.push({ role: 'system', content: system });
@@ -482,13 +571,13 @@ function runOllama(ctx) {
 }
 
 /** @returns {Record<string, (ctx: RunContext) => {kill:()=>void}|Promise<{kill:()=>void}>>} */
-export function defaultAgentRunners() {
+export function defaultAgentRunners({ extraEnv = {} } = {}) {
   return {
-    claude: spawnClaude,
-    opencode: spawnOpencode,
-    cursor: spawnCursor,
-    gemini: spawnGemini,
-    antigravity: spawnAntigravity,
+    claude: (ctx) => spawnClaude({ ...ctx, extraEnv }),
+    opencode: (ctx) => spawnOpencode({ ...ctx, extraEnv }),
+    cursor: (ctx) => spawnCursor({ ...ctx, extraEnv }),
+    gemini: (ctx) => spawnGemini({ ...ctx, extraEnv }),
+    antigravity: (ctx) => spawnAntigravity({ ...ctx, extraEnv }),
     ollama: runOllama,
   };
 }

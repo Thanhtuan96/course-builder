@@ -9,6 +9,8 @@ import net from 'net';
 import os from 'os';
 import chalk from 'chalk';
 import { nodeSupportsSqlite } from '../node-version.js';
+import * as security from '../../web/security.js';
+import { AGENT_BINARIES } from '../../web/studio-api/health.js';
 
 const AGENT_CLIS = ['claude', 'opencode', 'cursor-agent', 'gemini'];
 const PLATFORMS = ['claude', 'gemini', 'opencode', 'cursor'];
@@ -71,13 +73,13 @@ function professorInstalledFor(cwd) {
     .map(([name]) => name);
 }
 
-function httpGet(url, timeoutMs = 2000) {
+function httpGet(url, timeoutMs = 2000, headers = {}) {
   return new Promise((resolve) => {
     let settled = false;
     const done = (value) => { if (!settled) { settled = true; resolve(value); } };
     let req;
     try {
-      req = http.get(url, (res) => {
+      req = http.get(url, { headers }, (res) => {
         let body = '';
         res.on('data', (chunk) => { body += chunk; });
         res.on('end', () => {
@@ -110,6 +112,173 @@ function portOpen(port, timeoutMs = 800) {
   });
 }
 
+/**
+ * Pure security-posture checks (D-16, D-26). Exported so tests can assert the whole posture without
+ * a live server or the real home directory.
+ *
+ * @param {object} [opts]
+ * @param {Record<string,string|undefined>} [opts.env]
+ * @param {string} [opts.platform]
+ * @param {typeof statSync} [opts.statImpl]
+ * @param {(cmd: string, opts?: object) => string|null} [opts.resolveExecutableImpl]
+ * @returns {object[]}
+ */
+export function buildPostureChecks({
+  env = process.env,
+  platform = process.platform,
+  statImpl = statSync,
+  resolveExecutableImpl = security.resolveExecutable,
+} = {}) {
+  const checks = [];
+  const add = (name, status, detail, hint) => checks.push({ name, status, detail, hint });
+
+  const legacy = env.PROFESSOR_LEGACY === '1';
+  add(
+    'Security · legacy web',
+    legacy ? 'fail' : 'ok',
+    legacy ? 'legacy routes/UI are mounted' : 'Studio-only (legacy disabled)',
+    legacy
+      ? 'Stop using --legacy/PROFESSOR_LEGACY and use Professor Studio at http://localhost:5180.'
+      : undefined
+  );
+
+  const host = env.HOST;
+  const loopbackHosts = new Set(['', '127.0.0.1', 'localhost', '::1', '[::1]']);
+  if (host && !loopbackHosts.has(host)) {
+    add(
+      'Security · bind address',
+      'warn',
+      `${host} (not loopback)`,
+      'Bind 127.0.0.1 (default) unless you explicitly need LAN access.'
+    );
+  } else {
+    add('Security · bind address', 'ok', host || '127.0.0.1 (default loopback)');
+  }
+
+  const tokenFile = security.tokenFilePath(env);
+  let mode = null;
+  try {
+    mode = statImpl(tokenFile).mode & 0o777;
+  } catch {
+    mode = null;
+  }
+  if (mode === null) {
+    add('Security · token file', 'warn', 'not created yet', 'Created by `course-professor studio`.');
+  } else if (mode === 0o600) {
+    add('Security · token file', 'ok', `${tokenFile} (0600)`);
+  } else {
+    add(
+      'Security · token file',
+      'fail',
+      `${tokenFile} (0${mode.toString(8)})`,
+      `Run: chmod 600 ${tokenFile}`
+    );
+  }
+
+  add(
+    'Security · bash runner',
+    env.PROFESSOR_ALLOW_BASH === '1' ? 'warn' : 'ok',
+    env.PROFESSOR_ALLOW_BASH === '1' ? 'Bash runs are allowed' : 'Bash disabled (default)',
+    env.PROFESSOR_ALLOW_BASH === '1'
+      ? 'Unset PROFESSOR_ALLOW_BASH unless a course explicitly needs shell exercises.'
+      : undefined
+  );
+
+  const wildcardOrigins = security.isWildcardOrigins(env.STUDIO_ORIGINS || '');
+  const relaxedHosts = security.isNonLoopbackOptIn(env);
+  if (wildcardOrigins && relaxedHosts) {
+    add(
+      'Security · relaxed env',
+      'fail',
+      'STUDIO_ORIGINS=* with STUDIO_ALLOW_NON_LOOPBACK',
+      'The server refuses this combination. Unset one of them.'
+    );
+  } else if (wildcardOrigins) {
+    add(
+      'Security · relaxed env',
+      'warn',
+      'STUDIO_ORIGINS=*',
+      'Any non-null Origin is echoed. Use only while paired on a trusted machine.'
+    );
+  } else if (relaxedHosts) {
+    add(
+      'Security · relaxed env',
+      'warn',
+      'STUDIO_ALLOW_NON_LOOPBACK is set',
+      'Non-loopback clients and hosts are allowed. Use only on a trusted network.'
+    );
+  } else {
+    add('Security · relaxed env', 'ok', 'default exact-origin allowlist');
+  }
+
+  if (platform !== 'win32') {
+    add('Windows agent shims', 'ok', 'not applicable');
+  } else {
+    const unsupported = [];
+    for (const [agent, binaries] of Object.entries(AGENT_BINARIES)) {
+      for (const binary of binaries) {
+        const resolved = resolveExecutableImpl(binary, { platform });
+        if (resolved && security.isWindowsCommandShim(resolved, platform)) {
+          unsupported.push({ agent, resolved });
+        }
+      }
+    }
+    if (unsupported.length) {
+      add(
+        'Windows agent shims',
+        'fail',
+        unsupported.map((entry) => `${entry.agent} → ${entry.resolved}`).join(', '),
+        security.unsupportedWindowsShimMessage('Agent CLI', unsupported[0].resolved)
+      );
+    } else {
+      add('Windows agent shims', 'ok', 'native binaries only');
+    }
+  }
+
+  return checks;
+}
+
+/**
+ * Token-aware health probe (D-26). Never creates a token: an absent file means the request is sent
+ * without `X-Studio-Token`, and a 401 is reported as "reachable but unpaired" rather than "down".
+ *
+ * @param {{ env?: Record<string,string|undefined>, port?: number, timeoutMs?: number,
+ *           httpGetImpl?: typeof httpGet, portOpenImpl?: typeof portOpen }} [opts]
+ * @returns {Promise<object>}
+ */
+export async function buildStudioHealthCheck({
+  env = process.env,
+  port = 3000,
+  timeoutMs = 1000,
+  httpGetImpl = httpGet,
+  portOpenImpl = portOpen,
+} = {}) {
+  const name = `Studio server (:${port})`;
+  const token = security.readTokenFile(security.tokenFilePath(env));
+  const headers = token ? { 'X-Studio-Token': token } : {};
+  const health = await httpGetImpl(`http://127.0.0.1:${port}/api/studio/health`, timeoutMs, headers);
+
+  if (health.ok) {
+    return { name, status: 'ok', detail: 'health endpoint responding' };
+  }
+  if (health.status === 401) {
+    return {
+      name,
+      status: 'warn',
+      detail: 'server reachable but unpaired',
+      hint: 'Open the pairing URL printed by `course-professor studio`.',
+    };
+  }
+  const open = await portOpenImpl(port);
+  if (!open) return { name, status: 'ok', detail: `port ${port} free` };
+  return {
+    name,
+    status: 'warn',
+    detail: 'port in use but no health endpoint',
+    hint: `Something else is on ${port}. Stop it or start the server with \`npx course-professor web\`.`,
+  };
+}
+
 /** Count checks by status (for a footer line). */
 export function summarizeChecks(checks) {
   return checks.reduce((acc, c) => {
@@ -123,7 +292,12 @@ export function summarizeChecks(checks) {
  * @param {{ cwd?: string, nodeVersion?: string, home?: string }} [deps]
  * @returns {Promise<{ checks: object[] }>}
  */
-export async function runChecks({ cwd = process.cwd(), nodeVersion = process.version } = {}) {
+export async function runChecks({
+  cwd = process.cwd(),
+  nodeVersion = process.version,
+  env = process.env,
+  platform = process.platform,
+} = {}) {
   const checks = [];
   const add = (name, status, detail, hint) => checks.push({ name, status, detail, hint });
 
@@ -170,14 +344,11 @@ export async function runChecks({ cwd = process.cwd(), nodeVersion = process.ver
   else add('Ollama (:11434)', 'warn', 'not reachable',
     'Optional. Start Ollama, or set OLLAMA_ORIGINS for browser use.');
 
-  const studioHealth = await httpGet('http://127.0.0.1:3000/api/studio/health', 1000);
-  const port3000 = await portOpen(3000);
-  if (studioHealth.ok) add('Studio server (:3000)', 'ok', 'health endpoint responding');
-  else if (!port3000) add('Studio server (:3000)', 'ok', 'port 3000 free');
-  else add('Studio server (:3000)', 'warn', 'port in use but no health endpoint',
-    'Something else is on 3000. Stop it or start the server with `npx course-professor web`.');
+  const studioCheck = await buildStudioHealthCheck({ env });
+  add(studioCheck.name, studioCheck.status, studioCheck.detail, studioCheck.hint);
 
-  const dbPath = join(os.homedir(), '.professor', 'professor.db');
+  const professorHome = env.PROFESSOR_HOME || join(os.homedir(), '.professor');
+  const dbPath = join(professorHome, 'professor.db');
   if (existsSync(dbPath)) add('Professor DB', 'ok', dbPath);
   else add('Professor DB', 'warn', 'not created yet', 'Created when the local server runs.');
 
@@ -187,14 +358,16 @@ export async function runChecks({ cwd = process.cwd(), nodeVersion = process.ver
   else add('Check toolchains', 'warn', `missing: ${missing.join(', ')}`,
     'Optional — needed only to run those exercise file types with `course-professor check`.');
 
+  checks.push(...buildPostureChecks({ env, platform }));
+
   return { checks };
 }
 
 /**
  * @param {{ cwd?: string, nodeVersion?: string }} ctx
  */
-export async function run({ cwd = process.cwd() } = {}) {
-  const { checks } = await runChecks({ cwd });
+export async function run({ cwd = process.cwd(), env = process.env } = {}) {
+  const { checks } = await runChecks({ cwd, env });
 
   const mark = { ok: '✓', warn: '⚠', fail: '✗' };
 

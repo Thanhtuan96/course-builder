@@ -85,9 +85,20 @@ describe('validateItemName', () => {
     spy.mockRestore();
   });
 
-  it('rejects dot name', () => {
+  it('rejects dot names and embedded dot-dot slugs', () => {
     const spy = vi.spyOn(console, 'error').mockReturnValue();
     expect(() => validateItemName('.')).toThrow();
+    expect(() => validateItemName('..')).toThrow();
+    expect(() => validateItemName('...')).toThrow();
+    expect(() => validateItemName('a..b')).toThrow();
+    spy.mockRestore();
+  });
+
+  it('rejects uppercase, percent, separators and leading separators', () => {
+    const spy = vi.spyOn(console, 'error').mockReturnValue();
+    for (const name of ['A', 'React-Hooks', '%2e%2e', 'a/b', 'a\\b', '-leading', '/leading', 'trailing/']) {
+      expect(() => validateItemName(name), name).toThrow();
+    }
     spy.mockRestore();
   });
 });

@@ -1,1222 +1,390 @@
+/**
+ * web/server.js — side-effect-free application factory plus the process entry point.
+ *
+ * Importing this module binds no port, creates no directory, spawns nothing and logs nothing.
+ * `createApp({ legacy })` builds the Express app; `startServer()` resolves the token, derives the
+ * configuration and calls `listen`. Studio-only is the default; legacy mode is the single explicit
+ * opt-in and requires `web/legacy-server.js` (Plan 03).
+ */
 import express from 'express';
-import cors from 'cors';
 import { createServer } from 'http';
-import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-import { spawn, execSync } from 'child_process';
-import { archiveLecture } from './lecture-archive.js';
-import studioRouter from './studio-api.js';
+import { existsSync } from 'fs';
+import { join, dirname, resolve } from 'path';
+import { fileURLToPath, pathToFileURL } from 'url';
+import { createStudioRouter } from './studio-api.js';
+import { buildOriginSet } from './studio-api/guards.js';
+import { createStaticHandler } from '../bin/static-server.js';
+import * as security from './security.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = join(__dirname, '..');
 
-// Configuration
-const PORT = process.env.PORT || 3000;
-const HOST = process.env.HOST || '127.0.0.1';
-const NODE_ENV = process.env.NODE_ENV || 'development';
-const COURSES_DIR = process.env.COURSES_DIR || './courses';
+const STUDIO_BUILD_MESSAGE = `<!doctype html>
+<html><head><meta charset="utf-8"><title>Professor Studio</title></head>
+<body>
+  <h1>Professor Studio build not found</h1>
+  <p>Run <code>course-professor studio</code> or build Studio with <code>npm run build:studio</code>.</p>
+</body></html>`;
 
-console.log(`📁 Courses directory: ${COURSES_DIR}`);
+const LEGACY_BUILD_MESSAGE = `<!doctype html>
+<html><head><meta charset="utf-8"><title>Professor Web UI</title></head>
+<body>
+  <h1>Legacy web build not found</h1>
+  <p>Run <code>npm run build</code> from the repository root, or use Professor Studio.</p>
+</body></html>`;
 
-// Initialize Express
-const app = express();
-const server = createServer(app);
-
-// Middleware
-app.use('/api/studio', studioRouter);
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-
-// Ensure courses directory exists
-if (!existsSync(COURSES_DIR)) {
-  mkdirSync(COURSES_DIR, { recursive: true });
+function defaultCoursesDir() {
+  return process.env.COURSES_DIR || './courses';
 }
 
-// Helper: Get all courses
-function getCourses() {
-  const courses = [];
-  
-  if (!existsSync(COURSES_DIR)) {
-    return courses;
-  }
-  
-  const entries = readdirSync(COURSES_DIR, { withFileTypes: true });
-  
-  for (const entry of entries) {
-    if (entry.isDirectory()) {
-      const courseDir = join(COURSES_DIR, entry.name);
-      const courseFile = join(courseDir, 'COURSE.md');
-      
-      let metadata = { name: entry.name, slug: entry.name, description: '' };
-      
-      if (existsSync(courseFile)) {
-        try {
-          const content = readFileSync(courseFile, 'utf-8');
-          // Parse title from first heading
-          const titleMatch = content.match(/^#\s+(.+)$/m);
-          if (titleMatch) {
-            metadata.name = titleMatch[1];
-          }
-          // Get description from first paragraph after title
-          const descMatch = content.match(/^#\s+.+\n\n(.+?)(?:\n\n#|\n$)/m);
-          if (descMatch) {
-            metadata.description = descMatch[1].substring(0, 200);
-          }
-        } catch (e) {
-          // Ignore read errors
-        }
-      }
-      
-      courses.push(metadata);
+function defaultStudioDist() {
+  return process.env.STUDIO_DIST || join(REPO_ROOT, 'studio', 'dist');
+}
+
+/* ------------------------------------------------------------------ UI mounting */
+
+function mountStaticUi(app, { root, buildMessage, log }) {
+  const indexPath = join(root, 'index.html');
+  const handler = createStaticHandler({ root, spaFallback: true, log });
+
+  app.use((req, res, next) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      next();
+      return;
     }
-  }
-  
-  return courses;
-}
-
-// Helper: Get course file content
-function getCourseFile(slug, file) {
-  const validFiles = ['COURSE.md', 'LECTURE.md', 'NOTES.md', 'CAPSTONE.md'];
-  
-  // Sanitize filename
-  const sanitizedFile = file.replace(/[^a-zA-Z0-9._-]/g, '');
-  if (!validFiles.includes(sanitizedFile)) {
-    return null;
-  }
-  
-  const filePath = join(COURSES_DIR, slug, sanitizedFile);
-  
-  if (!existsSync(filePath)) {
-    return null;
-  }
-  
-  try {
-    return readFileSync(filePath, 'utf-8');
-  } catch (e) {
-    return null;
-  }
-}
-
-// Helper: Save course file
-function saveCourseFile(slug, file, content) {
-  const validFiles = ['COURSE.md', 'LECTURE.md', 'NOTES.md', 'CAPSTONE.md'];
-  
-  // Sanitize filename
-  const sanitizedFile = file.replace(/[^a-zA-Z0-9._-]/g, '');
-  if (!validFiles.includes(sanitizedFile)) {
-    return { success: false, error: 'Invalid file' };
-  }
-  
-  const courseDir = join(COURSES_DIR, slug);
-  const filePath = join(courseDir, sanitizedFile);
-  
-  // Ensure course directory exists
-  if (!existsSync(courseDir)) {
-    mkdirSync(courseDir, { recursive: true });
-  }
-  
-  try {
-    // Archive the existing lecture, but only when moving to a different section
-    // (in-place edits of the active lecture must not create duplicates).
-    if (sanitizedFile === 'LECTURE.md' && existsSync(filePath)) {
-      const result = archiveLecture(courseDir, content);
-      if (result.archived) {
-        console.log(`🗂️  Archived previous lecture → courses/${slug}/${result.path}`);
-      }
+    if (!existsSync(indexPath)) {
+      res.status(503).type('html').send(buildMessage);
+      return;
     }
-    writeFileSync(filePath, content, 'utf-8');
-    return { success: true };
-  } catch (e) {
-    return { success: false, error: e.message };
-  }
+    handler(req, res, next);
+  });
 }
 
-// Helper: Get all exercises for a course
-function getExercises(slug) {
-  const exercisesDir = join(COURSES_DIR, slug, 'exercises');
-  const exercises = [];
-  
-  if (!existsSync(exercisesDir)) {
-    return exercises;
-  }
-  
-  try {
-    const files = readdirSync(exercisesDir);
-    for (const file of files) {
-      if (file.endsWith('.md')) {
-        const filePath = join(exercisesDir, file);
-        const content = readFileSync(filePath, 'utf-8');
-        exercises.push({
-          filename: file,
-          path: `exercises/${file}`,
-          content
-        });
-      }
+/* ------------------------------------------------------------------ app factory */
+
+/**
+ * Build the Express application. Never binds a port, resolves a token, spawns a process or creates
+ * a directory; tests inject a temp DB, courses dir and Studio dist.
+ *
+ * Exactly one UI is served at `/` (D-24):
+ *   - Studio-only: `studio/dist` (503 build message when missing)
+ *   - legacy production: `legacyDist` (default `web/client/dist`)
+ *   - legacy dev: no UI on this port (Vite on 5173 owns it)
+ *
+ * @param {object} [options]
+ * @param {boolean} [options.legacy] serve the legacy API/UI (requires web/legacy-server.js)
+ * @param {string} [options.nodeEnv]
+ * @param {string} [options.token] static pairing token
+ * @param {() => string} [options.getToken] pairing-token getter
+ * @param {Set<string>|string} [options.origins]
+ * @param {object} [options.db]
+ * @param {string} [options.coursesDir]
+ * @param {string} [options.studioDist]
+ * @param {string} [options.legacyDist]
+ * @param {(...a:any[])=>void} [options.log]
+ * @param {Record<string, Function>} [options.runners]
+ * @param {Record<string, Function>} [options.legacyRunners] legacy chat agent runners
+ * @param {() => object} [options.capabilities]
+ * @param {object} [options.capabilityCache] legacy capability TTL cache (tests)
+ * @param {boolean} [options.useCli] result of the one-time Claude CLI probe
+ * @param {Function} [options.spawnImpl]
+ * @param {boolean} [options.allowNonLoopback]
+ * @param {string[]} [options.extraHosts]
+ * @returns {Promise<import('express').Express>}
+ */
+export async function createApp({
+  legacy = false,
+  nodeEnv = process.env.NODE_ENV || 'development',
+  token,
+  getToken,
+  origins,
+  db,
+  coursesDir = defaultCoursesDir(),
+  studioDist = defaultStudioDist(),
+  legacyDist = join(__dirname, 'client', 'dist'),
+  log = console.log,
+  runners,
+  legacyRunners,
+  capabilities,
+  capabilityCache,
+  useCli = false,
+  spawnImpl,
+  allowNonLoopback = false,
+  extraHosts,
+} = {}) {
+  const resolvedExtraHosts =
+    extraHosts ?? security.resolveExtraHosts({ env: process.env, host: process.env.HOST });
+
+  const app = express();
+
+  // Global Host guard (covers static assets too). Token/Origin/JSON stay on the API routers.
+  app.use((req, res, next) => {
+    if (!security.isAllowedHost(req.headers?.host, { extraHosts: resolvedExtraHosts })) {
+      res.status(403).json({ ok: false, error: 'Forbidden host', code: 'forbidden_host' });
+      return;
     }
-  } catch (e) {
-    console.error('Error reading exercises:', e);
-  }
-  
-  return exercises;
-}
-
-// Helper: Get active exercise from COURSE.md
-function getActiveExercise(slug) {
-  const courseContent = getCourseFile(slug, 'COURSE.md');
-  if (!courseContent) return null;
-  
-  // Look for "Active exercise: exercises/XX-xxx.md"
-  const match = courseContent.match(/Active exercise:\s*exercises\/([^\s]+)/i);
-  return match ? match[1] : null;
-}
-
-// API Routes
-
-// GET /api/courses - List all courses
-app.get('/api/courses', (req, res) => {
-  const courses = getCourses();
-  res.json(courses);
-});
-
-// GET /api/courses/:slug/exercises - Get all exercises for a course
-app.get('/api/courses/:slug/exercises', (req, res) => {
-  const { slug } = req.params;
-  const exercises = getExercises(slug);
-  const activeExercise = getActiveExercise(slug);
-  res.json({ exercises, activeExercise });
-});
-
-// GET /api/courses/:slug/exercises/:filename - Get specific exercise
-app.get('/api/courses/:slug/exercises/:filename', (req, res) => {
-  const { slug, filename } = req.params;
-  const exercisesDir = join(COURSES_DIR, slug, 'exercises');
-  const filePath = join(exercisesDir, filename);
-  
-  if (!existsSync(filePath)) {
-    return res.status(404).json({ error: 'Exercise not found' });
-  }
-  
-  try {
-    const content = readFileSync(filePath, 'utf-8');
-    res.json({ content, filename });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// POST /api/courses/:slug/exercises/:filename - Save exercise content
-app.post('/api/courses/:slug/exercises/:filename', (req, res) => {
-  const { slug, filename } = req.params;
-  const { content } = req.body;
-  
-  if (!content) {
-    return res.status(400).json({ error: 'Content is required' });
-  }
-  
-  const exercisesDir = join(COURSES_DIR, slug, 'exercises');
-  const filePath = join(exercisesDir, filename);
-  
-  // Ensure exercises directory exists
-  if (!existsSync(exercisesDir)) {
-    mkdirSync(exercisesDir, { recursive: true });
-  }
-  
-  try {
-    writeFileSync(filePath, content, 'utf-8');
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// GET /api/courses/:slug/:file - Get course file content
-app.get('/api/courses/:slug/:file', (req, res) => {
-  const { slug, file } = req.params;
-  const content = getCourseFile(slug, file);
-  
-  if (content === null) {
-    return res.status(404).json({ error: 'File not found' });
-  }
-  
-  res.json({ content });
-});
-
-// POST /api/courses/:slug/:file - Save course file content
-app.post('/api/courses/:slug/:file', (req, res) => {
-  const { slug, file } = req.params;
-  const { content } = req.body;
-  
-  if (!content) {
-    return res.status(400).json({ error: 'Content is required' });
-  }
-  
-  const result = saveCourseFile(slug, file, content);
-  
-  if (!result.success) {
-    return res.status(500).json({ error: result.error });
-  }
-  
-  res.json({ success: true });
-});
-
-// Professor system prompt — instructs AI to behave as a Socratic teaching assistant
-// and to wrap any course files it creates in <file path="...">...</file> tags so the
-// server can persist them to disk automatically.
-const PROFESSOR_SYSTEM_PROMPT = `You are Professor Claude — a Socratic technology mentor built into a web-based learning app.
-
-## Your role
-Teach users by asking questions, NOT by giving answers. Guide them to discover concepts themselves.
-- Never write working code for the user
-- Never complete exercises on their behalf
-- Always ask "What have you tried?" before offering hints
-- Give hints in layers: conceptual → pattern/tool → pseudo-code only
-
-## Commands you handle
-- \`professor:new-topic\` — Ask what they want to learn and their level (Beginner/Intermediate/Advanced/Expert), then create a course
-- \`professor:next\` — Load the next not-started section into LECTURE.md
-- \`professor:review\` — Socratic review: what's working → question → concept to study → next action
-- \`professor:done\` — Confirm understanding verbally, then mark section complete
-- \`professor:hint\` — Layer 1 (concept) → Layer 2 (tool/pattern) → Layer 3 (pseudo-code only)
-- \`professor:stuck\` — Walk through what they tried → exact sticking point → smaller steps → analogy
-- \`professor:discuss\` — Conceptual Q&A only
-- \`professor:quiz\` — 5 questions matched to their level
-- \`professor:syllabus\` — Describe course outline from COURSE.md
-- \`professor:progress\` — Summarize completed/current/remaining sections
-
-## Creating course files
-When creating or updating course files, include them in your response wrapped in XML tags.
-The app will save them automatically — do NOT mention the tags to the user.
-
-When creating a NEW course (professor:new-topic), derive a URL-safe slug from the topic name
-(e.g., "React Hooks" → "react-hooks") and include the slug in the path:
-
-<file path="courses/react-hooks/COURSE.md">
-[full file content here]
-</file>
-
-<file path="courses/react-hooks/CAPSTONE.md">
-[full file content here]
-</file>
-
-When updating an EXISTING course file (professor:next, professor:done, etc.), use just the filename:
-
-<file path="LECTURE.md">
-[full file content here]
-</file>
-
-<file path="COURSE.md">
-[updated content here]
-</file>
-
-## COURSE.md format
-\`\`\`
-# Course: {Topic Name}
-**Level**: {Beginner/Intermediate/Advanced/Expert}
-**Created**: {date}
-**Last active**: {date}
-
-## Syllabus
-- ⬜ Section 1: {Name}
-- ⬜ Section 2: {Name}
-...
-
-## Progress Log
-(entries added as sections are completed)
-\`\`\`
-
-Status icons: ⬜ Not started | 🔄 In progress | ✅ Done
-
-## LECTURE.md format
-\`\`\`
-# Section N: {Name}
-**Status**: 🔄 In progress
-
-## Concepts
-[key concepts explained clearly]
-
-## Exercise
-[one focused exercise — they must solve it themselves]
-
-## What to do
-Read through this, then attempt the exercise. Use \`professor:review\` when ready, or \`professor:hint\` if stuck.
-\`\`\`
-`;
-
-// Helper: parse <file path="...">...</file> blocks from AI response and save them.
-// Handles two formats:
-//   <file path="courses/{slug}/COURSE.md"> — new course creation
-//   <file path="LECTURE.md">              — updating existing course
-// Returns array of { slug, file } objects for files that were saved.
-function saveFilesFromResponse(fullText, courseSlug) {
-  const saved = [];
-  const validFiles = ['COURSE.md', 'LECTURE.md', 'CAPSTONE.md', 'NOTES.md'];
-  const fileRegex = /<file path="([^"]+)">([\s\S]*?)<\/file>/g;
-  let match;
-
-  while ((match = fileRegex.exec(fullText)) !== null) {
-    const [, filePath, content] = match;
-
-    let slug = courseSlug;
-    let fileName;
-
-    // Format: courses/{slug}/FILENAME.md
-    const coursePathMatch = filePath.match(/^courses\/([^/]+)\/([^/]+)$/);
-    if (coursePathMatch) {
-      slug = coursePathMatch[1].replace(/[^a-z0-9-]/gi, '-').toLowerCase();
-      fileName = coursePathMatch[2];
-    } else {
-      // Format: FILENAME.md (relative to current course)
-      fileName = filePath.replace(/^.*[\\/]/, '');
+    if (!allowNonLoopback && !security.isLoopbackAddress(req.socket?.remoteAddress)) {
+      res.status(403).json({
+        ok: false,
+        error: 'Studio bridge accepts loopback clients only',
+        code: 'forbidden_client',
+      });
+      return;
     }
-
-    if (!slug || !validFiles.includes(fileName)) continue;
-
-    const result = saveCourseFile(slug, fileName, content.trim());
-    if (result.success) {
-      saved.push({ slug, file: fileName });
-      console.log(`💾 Saved ${fileName} → courses/${slug}/`);
-    }
-  }
-  return saved;
-}
-
-// Stream chat response via claude CLI subprocess (uses Claude Code's existing OAuth)
-function streamViaCLI(res, messages, courseSlug, sessionId) {
-  const lastUser = [...messages].reverse().find(m => m.role === 'user');
-  if (!lastUser) {
-    res.write(`data: ${JSON.stringify({ error: 'No user message' })}\n\n`);
-    res.end();
-    return;
-  }
-
-  const args = [
-    '--print',
-    '--output-format', 'stream-json',
-    '--include-partial-messages',
-    '--dangerously-skip-permissions',
-    '--verbose',
-  ];
-
-  if (sessionId) {
-    args.push('--resume', sessionId);
-  }
-
-  args.push(lastUser.content);
-
-  // Delete CLAUDECODE so nested claude CLI is allowed
-  const env = { ...process.env };
-  delete env.CLAUDECODE;
-  // Prevent the CLI from detecting it's inside another Claude process
-  delete env.CLAUDE_CODE_ENTRYPOINT;
-  // Some versions need this to skip interactive permission prompts
-  env.CLAUDE_DANGEROUSLY_SKIP_PERMISSIONS = '1';
-  console.log(`🤖 CLI: claude ${args.slice(0, 4).join(' ')} ... "${lastUser.content.slice(0, 40)}"`);
-  const proc = spawn('claude', args, { env, cwd: __dirname, stdio: ['ignore', 'pipe', 'pipe'] });
-
-  let buffer = '';
-  let fullText = '';
-  let newSessionId = null;
-
-  proc.stdout.on('data', chunk => {
-    buffer += chunk.toString();
-    const lines = buffer.split('\n');
-    buffer = lines.pop();
-
-    for (const line of lines) {
-      if (!line.trim()) continue;
-      console.log('[CLI raw]', line.slice(0, 120));
-      try {
-        const d = JSON.parse(line);
-        if (d.type === 'system' && d.subtype === 'init') {
-          newSessionId = d.session_id;
-        } else if (d.type === 'stream_event') {
-          const delta = d.event?.delta;
-          if (delta?.type === 'text_delta' && delta.text) {
-            fullText += delta.text;
-            const visible = delta.text.replace(/<file path="[^"]*">[\s\S]*?<\/file>/g, '');
-            if (visible) res.write(`data: ${JSON.stringify({ content: visible })}\n\n`);
-          }
-        } else if (d.type === 'result') {
-          finalize(d.result || fullText);
-        }
-      } catch { /* skip malformed */ }
-    }
+    next();
   });
 
-  proc.stderr.on('data', chunk => {
-    const txt = chunk.toString();
-    console.error('[claude CLI stderr]', txt.slice(0, 300));
-  });
+  app.use(
+    '/api/studio',
+    createStudioRouter({
+      token,
+      getToken,
+      origins,
+      allowNonLoopback,
+      extraHosts: resolvedExtraHosts,
+      db,
+      runners,
+      capabilities,
+      log,
+    })
+  );
 
-  proc.on('error', err => {
-    res.write(`data: ${JSON.stringify({ error: `CLI error: ${err.message}` })}\n\n`);
-    res.end();
-  });
-
-  proc.on('close', code => {
-    console.log(`[claude CLI] exited with code ${code}, fullText.length=${fullText.length}`);
-    if (!res.writableEnded) {
-      if (code !== 0) {
-        res.write(`data: ${JSON.stringify({ error: `CLI exited with code ${code}` })}\n\n`);
-      }
-      // Always finalize — covers cases where 'result' event wasn't emitted
-      finalize(fullText);
+  if (legacy) {
+    let legacyModule;
+    try {
+      legacyModule = await import('./legacy-server.js');
+    } catch (cause) {
+      const err = new Error(
+        'Legacy mode requires web/legacy-server.js. ' +
+          'Install the full package or run without --legacy.'
+      );
+      err.code = 'legacy_unavailable';
+      err.cause = cause;
+      throw err;
     }
-  });
-
-  function finalize(text) {
-    if (res.writableEnded) return;
-    const saved = saveFilesFromResponse(text, courseSlug);
-    if (saved.length > 0) {
-      const bySlug = {};
-      for (const { slug, file } of saved) {
-        if (!bySlug[slug]) bySlug[slug] = [];
-        bySlug[slug].push(file);
-      }
-      for (const [slug, files] of Object.entries(bySlug)) {
-        res.write(`data: ${JSON.stringify({ filesUpdated: files, courseSlug: slug })}\n\n`);
-      }
+    if (typeof legacyModule.createLegacyRouter !== 'function') {
+      const err = new Error('web/legacy-server.js does not export createLegacyRouter.');
+      err.code = 'legacy_unavailable';
+      throw err;
     }
-    if (newSessionId) {
-      res.write(`data: ${JSON.stringify({ sessionId: newSessionId })}\n\n`);
-    }
-    res.write('data: [DONE]\n\n');
-    res.end();
-  }
-}
+    const legacyGetToken =
+      typeof getToken === 'function'
+        ? getToken
+        : typeof token === 'string'
+          ? () => token
+          : undefined;
 
-// Detect if claude CLI is available
-function claudeCLIAvailable() {
-  try {
-    execSync('which claude', { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] });
-    return true;
-  } catch { return false; }
-}
-const USE_CLI = claudeCLIAvailable();
-console.log(USE_CLI ? '✅ claude CLI found — using OAuth (no API key needed)' : '⚠️  claude CLI not found — falling back to API key');
-
-function commandExists(command) {
-  try {
-    execSync(`which ${command}`, { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function listOllamaModels() {
-  try {
-    const output = execSync('ollama list', {
-      encoding: 'utf-8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-      timeout: 3000
-    });
-
-    const lines = output
-      .split('\n')
-      .map(line => line.trim())
-      .filter(Boolean);
-    if (lines.length <= 1) return [];
-
-    return lines
-      .slice(1)
-      .map(line => line.split(/\s+/)[0])
-      .filter(Boolean)
-      .filter(name => name !== 'NAME');
-  } catch {
-    return [];
-  }
-}
-
-function stripAnsi(text) {
-  return text.replace(/\u001b\[[0-9;]*m/g, '').replace(/\u001b\[[0-9;]*[A-Za-z]/g, '');
-}
-
-function listCursorModels() {
-  try {
-    const output = execSync('cursor-agent models', {
-      encoding: 'utf-8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-      timeout: 6000
-    });
-    return stripAnsi(output)
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => /^[a-z0-9._-]+\s+-\s+/i.test(line))
-      .map(line => line.split(/\s+-\s+/)[0])
-      .filter(Boolean);
-  } catch {
-    return [];
-  }
-}
-
-function listOpencodeModels() {
-  try {
-    const output = execSync('opencode models', {
-      encoding: 'utf-8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-      timeout: 6000
-    });
-    return output
-      .split('\n')
-      .map(line => line.trim())
-      .filter(Boolean);
-  } catch {
-    return [];
-  }
-}
-
-function getAgentCapabilities() {
-  const ollamaInstalled = commandExists('ollama');
-  const ollamaModels = ollamaInstalled ? listOllamaModels() : [];
-  const cursorInstalled = commandExists('cursor-agent');
-  const opencodeInstalled = commandExists('opencode');
-  const cursorModels = cursorInstalled ? listCursorModels() : [];
-  const opencodeModels = opencodeInstalled ? listOpencodeModels() : [];
-
-  return {
-    claude: {
-      installed: commandExists('claude'),
-      supportsStreaming: true,
-      supportsResume: true,
-      supportsModelSelection: false
-    },
-    cursor: {
-      installed: cursorInstalled,
-      supportsStreaming: true,
-      supportsResume: true,
-      supportsModelSelection: true,
-      models: cursorModels
-    },
-    opencode: {
-      installed: opencodeInstalled,
-      supportsStreaming: true,
-      supportsResume: true,
-      supportsModelSelection: true,
-      models: opencodeModels
-    },
-    ollama: {
-      installed: ollamaInstalled,
-      daemonReady: ollamaModels.length > 0,
-      supportsStreaming: true,
-      supportsResume: false,
-      supportsModelSelection: true,
-      models: ollamaModels
-    },
-    cloud: {
-      available: !!(process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY || process.env.OPENAI_API_KEY),
-      supportsStreaming: true,
-      supportsResume: false,
-      supportsModelSelection: true
-    }
-  };
-}
-
-function resolveProvider(requestedProvider, capabilities) {
-  if (requestedProvider && requestedProvider !== 'auto') {
-    if (requestedProvider === 'cloud') {
-      return capabilities.cloud.available ? 'cloud' : 'none';
-    }
-    if (!capabilities[requestedProvider]?.installed) {
-      return 'none';
-    }
-    return requestedProvider;
-  }
-  const priority = ['claude', 'cursor', 'opencode', 'ollama', 'cloud'];
-  for (const provider of priority) {
-    if (provider === 'cloud' && capabilities.cloud.available) return provider;
-    if (provider !== 'cloud' && capabilities[provider]?.installed) return provider;
-  }
-  return 'none';
-}
-
-function sendSSEError(res, code, message, details = {}) {
-  res.write(`data: ${JSON.stringify({ error: message, errorCode: code, ...details })}\n\n`);
-  res.end();
-}
-
-function normalizeOllamaMessages(messages) {
-  return messages
-    .filter(m => m.content && m.content.trim())
-    .map(m => ({
-      role: m.role === 'user' ? 'user' : 'assistant',
-      content: m.content
-    }));
-}
-
-async function streamViaOllama(res, messages, courseSlug, model) {
-  const selectedModel = model || process.env.OLLAMA_MODEL || 'qwen2.5-coder:latest';
-  const ollamaMessages = normalizeOllamaMessages(messages);
-  ollamaMessages.unshift({ role: 'system', content: PROFESSOR_SYSTEM_PROMPT });
-
-  let fullText = '';
-  try {
-    const response = await fetch('http://127.0.0.1:11434/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: selectedModel,
-        messages: ollamaMessages,
-        stream: true
+    app.use(
+      legacyModule.createLegacyRouter({
+        coursesDir,
+        token,
+        getToken: legacyGetToken,
+        origins,
+        allowNonLoopback,
+        extraHosts: resolvedExtraHosts,
+        spawnImpl,
+        capabilities,
+        capabilityCache,
+        useCli,
+        runners: legacyRunners,
+        log,
       })
+    );
+  }
+
+  // API 404 before any UI fallback so `/api/*` can never return HTML.
+  app.use('/api', (req, res) => {
+    res.status(404).json({ ok: false, error: 'Not found', code: 'not_found' });
+  });
+
+  if (!legacy) {
+    mountStaticUi(app, { root: studioDist, buildMessage: STUDIO_BUILD_MESSAGE, log });
+  } else if (nodeEnv === 'production') {
+    mountStaticUi(app, { root: legacyDist, buildMessage: LEGACY_BUILD_MESSAGE, log });
+  } else {
+    // Legacy dev: Vite owns the UI on 5173. Never serve Studio's index on this port.
+    app.get('/', (req, res) => {
+      res
+        .status(200)
+        .type('html')
+        .send(
+          '<!doctype html><html><body><h1>Legacy UI runs on Vite</h1>' +
+            '<p>Open <a href="http://localhost:5173">http://localhost:5173</a>.</p></body></html>'
+        );
+    });
+  }
+
+  return app;
+}
+
+/* ------------------------------------------------------------------ entry point */
+
+/**
+ * Resolve configuration, build the app and bind the server.
+ *
+ * @param {object} [options]
+ * @param {number|string} [options.port]
+ * @param {string} [options.host]
+ * @param {boolean} [options.legacy]
+ * @param {Record<string,string|undefined>} [options.env]
+ * @param {string[]} [options.argv]
+ * @param {boolean} [options.logBanner]
+ * @returns {Promise<{ app: import('express').Express, server: import('http').Server,
+ *                     token: string, origins: Set<string>, uiUrl: string,
+ *                     close: () => Promise<void> }>}
+ */
+export async function startServer({
+  port,
+  host,
+  legacy,
+  env = process.env,
+  argv = process.argv,
+  logBanner,
+  spawnImpl,
+  platform,
+  ...appOptions
+} = {}) {
+  const legacyEnabled =
+    legacy === true || env.PROFESSOR_LEGACY === '1' || argv.includes('--legacy');
+  const nodeEnv = appOptions.nodeEnv ?? env.NODE_ENV ?? 'development';
+  const resolvedPort = port ?? env.PORT ?? 3000;
+  const resolvedHost = host ?? env.HOST ?? '127.0.0.1';
+
+  if (['0.0.0.0', '::', '*', '[::]'].includes(String(resolvedHost))) {
+    const err = new Error(`Refusing to bind a wildcard host: ${resolvedHost}`);
+    err.code = 'insecure_config';
+    throw err;
+  }
+
+  const extraHosts = security.resolveExtraHosts({ env, host: resolvedHost });
+  const optIn = security.isNonLoopbackOptIn(env);
+  const legacyFile = security.legacyTokenPath(REPO_ROOT);
+
+  const { token: explicitToken, getToken: explicitGetter, origins: explicitOrigins, ...rest } =
+    appOptions;
+
+  const token = explicitToken ?? security.ensureStudioToken({ env, legacyFile });
+  const getToken = explicitGetter ?? security.createTokenGetter({ env, legacyFile });
+  const origins =
+    explicitOrigins ??
+    buildOriginSet({
+      envValue: env.STUDIO_ORIGINS,
+      ownPort: resolvedPort,
+      legacyDev: legacyEnabled && nodeEnv !== 'production',
+      studioPort: env.STUDIO_STATIC_PORT,
     });
 
-    if (!response.ok) {
-      const text = await response.text();
-      if (response.status === 404 || text.includes('model')) {
-        sendSSEError(res, 'model_not_found', `Ollama model "${selectedModel}" not found.`, {
-          fix: `Run: ollama pull ${selectedModel}`
-        });
+  if (security.isWildcardOrigins(origins) && optIn) {
+    const err = new Error(
+      'STUDIO_ORIGINS=* cannot be combined with STUDIO_ALLOW_NON_LOOPBACK; refusing to start.'
+    );
+    err.code = 'insecure_config';
+    throw err;
+  }
+  if (optIn) {
+    console.error(
+      '[security] STUDIO_ALLOW_NON_LOOPBACK is enabled: non-loopback clients/hosts are allowed. ' +
+        'Only do this on a trusted network.'
+    );
+  } else if (security.isWildcardOrigins(origins)) {
+    console.error(
+      '[security] STUDIO_ORIGINS=* is enabled: any non-null Origin is echoed (never `*`). ' +
+        'Only do this while paired on a trusted machine.'
+    );
+  }
+
+  let legacyModule = null;
+  let useCli = appOptions.useCli;
+  if (legacyEnabled) {
+    console.error(
+      '[deprecated] Legacy web UI is enabled. Use Professor Studio at http://localhost:5180.'
+    );
+    legacyModule = await import('./legacy-server.js');
+    if (useCli === undefined) useCli = legacyModule.claudeCLIAvailable({ platform });
+  }
+
+  const app = await createApp({
+    ...rest,
+    legacy: legacyEnabled,
+    nodeEnv,
+    token,
+    getToken,
+    origins,
+    coursesDir: rest.coursesDir ?? env.COURSES_DIR ?? './courses',
+    studioDist: rest.studioDist ?? env.STUDIO_DIST ?? join(REPO_ROOT, 'studio', 'dist'),
+    legacyDist:
+      rest.legacyDist ?? env.LEGACY_DIST ?? join(REPO_ROOT, 'web', 'client', 'dist'),
+    useCli,
+    spawnImpl,
+    extraHosts,
+    allowNonLoopback: rest.allowNonLoopback ?? (optIn || extraHosts.length > 0),
+  });
+
+  const server = createServer(app);
+  await new Promise((resolveListen, reject) => {
+    server.once('error', reject);
+    server.listen(resolvedPort, resolvedHost, () => {
+      server.removeListener('error', reject);
+      resolveListen();
+    });
+  });
+
+  const uiUrl =
+    legacyEnabled && nodeEnv !== 'production'
+      ? 'http://localhost:5173'
+      : `http://localhost:${resolvedPort}`;
+
+  let legacyDev = null;
+  if (legacyEnabled && nodeEnv !== 'production') {
+    legacyDev = legacyModule.startLegacyDevServer({
+      clientDir: join(REPO_ROOT, 'web', 'client'),
+      spawnImpl,
+      platform,
+      log: appOptions.log ?? console.log,
+    });
+  }
+
+  let pairingUrl = `${uiUrl}/#token=${encodeURIComponent(token)}`;
+  if (Number(resolvedPort) !== 3000) {
+    pairingUrl += `&bridge=${encodeURIComponent(`http://localhost:${resolvedPort}`)}`;
+  }
+
+  if (logBanner !== false) {
+    const output = [
+      '',
+      '┌─ Professor Studio ───────────────────────────────────────────',
+      `│ UI:              ${uiUrl}`,
+      `│ Pairing token:   ${security.maskToken(token)}`,
+      `│ Pairing URL:     ${pairingUrl}`,
+      `│ Allowed origins: ${[...origins].join(', ')}`,
+      '└──────────────────────────────────────────────────────────────',
+      '',
+    ].join('\n');
+    (appOptions.log ?? console.log)(output);
+  }
+
+  const close = () =>
+    new Promise((resolveClose) => {
+      legacyDev?.kill?.();
+      if (!server.listening) {
+        resolveClose();
         return;
       }
-      sendSSEError(res, 'ollama_request_failed', `Ollama error ${response.status}: ${text.slice(0, 200)}`);
-      return;
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    res.write(`data: ${JSON.stringify({ provider: 'ollama', model: selectedModel })}\n\n`);
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-
-      for (const line of lines) {
-        if (!line.trim()) continue;
-        try {
-          const parsed = JSON.parse(line);
-          const token = parsed.message?.content || '';
-          if (token) {
-            fullText += token;
-            res.write(`data: ${JSON.stringify({ content: token })}\n\n`);
-          }
-        } catch {
-          // Ignore malformed stream line
-        }
-      }
-    }
-
-    const saved = saveFilesFromResponse(fullText, courseSlug);
-    if (saved.length > 0) {
-      const bySlug = {};
-      for (const { slug, file } of saved) {
-        if (!bySlug[slug]) bySlug[slug] = [];
-        bySlug[slug].push(file);
-      }
-      for (const [slug, files] of Object.entries(bySlug)) {
-        res.write(`data: ${JSON.stringify({ filesUpdated: files, courseSlug: slug })}\n\n`);
-      }
-    }
-    res.write('data: [DONE]\n\n');
-    res.end();
-  } catch (err) {
-    sendSSEError(res, 'ollama_not_running', 'Ollama is not reachable on localhost:11434.', {
-      fix: 'Start Ollama with: ollama serve',
-      details: err.message
+      server.close(() => resolveClose());
     });
-  }
+
+  return { app, server, token, origins, uiUrl, close };
 }
 
-function saveResponseFilesAndComplete(res, text, courseSlug, metadata = {}) {
-  const saved = saveFilesFromResponse(text, courseSlug);
-  if (saved.length > 0) {
-    const bySlug = {};
-    for (const { slug, file } of saved) {
-      if (!bySlug[slug]) bySlug[slug] = [];
-      bySlug[slug].push(file);
-    }
-    for (const [slug, files] of Object.entries(bySlug)) {
-      res.write(`data: ${JSON.stringify({ filesUpdated: files, courseSlug: slug })}\n\n`);
-    }
-  }
-  if (metadata.sessionId) {
-    res.write(`data: ${JSON.stringify({ sessionId: metadata.sessionId })}\n\n`);
-  }
-  res.write('data: [DONE]\n\n');
-  res.end();
-}
+/* ------------------------------------------------------------------ process entry */
 
-function streamViaCursor(res, messages, courseSlug, sessionId, model) {
-  const lastUser = [...messages].reverse().find(m => m.role === 'user');
-  if (!lastUser) {
-    sendSSEError(res, 'missing_message', 'No user message provided.');
-    return;
-  }
+const entryPath = process.argv[1];
+const isEntryPoint =
+  Boolean(entryPath) && pathToFileURL(resolve(entryPath)).href === import.meta.url;
 
-  const args = [
-    '--print',
-    '--output-format', 'stream-json',
-    '--stream-partial-output',
-    '--trust'
-  ];
-  if (sessionId) {
-    args.push('--resume', sessionId);
-  }
-  if (model) {
-    args.push('--model', model);
-  }
-  args.push(lastUser.content);
-
-  const proc = spawn('cursor-agent', args, { cwd: __dirname, stdio: ['ignore', 'pipe', 'pipe'] });
-  let buffer = '';
-  let fullText = '';
-  let lastAssistant = '';
-  let newSessionId = null;
-
-  proc.stdout.on('data', chunk => {
-    buffer += chunk.toString();
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || '';
-    for (const rawLine of lines) {
-      const line = rawLine.trim();
-      if (!line) continue;
-      try {
-        const d = JSON.parse(line);
-        if (d.type === 'system' && d.subtype === 'init' && d.session_id) {
-          newSessionId = d.session_id;
-        } else if (d.type === 'stream_event') {
-          const token = d.event?.delta?.text || '';
-          if (token) {
-            fullText += token;
-            res.write(`data: ${JSON.stringify({ content: token })}\n\n`);
-          }
-        } else if (d.type === 'assistant') {
-          const assistantText = (d.message?.content || [])
-            .filter(part => part.type === 'text')
-            .map(part => part.text)
-            .join('');
-          if (assistantText && assistantText.startsWith(lastAssistant)) {
-            const delta = assistantText.slice(lastAssistant.length);
-            if (delta) {
-              fullText += delta;
-              res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
-            }
-          } else if (assistantText && !fullText) {
-            fullText += assistantText;
-            res.write(`data: ${JSON.stringify({ content: assistantText })}\n\n`);
-          }
-          lastAssistant = assistantText || lastAssistant;
-        } else if (d.type === 'result' && d.result && !fullText) {
-          fullText += d.result;
-          res.write(`data: ${JSON.stringify({ content: d.result })}\n\n`);
-        }
-      } catch {
-        // skip malformed lines
-      }
-    }
-  });
-
-  proc.stderr.on('data', chunk => {
-    const text = chunk.toString();
-    if (/api\s*key|login|auth/i.test(text)) {
-      sendSSEError(res, 'auth_required', 'Cursor Agent requires local login/authentication.', {
-        fix: 'Run: cursor-agent login'
-      });
-    }
-  });
-
-  proc.on('error', (err) => {
-    sendSSEError(res, 'cursor_exec_failed', `Cursor Agent failed to start: ${err.message}`);
-  });
-
-  proc.on('close', (code) => {
-    if (res.writableEnded) return;
-    if (code !== 0 && !fullText) {
-      sendSSEError(res, 'cursor_failed', `Cursor Agent exited with code ${code}.`);
-      return;
-    }
-    saveResponseFilesAndComplete(res, fullText, courseSlug, { sessionId: newSessionId });
+if (isEntryPoint) {
+  startServer().catch((err) => {
+    console.error(`Error: ${err.message}`);
+    process.exit(1);
   });
 }
-
-function streamViaOpenCode(res, messages, courseSlug, sessionId, model) {
-  const lastUser = [...messages].reverse().find(m => m.role === 'user');
-  if (!lastUser) {
-    sendSSEError(res, 'missing_message', 'No user message provided.');
-    return;
-  }
-
-  const args = ['run', '--format', 'json'];
-  if (sessionId) {
-    args.push('--session', sessionId);
-  } else {
-    args.push('--continue');
-  }
-  if (model) {
-    args.push('--model', model);
-  }
-  args.push(lastUser.content);
-
-  const proc = spawn('opencode', args, { cwd: __dirname, stdio: ['ignore', 'pipe', 'pipe'] });
-  let buffer = '';
-  let fullText = '';
-  let newSessionId = null;
-
-  const flushLine = (line) => {
-    const trimmed = line.trim();
-    if (!trimmed) return;
-    try {
-      const event = JSON.parse(trimmed);
-      const textCandidates = [
-        event.delta?.text,
-        event.message?.content,
-        event.content,
-        event.text,
-        event.result
-      ].filter(Boolean);
-      for (const item of textCandidates) {
-        const text = typeof item === 'string' ? item : '';
-        if (text) {
-          fullText += text;
-          res.write(`data: ${JSON.stringify({ content: text })}\n\n`);
-          break;
-        }
-      }
-      const sid = event.sessionID || event.sessionId || event.session_id;
-      if (sid) newSessionId = sid;
-    } catch {
-      // If output isn't json event, stream as plain text fallback.
-      fullText += trimmed + '\n';
-      res.write(`data: ${JSON.stringify({ content: `${trimmed}\n` })}\n\n`);
-    }
-  };
-
-  proc.stdout.on('data', chunk => {
-    buffer += chunk.toString();
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || '';
-    for (const line of lines) {
-      flushLine(line);
-    }
-  });
-
-  proc.stderr.on('data', chunk => {
-    const text = chunk.toString();
-    if (/provider|credential|auth|login/i.test(text)) {
-      sendSSEError(res, 'auth_required', 'OpenCode requires provider credentials/login.', {
-        fix: 'Run: opencode providers'
-      });
-    }
-  });
-
-  proc.on('error', (err) => {
-    sendSSEError(res, 'opencode_exec_failed', `OpenCode failed to start: ${err.message}`);
-  });
-
-  proc.on('close', (code) => {
-    if (res.writableEnded) return;
-    if (buffer.trim()) flushLine(buffer);
-    if (code !== 0 && !fullText) {
-      sendSSEError(res, 'opencode_failed', `OpenCode exited with code ${code}.`);
-      return;
-    }
-    saveResponseFilesAndComplete(res, fullText, courseSlug, { sessionId: newSessionId });
-  });
-}
-
-app.get('/api/agents/capabilities', (req, res) => {
-  res.json({ capabilities: getAgentCapabilities() });
-});
-
-app.get('/api/agents/models', (req, res) => {
-  const provider = (req.query.provider || 'auto').toString();
-  const capabilities = getAgentCapabilities();
-  const resolved = resolveProvider(provider, capabilities);
-
-  if (resolved === 'ollama') {
-    res.json({
-      provider: resolved,
-      supportsModelSelection: true,
-      allowCustomModel: true,
-      models: capabilities.ollama.models
-    });
-    return;
-  }
-
-  if (resolved === 'cursor') {
-    res.json({
-      provider: resolved,
-      supportsModelSelection: true,
-      allowCustomModel: true,
-      models: capabilities.cursor.models || []
-    });
-    return;
-  }
-
-  if (resolved === 'opencode') {
-    res.json({
-      provider: resolved,
-      supportsModelSelection: true,
-      allowCustomModel: true,
-      models: capabilities.opencode.models || []
-    });
-    return;
-  }
-
-  if (resolved === 'cloud') {
-    const models = process.env.OPENAI_API_KEY
-      ? ['gpt-4o', 'gpt-4.1-mini']
-      : ['claude-sonnet-4-6'];
-    res.json({
-      provider: resolved,
-      supportsModelSelection: true,
-      allowCustomModel: false,
-      models
-    });
-    return;
-  }
-
-  res.json({
-    provider: resolved,
-    supportsModelSelection: false,
-    allowCustomModel: false,
-    models: []
-  });
-});
-
-// POST /api/chat - Stream Claude responses via SSE
-app.post('/api/chat', (req, res) => {
-  console.log('📨 POST /api/chat received, messages:', req.body?.messages?.length, 'USE_CLI:', USE_CLI);
-  const { messages, courseSlug, sessionId, provider = 'auto', model } = req.body;
-
-  // Set SSE headers
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
-
-  const capabilities = getAgentCapabilities();
-  const selectedProvider = resolveProvider(provider, capabilities);
-  if (selectedProvider === 'none') {
-    sendSSEError(res, 'no_provider_available', 'No local provider or cloud API is available.');
-    return;
-  }
-  res.write(`data: ${JSON.stringify({ provider: selectedProvider })}\n\n`);
-
-  if (selectedProvider === 'claude') {
-    streamViaCLI(res, messages, courseSlug, sessionId);
-    return;
-  }
-  if (selectedProvider === 'ollama') {
-    if (!capabilities.ollama.installed) {
-      sendSSEError(res, 'ollama_not_installed', 'Ollama CLI not found.', { fix: 'Install Ollama from https://ollama.com/' });
-      return;
-    }
-    streamViaOllama(res, messages, courseSlug, model);
-    return;
-  }
-
-  if (selectedProvider === 'cursor') {
-    streamViaCursor(res, messages, courseSlug, sessionId, model);
-    return;
-  }
-
-  if (selectedProvider === 'opencode') {
-    streamViaOpenCode(res, messages, courseSlug, sessionId, model);
-    return;
-  }
-
-  // Get API key (fallback when CLI not available)
-  const apiKey = process.env.ANTHROPIC_API_KEY
-    || process.env.CLAUDE_API_KEY
-    || process.env.OPENAI_API_KEY;
-
-  if (!apiKey) {
-    res.write(`data: ${JSON.stringify({ error: 'No API key configured. Run: export ANTHROPIC_API_KEY=your-key' })}\n\n`);
-    res.end();
-    return;
-  }
-
-  // Build messages for API (filter out empty assistant messages from streaming)
-  const apiMessages = messages
-    .filter(m => m.content && m.content.trim())
-    .map(m => ({
-      role: m.role === 'user' ? 'user' : 'assistant',
-      content: m.content
-    }));
-
-  // Determine API provider
-  const isOpenAI = !!process.env.OPENAI_API_KEY && !process.env.ANTHROPIC_API_KEY && !process.env.CLAUDE_API_KEY;
-
-  let apiUrl, headers, requestBody;
-
-  if (isOpenAI) {
-    apiUrl = 'https://api.openai.com/v1/chat/completions';
-    headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` };
-    requestBody = {
-      model: 'gpt-4o',
-      messages: [{ role: 'system', content: PROFESSOR_SYSTEM_PROMPT }, ...apiMessages],
-      stream: true
-    };
-    console.log('🤖 Using model: gpt-4o');
-  } else {
-    apiUrl = 'https://api.anthropic.com/v1/messages';
-    headers = { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' };
-    requestBody = {
-      model: 'claude-sonnet-4-6',
-      max_tokens: 4096,
-      system: PROFESSOR_SYSTEM_PROMPT,
-      messages: apiMessages,
-      stream: true
-    };
-    console.log('🤖 Using model: claude-sonnet-4-6');
-  }
-
-  // Buffer full response to extract file blocks after streaming
-  let fullResponse = '';
-
-  fetch(apiUrl, { method: 'POST', headers, body: JSON.stringify(requestBody) })
-    .then(response => {
-      if (!response.ok) {
-        return response.text().then(text => {
-          res.write(`data: ${JSON.stringify({ error: `API error ${response.status}: ${text.slice(0, 200)}` })}\n\n`);
-          res.end();
-        });
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      function read() {
-        reader.read().then(({ done, value }) => {
-          if (done) {
-            finalize();
-            return;
-          }
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop();
-
-          for (const line of lines) {
-            if (!line.startsWith('data: ')) continue;
-            const data = line.slice(6);
-
-            if (data === '[DONE]') {
-              finalize();
-              return;
-            }
-
-            try {
-              const parsed = JSON.parse(data);
-              let text = null;
-
-              if (isOpenAI) {
-                text = parsed.choices?.[0]?.delta?.content;
-              } else {
-                if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
-                  text = parsed.delta.text;
-                }
-              }
-
-              if (text) {
-                fullResponse += text;
-                // Strip file blocks from the visible chat text before sending
-                const visibleText = text; // stream as-is; client sees file tags briefly — cleaned in finalize
-                res.write(`data: ${JSON.stringify({ content: visibleText })}\n\n`);
-              }
-            } catch {
-              // Skip malformed JSON
-            }
-          }
-
-          read();
-        }).catch(err => {
-          res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
-          res.end();
-        });
-      }
-
-      function finalize() {
-        // Save any course files embedded in the response
-        const saved = saveFilesFromResponse(fullResponse, courseSlug);
-        if (saved.length > 0) {
-          // Group by slug and collect filenames
-          const bySlug = {};
-          for (const { slug, file } of saved) {
-            if (!bySlug[slug]) bySlug[slug] = [];
-            bySlug[slug].push(file);
-          }
-          // Notify client for each affected slug
-          for (const [slug, files] of Object.entries(bySlug)) {
-            res.write(`data: ${JSON.stringify({ filesUpdated: files, courseSlug: slug })}\n\n`);
-          }
-        }
-        res.write('data: [DONE]\n\n');
-        res.end();
-      }
-
-      read();
-    })
-    .catch(error => {
-      res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
-      res.end();
-    });
-});
-
-// POST /api/notify - Trigger broadcast (placeholder for WebSocket)
-app.post('/api/notify', (req, res) => {
-  const { courseSlug, lectureSlug } = req.body;
-  // WebSocket broadcast would go here in full implementation
-  res.json({ success: true, message: 'Notification sent' });
-});
-
-// Development: Start Vite dev server
-if (NODE_ENV !== 'production') {
-  const { spawn } = await import('child_process');
-  
-  console.log(`🔧 Starting Vite dev server...`);
-  const vite = spawn('npm', ['run', 'dev'], {
-    cwd: join(__dirname, 'client'),
-    stdio: 'inherit',
-    shell: true
-  });
-  
-  vite.on('error', (err) => {
-    console.error('Failed to start Vite:', err);
-  });
-}
-
-// Production: Serve static files
-if (NODE_ENV === 'production') {
-  const distPath = join(__dirname, 'client', 'dist');
-  
-  if (existsSync(distPath)) {
-    app.use(express.static(distPath));
-    
-    // Handle SPA - serve index.html for all non-API routes
-    app.get('*', (req, res) => {
-      res.sendFile(join(distPath, 'index.html'));
-    });
-    
-    console.log(`📦 Serving static files from ${distPath}`);
-  } else {
-    console.warn(`⚠️  Production build not found at ${distPath}`);
-    console.warn(`   Run 'npm run build' first`);
-  }
-}
-
-// Start server (loopback by default — the Studio bridge is local-only; set HOST to override)
-server.listen(PORT, HOST, () => {
-  const url = NODE_ENV === 'production' 
-    ? `http://localhost:${PORT}`
-    : `http://localhost:${PORT} (with Vite dev server)`;
-  const hostNote = process.env.HOST ? `\n║   Bound to HOST=${HOST} (exposed beyond loopback)  ║` : '';
-
-  console.log(`
-╔══════════════════════════════════════════════════════════════╗
-║           📚 Professor Web UI - Running                       ║
-║                                                               ║
-║   URL: ${url}
-║   Mode: ${NODE_ENV}
-║   Courses: ${COURSES_DIR}${hostNote}
-╚══════════════════════════════════════════════════════════════╝
-  `.trim());
-});
-
-export { app, server };
