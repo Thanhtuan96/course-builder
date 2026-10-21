@@ -77,7 +77,7 @@ describe('planCourseImport log mapping', () => {
         { date: '2026-10-04', section: 'Unknown topic', verdict: 'reviewed' },
       ],
     };
-    const plan = planCourseImport(course);
+    const plan = planCourseImport(course, { now: Date.parse('2026-10-15T12:00:00Z') });
     expect(plan.course.goal).toBe('Ship something real');
     expect(plan.logs.map((l) => l.kind)).toEqual(['quiz', 'reflection', 'note']);
     expect(plan.logs[0]).toMatchObject({ score: 4, total: 5, lessonId: 'cli-lesson-synthetic-1' });
@@ -89,8 +89,12 @@ describe('planCourseImport log mapping', () => {
 describe('applyCourseImport', () => {
   it('dry-run writes nothing', async () => {
     const store = mkStore();
-    const course = readCourse(FIXTURE, { slug: 'flavour-table' });
-    const stats = await applyCourseImport(planCourseImport(course), store, { dryRun: true });
+    const course = readCourse(FIXTURE, { slug: 'flavour-table', today: '2026-10-15' });
+    const stats = await applyCourseImport(
+      planCourseImport(course, { now: Date.parse('2026-10-15T12:00:00Z') }),
+      store,
+      { dryRun: true }
+    );
     expect(stats).toMatchObject({ lessons: 3, versions: 2, cards: 2, reflections: 1 });
     expect(await store.list('courses')).toHaveLength(0);
     expect(await store.list('lessons')).toHaveLength(0);
@@ -99,8 +103,8 @@ describe('applyCourseImport', () => {
 
   it('imports courses/lessons/versions/cards/reflections and is idempotent', async () => {
     const store = mkStore();
-    const course = readCourse(FIXTURE, { slug: 'flavour-table' });
-    const plan = planCourseImport(course);
+    const course = readCourse(FIXTURE, { slug: 'flavour-table', today: '2026-10-15' });
+    const plan = planCourseImport(course, { now: Date.parse('2026-10-15T12:00:00Z') });
 
     await applyCourseImport(plan, store);
     await applyCourseImport(plan, store); // re-run must not duplicate

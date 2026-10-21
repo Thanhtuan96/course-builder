@@ -54,7 +54,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Seams and Toolchain Prep** - Split hotspot monoliths with no behavior change and land every milestone dependency in one lockfile change (Wave 0) (completed 2026-10-17)
 - [x] **Phase 2: Security Release Gate and Legacy Gating** - Studio-only by default, one hardened guard layer for every route, safe spawning and a side-effect-asserting regression suite (Wave 1) (completed 2026-10-22)
 - [x] **Phase 3: Plugin Drift Guard** - Generate `shared/` from canonical sources with one script and fail CI on drift (Wave 1) (completed 2026-10-22)
-- [ ] **Phase 4: Test Entry and CI Baseline** - One `npm test` for both suites, CI on `develop`, deterministic tests (Wave 1)
+- [x] **Phase 4: Test Entry and CI Baseline** - One `npm test` for both suites, CI on `develop`, deterministic tests (Wave 1) (completed 2026-10-22)
 - [x] **Phase 5: Beta Data Foundation** - Content-free learning events, revision links, activation and report builder in every storage adapter (Wave 1) (completed 2026-10-22)
 - [x] **Phase 6: Studio Beta Debt** - Wrong-language errors surfaced, render-safe language switch, loopback-only bridge and CSP (Wave 1) (completed 2026-10-22)
 - [ ] **Phase 7: Beta Report UI and Nudges** - Learner previews and downloads the beta report; day-7/day-14 reminders (Wave 2)
@@ -287,7 +287,7 @@ Wave 0 (Phase 1) → Wave 1 (Phases 2, 3, 4, 5, 6 in parallel) → Wave 2 (Phase
 | 1. Seams and Toolchain Prep | 0 | 5/4 | Complete    | 2026-10-17 |
 | 2. Security Release Gate and Legacy Gating | 1 | 5/5 | Complete | 2026-10-22 |
 | 3. Plugin Drift Guard | 1 | 1/1 | Complete | 2026-10-22 |
-| 4. Test Entry and CI Baseline | 1 | 0/TBD | Not started | - |
+| 4. Test Entry and CI Baseline | 1 | 3/3 | Complete | 2026-10-22 |
 | 5. Beta Data Foundation | 1 | 6/6 | Complete | 2026-10-22 |
 | 6. Studio Beta Debt | 1 | 4/4 | Complete | 2026-10-22 |
 | 7. Beta Report UI and Nudges | 2 | 0/TBD | Not started | - |

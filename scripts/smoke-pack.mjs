@@ -23,7 +23,7 @@
 import { spawn, spawnSync } from 'child_process';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync, existsSync, readFileSync } from 'fs';
 import { tmpdir } from 'os';
-import { dirname, join } from 'path';
+import { basename, dirname, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 
@@ -34,7 +34,42 @@ const API_PORT = Number(process.env.SMOKE_API_PORT || 3019);
 const TOKEN = 'smoke-token-0123456789abcdef';
 const HEALTH_TIMEOUT_MS = 60000;
 
+// Phase 2 supplies these two assets; plan 04-01 adds the matching package.json `files` entries.
+// The real tarball smoke is intentionally deferred until Phase 2 merges (nothing is stubbed here).
+const REQUIRED_PACKED_FILES = ['web/security.js', 'web/legacy-server.js'];
+const TOKEN_BASENAME = '.studio-token';
+
 const require = createRequire(import.meta.url);
+
+/**
+ * Flatten `npm pack --json` output into the list of packed file entries.
+ *
+ * @param {object|object[]} raw parsed npm output (real packs are arrays; dry runs can be objects)
+ * @returns {{ path: string, size?: number, mode?: number }[]} flat file entries with a string path
+ */
+export function normalizePackEntries(raw) {
+  const entries = Array.isArray(raw) ? raw : [raw];
+  return entries
+    .flatMap((entry) => entry?.files ?? [])
+    .filter((file) => typeof file?.path === 'string');
+}
+
+/**
+ * Check a normalized packlist for required security assets and a leaked pairing token.
+ *
+ * @param {({ path: string }|string)[]} files packed file entries or plain paths
+ * @returns {{ missing: string[], leaked: string[] }} required paths absent from the packlist and
+ *   packed paths whose basename is `.studio-token`
+ */
+export function checkPacklist(files) {
+  const paths = new Set(
+    files.map((file) => (typeof file === 'string' ? file : file?.path)).filter(Boolean)
+  );
+  const missing = REQUIRED_PACKED_FILES.filter((required) => !paths.has(required));
+  const leaked = [...paths].filter((packed) => basename(packed) === TOKEN_BASENAME);
+  return { missing, leaked };
+}
+
 
 let stepNo = 0;
 function step(title) {
@@ -140,14 +175,36 @@ async function main() {
 
   step('npm pack');
   const pack = runSync('npm', ['pack', '--json'], { cwd: REPO_ROOT, capture: true });
-  let filename;
+  let parsed;
   try {
-    filename = JSON.parse(pack.stdout).at(-1).filename;
+    parsed = JSON.parse(pack.stdout);
   } catch {
     fail(`could not parse \`npm pack --json\` output:\n${pack.stdout}`);
   }
+  const packEntries = Array.isArray(parsed) ? parsed : [parsed];
+  let filename;
+  try {
+    filename = packEntries.at(-1).filename;
+  } catch {
+    fail(`could not read the packed filename from \`npm pack --json\` output:\n${pack.stdout}`);
+  }
+  if (!filename) fail(`\`npm pack --json\` returned no filename:\n${pack.stdout}`);
   tgzPath = join(REPO_ROOT, filename);
   console.log(`   packed ${filename}`);
+
+  step('Verify the packlist includes the Phase 2 security assets and no pairing token');
+  const packedFiles = normalizePackEntries(parsed);
+  const packlist = checkPacklist(packedFiles);
+  for (const missing of packlist.missing) {
+    fail(
+      `packed tarball is missing ${missing}. Add it to package.json "files" and rebuild. ` +
+        'Phase 2 supplies the file contents; this smoke is deferred until that phase merges.'
+    );
+  }
+  if (packlist.leaked.length > 0) {
+    fail(`pairing token would be published: ${packlist.leaked.join(', ')}`);
+  }
+  console.log(`   ${packedFiles.length} files; both security assets present; no token path`);
 
   step('Install the tarball into a fresh temp project');
   const projectDir = mkWorkTemp('professor-smoke-project-');
@@ -245,11 +302,10 @@ async function main() {
   }
   // `schemaVersion` is derived from the applied migration ledger (the highest `d1_migrations`
   // prefix); what this smoke test really needs to prove is that the shipped `studio/migrations/*.sql`
-  // were applied. We assert
-  // that directly by counting the rows in the migration ledger (4 migrations ship today).
+  // were applied. We assert that directly by counting the rows in the migration ledger (5 ship today).
   const applied = countAppliedMigrations(join(professorHome, 'professor.db'));
-  if (applied < 4) {
-    fail(`only ${applied} migration(s) applied from the tarball (expected >= 4). Is studio/migrations shipped?`);
+  if (applied < 5) {
+    fail(`only ${applied} migration(s) applied from the tarball (expected >= 5). Is studio/migrations shipped?`);
   }
   console.log(`   GET /api/studio/db/health → kind=sqlite schemaVersion=${dbHealth.schemaVersion} migrationsApplied=${applied}`);
 
@@ -266,10 +322,15 @@ async function main() {
   console.log('\n✓ SMOKE PASSED — the packed tarball installs and runs cleanly.');
 }
 
-try {
-  await main();
-} catch (err) {
-  fail(err?.stack || String(err));
-} finally {
-  cleanup();
+const invokedDirectly =
+  Boolean(process.argv[1]) && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (invokedDirectly) {
+  try {
+    await main();
+  } catch (err) {
+    fail(err?.stack || String(err));
+  } finally {
+    cleanup();
+  }
 }

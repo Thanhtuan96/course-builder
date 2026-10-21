@@ -1,13 +1,12 @@
 name: Release smoke
 
 # Verifies that the npm tarball installs and runs end-to-end on the Studio floor (Node 22), and that
-# the lighter CLI commands still work on the documented minimum (Node 18). Run before every publish.
+# the lighter CLI commands still work on the documented minimum (Node 18). Runs on every push/PR to
+# the release branches and before every publish.
 
 on:
   push:
-    branches:
-      - main
-      - feat/studio-local-first
+    branches: [develop, main]
   pull_request:
   workflow_dispatch:
 
@@ -15,26 +14,48 @@ jobs:
   tarball-smoke:
     name: Tarball smoke (Node 22)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install dependencies
-        run: npm ci
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            studio/package-lock.json
+            web/package-lock.json
+            web/client/package-lock.json
+      - name: Install every package root with npm ci
+        run: |
+          npm ci
+          npm --prefix web ci
+          npm --prefix web/client ci
+          npm --prefix studio ci
+      - name: Build legacy client and Studio bundle
+        run: |
+          npm --prefix web/client run build
+          npm --prefix studio run build
       - name: Build + pack + install + run (scripts/smoke-pack.mjs)
-        run: npm run smoke:pack
+        run: SMOKE_SKIP_BUILD=1 npm run smoke:pack
 
   cli-floor:
     name: CLI floor (Node 18 — --help / doctor)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '18'
-      - name: Install dependencies
-        run: npm ci
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            studio/package-lock.json
+            web/package-lock.json
+            web/client/package-lock.json
+      - name: Install runtime dependencies
+        run: npm ci --omit=dev
       - name: Help
         run: node bin/cli.js --help
       - name: Doctor

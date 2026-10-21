@@ -1,0 +1,93 @@
+name: CI
+
+# Every push and PR to the release branches runs the whole test story:
+#   unit     — root + Studio suites on Node 22 and Node 24 (one Vitest projects run)
+#   security — test/security/** (security release gate regression suite)
+#   drift    — test/shared-drift.test.js (shared/ must match its canonical sources)
+# Tarball smoke and the Node 18 CLI floor live in release-smoke.yml so they are not duplicated.
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    name: Unit (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            studio/package-lock.json
+            web/package-lock.json
+            web/client/package-lock.json
+      - name: Install root and Studio package roots
+        run: |
+          npm ci
+          npm --prefix studio ci
+      - name: Run root + Studio suites
+        run: npm test
+
+  # A missing test filter exits 1 in Vitest, so deleting either suite turns its job red on purpose.
+  # Do not add passWithNoTests or another escape hatch.
+  security:
+    name: Security suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            studio/package-lock.json
+            web/package-lock.json
+            web/client/package-lock.json
+      - name: Install root and Studio package roots
+        run: |
+          npm ci
+          npm --prefix studio ci
+      - name: Run security suite
+        run: npm run test:security
+
+  drift:
+    name: Shared drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            studio/package-lock.json
+            web/package-lock.json
+            web/client/package-lock.json
+      - name: Install root and Studio package roots
+        run: |
+          npm ci
+          npm --prefix studio ci
+      - name: Run shared drift suite
+        run: npm run test:drift

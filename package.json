@@ -12,8 +12,10 @@
         "build:studio": "npm --prefix studio install --no-audit --no-fund && npm --prefix studio run build",
         "smoke:pack": "node scripts/smoke-pack.mjs",
         "start": "cd web && node server.js",
-        "pretest": "npm --prefix web install --no-audit --no-fund --silent",
-        "test": "vitest",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:security": "vitest run test/security --project root",
+        "test:drift": "vitest run test/shared-drift.test.js --project root",
         "prepublishOnly": "npm run build && npm run build:studio"
     },
     "files": [
@@ -22,6 +24,8 @@
         "shared/",
         "plugin.json",
         "web/server.js",
+        "web/security.js",
+        "web/legacy-server.js",
         "web/studio-api.js",
         "web/studio-api/",
         "web/studio-db.js",

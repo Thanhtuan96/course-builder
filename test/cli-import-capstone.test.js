@@ -74,7 +74,7 @@ describe('planCourseImport: capstone + completion', () => {
   it('reads CAPSTONE.md (rubric parsed) and COMPLETION.md frontmatter', () => {
     const dir = mkCourseDir();
     const course = readCourse(dir, { slug: 'capstone-course', today: '2026-10-15' });
-    const plan = planCourseImport(course);
+    const plan = planCourseImport(course, { now: Date.parse('2026-10-15T12:00:00Z') });
 
     expect(plan.capstone.brief_md).toContain('learning playbook');
     expect(plan.capstone.rubric).toEqual([
@@ -92,8 +92,8 @@ describe('planCourseImport: capstone + completion', () => {
   it('returns null capstone/completion when the files are absent', () => {
     const dir = mkTemp();
     writeFileSync(join(dir, 'COURSE.md'), COURSE_MD);
-    const course = readCourse(dir, { slug: 'capstone-course' });
-    const plan = planCourseImport(course);
+    const course = readCourse(dir, { slug: 'capstone-course', today: '2026-10-15' });
+    const plan = planCourseImport(course, { now: Date.parse('2026-10-15T12:00:00Z') });
     expect(plan.capstone).toBeNull();
     expect(plan.completion).toBeNull();
   });
@@ -103,7 +103,7 @@ describe('applyCourseImport: capstone + completion', () => {
   it('creates the capstone and a course_complete submission, idempotently', async () => {
     const dir = mkCourseDir();
     const course = readCourse(dir, { slug: 'capstone-course', today: '2026-10-15' });
-    const plan = planCourseImport(course);
+    const plan = planCourseImport(course, { now: Date.parse('2026-10-15T12:00:00Z') });
 
     const store = mkStore();
     try {
@@ -134,10 +134,14 @@ describe('applyCourseImport: capstone + completion', () => {
 
   it('dry-run counts the capstone + completion without writing', async () => {
     const dir = mkCourseDir();
-    const course = readCourse(dir, { slug: 'capstone-course' });
+    const course = readCourse(dir, { slug: 'capstone-course', today: '2026-10-15' });
     const store = mkStore();
     try {
-      const stats = await applyCourseImport(planCourseImport(course), store, { dryRun: true });
+      const stats = await applyCourseImport(
+        planCourseImport(course, { now: Date.parse('2026-10-15T12:00:00Z') }),
+        store,
+        { dryRun: true }
+      );
       expect(stats).toMatchObject({ capstones: 1, completions: 1 });
       expect(await store.list('capstones')).toHaveLength(0);
       expect(await store.list('capstone_submissions')).toHaveLength(0);
