@@ -1,7 +1,11 @@
+import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createMemoryAdapter } from '../src/lib/repo/memory-adapter.js';
+import { createIdbAdapter } from '../src/lib/repo/idb-adapter.js';
 import * as repo from '../src/lib/repo/index.js';
 import { dayKey } from '../src/lib/course.js';
+import { computeMetrics } from '../src/lib/beta/metrics.js';
+import { buildBetaReport } from '../src/lib/beta/report.js';
 
 beforeEach(() => {
   repo.useAdapter(createMemoryAdapter());
@@ -232,6 +236,208 @@ describe('repo: capstone (Phase 33)', () => {
     const files = await repo.listCourseWorkspaceFiles(course.id);
     expect(files.find((f) => f.path === 'main.js').content).toBe('c');
     expect(files.map((f) => f.path).sort()).toEqual(['main.js', 'util.js']);
+  });
+});
+
+const FIXED_NOW = new Date('2026-10-22T12:00:00.000Z');
+const REPORT_APP = { version: '1.6.0-beta.1', storage: 'memory', provider: null };
+const CAPSTONE_SUMMARY = { started: true, submissions: 1, externalEvidence: 0, verdict: null };
+
+const sortById = (rows) => [...rows].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+
+function linkKindCounts(links) {
+  const counts = { explicit: 0, inferred: 0 };
+  for (const link of links) if (link.link_kind in counts) counts[link.link_kind] += 1;
+  return counts;
+}
+
+describe('repo: beta backup and restore', () => {
+  it('round-trips events, revision links and the profile without changing metrics or the report', async () => {
+    const course = await repo.createCourse({
+      title: 'Beta backup course',
+      kind: 'programming',
+      lessons: [{ title: 'L1' }],
+    });
+    const lesson = course.lessons[0];
+
+    await repo.saveQuizAttempt(lesson.id, {
+      questions: [{ id: 'q1' }],
+      answers: [0],
+      score: 0,
+      total: 1,
+    });
+    const feedback = await repo.appendChat(lesson.id, {
+      role: 'assistant',
+      content: 'review feedback',
+      mode: 'review',
+    });
+    const revised = await repo.saveQuizAttempt(lesson.id, {
+      questions: [{ id: 'q1' }],
+      answers: [0],
+      score: 1,
+      total: 1,
+      revisionOf: { feedbackTable: 'chat_messages', feedbackId: feedback.id },
+    });
+
+    const [card] = await repo.addCards(course.id, lesson.id, [{ front: 'q', back: 'a' }]);
+    await repo.gradeCard(card.id, 2);
+    await repo.appendChat(lesson.id, { role: 'user', content: 'checked', mode: 'review' });
+
+    const file = await repo.saveWorkspaceFile({
+      courseId: course.id,
+      lessonId: lesson.id,
+      path: 'main.js',
+      content: 'x',
+    });
+    await repo.saveRunResult({
+      lessonId: lesson.id,
+      fileId: file.id,
+      runner: 'browser',
+      checks: [{ passed: false }],
+    });
+
+    const events = await repo.listEvents();
+    const links = await repo.listRevisionLinks();
+    const profile = await repo.getBetaProfile();
+    const metrics = computeMetrics({ events, profile, now: FIXED_NOW });
+    const report = buildBetaReport({
+      events,
+      profile,
+      revisionLinks: links,
+      now: FIXED_NOW,
+      app: REPORT_APP,
+      capstone: CAPSTONE_SUMMARY,
+    });
+
+    expect(events.map((e) => e.kind)).toEqual(
+      expect.arrayContaining([
+        'quiz_completed',
+        'recall_completed',
+        'answer_sent_for_review',
+        'exercise_completed',
+      ])
+    );
+    expect(links).toHaveLength(1);
+    expect(links[0]).toMatchObject({ surface: 'quiz', link_kind: 'explicit', revised_id: revised.id });
+    expect(profile.activated_at).toBeTruthy();
+
+    const times = events.map((e) => Date.parse(e.created_at));
+    expect(times).toEqual([...times].sort((a, b) => a - b));
+
+    expect(await repo.listEvents({ kind: 'quiz_completed' })).toHaveLength(2);
+    expect(await repo.listEvents({ lessonId: lesson.id })).toHaveLength(events.length);
+    expect(await repo.listEvents({ surface: 'recall' })).toHaveLength(1);
+    expect(await repo.listEvents({ day: dayKey(new Date()) })).toHaveLength(events.length);
+    expect(await repo.listRevisionLinks({ linkKind: 'explicit' })).toHaveLength(1);
+    expect(await repo.listRevisionLinks({ courseId: course.id })).toHaveLength(1);
+    expect((await repo.listRevisionLinks({ revisedId: revised.id }))[0].link_kind).toBe('explicit');
+
+    const dump = await repo.exportAll();
+    repo.useAdapter(createMemoryAdapter());
+    await repo.importAll(dump);
+
+    const restoredEvents = await repo.listEvents();
+    const restoredLinks = await repo.listRevisionLinks();
+    const restoredProfile = await repo.getBetaProfile();
+
+    expect(sortById(restoredEvents)).toEqual(sortById(events));
+    expect(sortById(restoredLinks)).toEqual(sortById(links));
+    expect(restoredProfile).toEqual(profile);
+    expect(computeMetrics({ events: restoredEvents, profile: restoredProfile, now: FIXED_NOW })).toEqual(metrics);
+    expect(
+      buildBetaReport({
+        events: restoredEvents,
+        profile: restoredProfile,
+        revisionLinks: restoredLinks,
+        now: FIXED_NOW,
+        app: REPORT_APP,
+        capstone: CAPSTONE_SUMMARY,
+      })
+    ).toEqual(report);
+  });
+});
+
+describe('repo: IndexedDB beta emission', () => {
+  let idbCounter = 0;
+
+  it('writes exactly one quiz_completed event for one saveQuizAttempt', async () => {
+    const adapter = createIdbAdapter({ dbName: `repo-beta-idb-${Date.now()}-${++idbCounter}` });
+    repo.useAdapter(adapter);
+
+    const course = await repo.createCourse({ title: 'IDB beta', lessons: [{ title: 'L1' }] });
+    const lesson = course.lessons[0];
+    const attempt = await repo.saveQuizAttempt(lesson.id, {
+      questions: [{ id: 'q1' }],
+      answers: [0],
+      score: 1,
+      total: 1,
+    });
+
+    const events = await adapter.list('learning_events');
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      kind: 'quiz_completed',
+      surface: 'quiz',
+      lesson_id: lesson.id,
+      ref_id: attempt.id,
+      day: dayKey(new Date()),
+    });
+    expect(await adapter.list('beta_profile')).toHaveLength(1);
+  });
+});
+
+describe('repo: explicit revision link without a prior attempt', () => {
+  let idbCounter = 0;
+
+  async function seedExplicitOnly() {
+    const course = await repo.createCourse({ title: 'Explicit only', lessons: [{ title: 'L1' }] });
+    const lesson = course.lessons[0];
+    const feedback = await repo.appendChat(lesson.id, {
+      role: 'assistant',
+      content: 'Try the edge case again.',
+      mode: 'review',
+    });
+    const attempt = await repo.saveQuizAttempt(lesson.id, {
+      questions: [{ id: 'q1' }],
+      answers: [0],
+      score: 1,
+      total: 1,
+      revisionOf: { feedbackTable: 'chat_messages', feedbackId: feedback.id },
+    });
+    return { course, lesson, feedback, attempt };
+  }
+
+  async function expectSingleExplicitLink({ course, lesson, feedback, attempt }) {
+    const links = await repo.listRevisionLinks({ revisedId: attempt.id });
+    expect(links).toHaveLength(1);
+    expect(links[0]).toMatchObject({
+      surface: 'quiz',
+      course_id: course.id,
+      lesson_id: lesson.id,
+      attempt_table: 'quiz_attempts',
+      attempt_id: null,
+      feedback_table: 'chat_messages',
+      feedback_id: feedback.id,
+      revised_table: 'quiz_attempts',
+      revised_id: attempt.id,
+      link_kind: 'explicit',
+    });
+    expect(links[0].attempt_id).toBeNull();
+    expect(await repo.listRevisionLinks({ linkKind: 'inferred' })).toHaveLength(0);
+    expect(await repo.listQuizAttempts(lesson.id)).toHaveLength(1);
+    const events = await repo.listEvents({ kind: 'quiz_completed' });
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ ref_id: attempt.id, lesson_id: lesson.id });
+  }
+
+  it('memory: stores exactly one explicit link with a null attempt_id', async () => {
+    repo.useAdapter(createMemoryAdapter());
+    await expectSingleExplicitLink(await seedExplicitOnly());
+  });
+
+  it('IndexedDB: stores exactly one explicit link with a null attempt_id', async () => {
+    repo.useAdapter(createIdbAdapter({ dbName: `repo-explicit-only-${Date.now()}-${++idbCounter}` }));
+    await expectSingleExplicitLink(await seedExplicitOnly());
   });
 });
 

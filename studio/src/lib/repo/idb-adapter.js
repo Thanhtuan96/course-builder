@@ -16,10 +16,11 @@ const DB_NAME = 'professor-studio';
 /** The IndexedDB database name (DELETE it to remove the browser copy — STORE-03). */
 export const IDB_DB_NAME = DB_NAME;
 // v1 = the seed db.js (courses/cards/meta); v2 = the normalized schema; v3 adds the CLI-import
-// `external_id` indexes; v4 adds the capstone tables (Phase 33). Bumping the version is what makes
-// `onupgradeneeded` run for browsers that already have an older database — otherwise the new
-// stores/indexes would never be created.
-export const DB_VERSION = 4;
+// `external_id` indexes; v4 adds the capstone tables (Phase 33); v5 adds the beta-loop tables
+// `learning_events`, `revision_links` and `beta_profile` (Phase 5). Bumping the version is what
+// makes `onupgradeneeded` run for browsers that already have an older database — otherwise the new
+// stores/indexes would never be created and `exportAll`/`list` would throw `NotFoundError`.
+export const DB_VERSION = 5;
 
 /**
  * Bring an open (upgrading) database in line with schema.js: create missing stores AND add any

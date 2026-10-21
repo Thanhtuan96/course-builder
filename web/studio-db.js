@@ -19,11 +19,11 @@ import { readFileSync, readdirSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { homedir } from 'os';
 import { fileURLToPath } from 'url';
+import { LATEST_MIGRATION_VERSION } from '../studio/src/lib/repo/schema.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export const APP_ID = 'professor-studio';
-export const SCHEMA_VERSION = 1;
 export const MIGRATIONS_TABLE = 'd1_migrations';
 
 /** Error carrying a stable machine code for the HTTP layer. */
@@ -127,6 +127,23 @@ export function runMigrations(db, dir) {
 }
 
 /**
+ * Highest numeric migration prefix recorded in `d1_migrations`, or 0 when no row matches.
+ * Malformed names and suffixes are ignored; the value is never derived from a row COUNT because a
+ * missing middle migration would then report a version the database does not actually have.
+ * @param {DatabaseSync} db
+ * @returns {number}
+ */
+export function appliedMigrationVersion(db) {
+  const rows = db.prepare(`SELECT name FROM ${q(MIGRATIONS_TABLE)}`).all();
+  return rows.reduce((max, row) => {
+    const match = /^(\d+)_/.exec(String(row.name));
+    if (!match) return max;
+    const version = Number(match[1]);
+    return Number.isInteger(version) ? Math.max(max, version) : max;
+  }, 0);
+}
+
+/**
  * Read the live schema (tables + columns) via sqlite_master + pragma_table_info.
  * @param {DatabaseSync} db
  * @returns {Record<string, { idName: string, columns: Map<string, {name:string,type:string,notnull:boolean,pk:boolean,dflt:any}> }>}
@@ -171,6 +188,9 @@ export function createStudioDb({ dbPath, migrationsDir, log = () => {} } = {}) {
 
   const migrationsRun = runMigrations(db, migrationsDir || resolveMigrationsDir());
   const schema = introspectSchema(db);
+  // D-12: report the schema the database actually has, not the code's idea of it. An empty ledger
+  // (a brand-new DB before the first migration recorded) falls back to the shared constant.
+  const schemaVersion = appliedMigrationVersion(db) || LATEST_MIGRATION_VERSION;
   if (migrationsRun.length) log(`Applied ${migrationsRun.length} migration(s): ${migrationsRun.join(', ')}`);
 
   function specFor(table) {
@@ -289,7 +309,7 @@ export function createStudioDb({ dbPath, migrationsDir, log = () => {} } = {}) {
     return {
       app: APP_ID,
       version: 1,
-      schemaVersion: SCHEMA_VERSION,
+      schemaVersion,
       exportedAt: new Date().toISOString(),
       tables,
     };
@@ -341,7 +361,7 @@ export function createStudioDb({ dbPath, migrationsDir, log = () => {} } = {}) {
   return {
     path,
     tables: Object.keys(schema),
-    schemaVersion: SCHEMA_VERSION,
+    schemaVersion,
     migrationsRun,
     get,
     put,
@@ -354,7 +374,7 @@ export function createStudioDb({ dbPath, migrationsDir, log = () => {} } = {}) {
     close,
     /** @returns {{kind:'sqlite', path:string, schemaVersion:number}} */
     info() {
-      return { kind: 'sqlite', path, schemaVersion: SCHEMA_VERSION };
+      return { kind: 'sqlite', path, schemaVersion };
     },
   };
 }

@@ -124,7 +124,7 @@ describe('studio /db HTTP contract', () => {
     const res = await fetch(`${baseUrl}/api/studio/db/health`, { headers: { 'X-Studio-Token': TOKEN } });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toMatchObject({ ok: true, kind: 'sqlite', schemaVersion: 1 });
+    expect(body).toMatchObject({ ok: true, kind: 'sqlite', schemaVersion: 5 });
     expect(typeof body.path).toBe('string');
   });
 

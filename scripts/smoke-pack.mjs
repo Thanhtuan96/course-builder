@@ -243,8 +243,9 @@ async function main() {
   if (typeof dbHealth.schemaVersion !== 'number') {
     fail(`db/health schemaVersion was not a number: ${JSON.stringify(dbHealth)}`);
   }
-  // `schemaVersion` is the adapter schema revision (pinned at 1 by the API tests); what this smoke
-  // test really needs to prove is that the shipped `studio/migrations/*.sql` were applied. We assert
+  // `schemaVersion` is derived from the applied migration ledger (the highest `d1_migrations`
+  // prefix); what this smoke test really needs to prove is that the shipped `studio/migrations/*.sql`
+  // were applied. We assert
   // that directly by counting the rows in the migration ledger (4 migrations ship today).
   const applied = countAppliedMigrations(join(professorHome, 'professor.db'));
   if (applied < 4) {

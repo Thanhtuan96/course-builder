@@ -85,11 +85,29 @@ export const TABLES = {
     fields: ['id', 'owner_id', 'capstone_id', 'attempt', 'content_md', 'repo_url', 'files_json', 'test_results_json', 'review_json', 'verdict', 'external_id', 'created_at', 'updated_at', 'deleted_at'],
     indexes: ['capstone_id', 'external_id'],
   },
+  learning_events: {
+    id: 'id',
+    fields: ['id', 'owner_id', 'day', 'kind', 'surface', 'course_id', 'lesson_id', 'ref_id', 'meta_json', 'created_at', 'updated_at', 'deleted_at'],
+    indexes: ['day', 'kind', 'surface', 'course_id', 'lesson_id'],
+  },
+  revision_links: {
+    id: 'id',
+    fields: ['id', 'owner_id', 'surface', 'course_id', 'lesson_id', 'attempt_table', 'attempt_id', 'feedback_table', 'feedback_id', 'revised_table', 'revised_id', 'link_kind', 'created_at', 'updated_at', 'deleted_at'],
+    indexes: ['surface', 'course_id', 'lesson_id', 'attempt_id', 'revised_id', 'link_kind'],
+  },
+  beta_profile: {
+    id: 'id',
+    fields: ['id', 'owner_id', 'participant_id', 'activated_at', 'activated_day', 'created_at', 'updated_at', 'deleted_at'],
+    indexes: [],
+  },
 };
 
 export const TABLE_NAMES = Object.keys(TABLES);
 
-export const SCHEMA_VERSION = 1;
+/** Highest migration file shipped in `studio/migrations/` (D-12 single constant source). */
+export const LATEST_MIGRATION_VERSION = 5;
+
+export const SCHEMA_VERSION = LATEST_MIGRATION_VERSION;
 
 /**
  * @param {string} table

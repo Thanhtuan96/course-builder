@@ -9,6 +9,16 @@ import { createIdbAdapter } from './idb-adapter.js';
 import { review as srsReview, newCardState } from '../srs.js';
 import { dayKey } from '../course.js';
 import { normalizeLanguage } from '../i18n/languages.js';
+import {
+  buildEventRow,
+  buildRevisionLink,
+  checksList,
+  compactMeta,
+  REVISION_FEEDBACK_TABLES,
+  validateEventKind,
+  validateEventSurface,
+  validateMeta,
+} from './events.js';
 
 let adapter = createIdbAdapter();
 const changes = new EventTarget();
@@ -83,6 +93,193 @@ function mergeAllowed(prev, patch, allowed) {
   const out = { ...prev };
   for (const key of allowed) if (patch[key] !== undefined) out[key] = patch[key];
   return out;
+}
+
+/* ------------------------------------------------------------------ revision helpers */
+
+const REVISION_WINDOW_MS = 72 * 60 * 60 * 1000;
+const TUTOR_ATTEMPT_MODES = Object.freeze(['check_answer', 'review']);
+
+function toIsoTimestamp(now) {
+  if (now === undefined || now === null) return nowIso();
+  return (now instanceof Date ? now : new Date(now)).toISOString();
+}
+
+function createdAtMs(row) {
+  const value = Date.parse(row?.created_at);
+  return Number.isNaN(value) ? null : value;
+}
+
+function sortByCreatedAt(rows, tiebreak = 'id') {
+  return [...rows].sort((a, b) => {
+    const aTime = createdAtMs(a);
+    const bTime = createdAtMs(b);
+    if (aTime !== bTime) return aTime - bTime;
+    const aKey = String(a?.[tiebreak] ?? '');
+    const bKey = String(b?.[tiebreak] ?? '');
+    return aKey < bKey ? -1 : aKey > bKey ? 1 : 0;
+  });
+}
+
+function latestPriorAttempt(rows, attemptRow, tiebreak = 'id') {
+  const newTime = createdAtMs(attemptRow);
+  if (newTime == null) return null;
+  const candidates = rows.filter((row) => row.id !== attemptRow.id && createdAtMs(row) != null && createdAtMs(row) <= newTime);
+  if (candidates.length === 0) return null;
+  const sorted = sortByCreatedAt(candidates, tiebreak);
+  return sorted[sorted.length - 1];
+}
+
+function runChecks(row) {
+  return checksList(parseJsonColumn(row?.checks_json, null));
+}
+
+function hasFailingCheck(row) {
+  return runChecks(row).some((check) => check?.passed === false || check?.ok === false);
+}
+
+async function revisionCourseId({ lessonId = null, capstoneId = null } = {}) {
+  if (capstoneId) {
+    const capstone = await adapter.get('capstones', capstoneId);
+    return capstone?.course_id ?? null;
+  }
+  if (lessonId) {
+    const lesson = await adapter.get('lessons', lessonId);
+    return lesson?.course_id ?? null;
+  }
+  return null;
+}
+
+async function findPriorAttempt({ surface, attemptRow, lessonId = null, capstoneId = null }) {
+  if (surface === 'quiz') {
+    const rows = await adapter.list('quiz_attempts', { where: { lesson_id: lessonId } });
+    return latestPriorAttempt(rows, attemptRow);
+  }
+  if (surface === 'tutor') {
+    const rows = await adapter.list('chat_messages', { where: { lesson_id: lessonId } });
+    const attempts = rows.filter((row) => row.role === 'user' && TUTOR_ATTEMPT_MODES.includes(row.mode));
+    return latestPriorAttempt(attempts, attemptRow);
+  }
+  if (surface === 'workspace') {
+    const rows = await adapter.list('run_results', { where: { lesson_id: lessonId } });
+    const sameFile = rows.filter(
+      (row) => (row.file_id ?? null) === (attemptRow.file_id ?? null) && hasFailingCheck(row)
+    );
+    return latestPriorAttempt(sameFile, attemptRow);
+  }
+  if (surface === 'capstone') {
+    const rows = await adapter.list('capstone_submissions', { where: { capstone_id: capstoneId } });
+    const reviewed = rows.filter((row) => row.review_json != null || row.verdict != null);
+    return latestPriorAttempt(reviewed, attemptRow, 'attempt');
+  }
+  return null;
+}
+
+/** Load a caller-supplied feedback row only through the fixed allowlist (T-05-08). */
+async function loadExplicitFeedback(revisionOf) {
+  if (!revisionOf || typeof revisionOf !== 'object') return null;
+  const { feedbackTable, feedbackId } = revisionOf;
+  if (!feedbackTable || !feedbackId) return null;
+  if (!REVISION_FEEDBACK_TABLES.includes(feedbackTable)) return null;
+  const row = await adapter.get(feedbackTable, feedbackId);
+  if (!row || row.deleted_at) return null;
+  return { table: feedbackTable, id: feedbackId, row };
+}
+
+function latestByCreatedAt(rows, tiebreak = 'id') {
+  const valid = rows.filter((row) => createdAtMs(row) != null);
+  if (valid.length === 0) return null;
+  const sorted = sortByCreatedAt(valid, tiebreak);
+  return sorted[sorted.length - 1];
+}
+
+/**
+ * Resolve the D-07 feedback row for one surface. Workspace and capstone are their own feedback.
+ * @param {{ surface: string, attemptRow: object, prior: object|null, lessonId?: string|null }} input
+ */
+async function findInferenceFeedback({ surface, attemptRow, prior, lessonId = null }) {
+  if (surface === 'workspace' || surface === 'capstone') return prior;
+  if (surface !== 'quiz' && surface !== 'tutor') return null;
+  const priorTime = createdAtMs(prior);
+  const newTime = createdAtMs(attemptRow);
+  if (priorTime == null || newTime == null) return null;
+  const rows = await adapter.list('chat_messages', { where: { lesson_id: lessonId } });
+  const candidates = rows.filter((row) => {
+    if (row.role !== 'assistant') return false;
+    if (surface === 'quiz' && row.mode !== 'review') return false;
+    const at = createdAtMs(row);
+    return at != null && at > priorTime && at <= newTime;
+  });
+  return latestByCreatedAt(candidates);
+}
+
+/**
+ * Write at most one revision link for a just-created attempt row (D-06/D-07).
+ * @param {{ surface: string, attemptTable: string, attemptRow: object, lessonId?: string|null, capstoneId?: string|null, revisionOf?: object|null, now?: Date|string }} input
+ */
+async function maybeLinkRevision({
+  surface,
+  attemptTable,
+  attemptRow,
+  lessonId = null,
+  capstoneId = null,
+  revisionOf = null,
+  now,
+}) {
+  const existing = await adapter.list('revision_links', { where: { revised_id: attemptRow.id } });
+  if (existing.length > 0) return existing[0];
+
+  const courseId = await revisionCourseId({ lessonId, capstoneId });
+  const prior = await findPriorAttempt({ surface, attemptRow, lessonId, capstoneId });
+  const explicit = await loadExplicitFeedback(revisionOf);
+  if (explicit) {
+    const row = stampCreate(
+      buildRevisionLink({
+        surface,
+        courseId,
+        lessonId,
+        attemptTable,
+        attemptId: prior?.id ?? null,
+        feedbackTable: explicit.table,
+        feedbackId: explicit.id,
+        revisedTable: attemptTable,
+        revisedId: attemptRow.id,
+        linkKind: 'explicit',
+      }),
+      toIsoTimestamp(now)
+    );
+    await adapter.put('revision_links', row);
+    return row;
+  }
+
+  const feedback = await findInferenceFeedback({ surface, attemptRow, prior, lessonId });
+  if (!prior || !feedback) return null;
+
+  const priorTime = createdAtMs(prior);
+  const newTime = createdAtMs(attemptRow);
+  if (priorTime == null || newTime == null) return null;
+  const span = newTime - priorTime;
+  if (span < 0 || span > REVISION_WINDOW_MS) return null;
+
+  const feedbackTable =
+    surface === 'workspace' ? 'run_results' : surface === 'capstone' ? 'capstone_submissions' : 'chat_messages';
+  const row = stampCreate(
+    buildRevisionLink({
+      surface,
+      courseId,
+      lessonId,
+      attemptTable,
+      attemptId: prior.id,
+      feedbackTable,
+      feedbackId: feedback.id,
+      revisedTable: attemptTable,
+      revisedId: attemptRow.id,
+      linkKind: 'inferred',
+    }),
+    toIsoTimestamp(now)
+  );
+  await adapter.put('revision_links', row);
+  return row;
 }
 
 /* ------------------------------------------------------------------ courses */
@@ -290,9 +487,12 @@ export async function getLessonContent(lessonId) {
 
 /**
  * @param {string} lessonId
- * @param {{ questions?: any[], answers?: any[], score?: number, total?: number }} data
+ * @param {{ questions?: any[], answers?: any[], score?: number, total?: number, revisionOf?: object|null }} data
  */
-export async function saveQuizAttempt(lessonId, { questions = [], answers = [], score = null, total = null } = {}) {
+export async function saveQuizAttempt(
+  lessonId,
+  { questions = [], answers = [], score = null, total = null, revisionOf = null } = {}
+) {
   const row = stampCreate({
     lesson_id: lessonId,
     questions_json: JSON.stringify(questions),
@@ -301,6 +501,23 @@ export async function saveQuizAttempt(lessonId, { questions = [], answers = [], 
     total,
   });
   await adapter.put('quiz_attempts', row);
+  const lesson = lessonId ? await adapter.get('lessons', lessonId) : null;
+  const meta = compactMeta({ total, score, answered: Array.isArray(answers) ? answers.length : 0 });
+  await recordEvent({
+    kind: 'quiz_completed',
+    surface: 'quiz',
+    courseId: lesson?.course_id ?? null,
+    lessonId,
+    refId: row.id,
+    meta,
+  });
+  await maybeLinkRevision({
+    surface: 'quiz',
+    attemptTable: 'quiz_attempts',
+    attemptRow: row,
+    lessonId,
+    revisionOf,
+  });
   emit('quiz_attempts', row.id, 'create');
   return row;
 }
@@ -395,6 +612,14 @@ export async function gradeCard(cardId, grade) {
   await adapter.put('cards', next);
   const review = stampCreate({ card_id: cardId, grade, reviewed_at: nowIso() });
   await adapter.put('reviews', review);
+  await recordEvent({
+    kind: 'recall_completed',
+    surface: 'recall',
+    courseId: card.course_id ?? null,
+    lessonId: card.lesson_id ?? null,
+    refId: review.id,
+    meta: { grade },
+  });
   emit('cards', cardId, 'grade');
   return { card: next, review };
 }
@@ -403,11 +628,29 @@ export async function gradeCard(cardId, grade) {
 
 /**
  * @param {string} lessonId
- * @param {{ role: string, content: string, mode?: string }} msg
+ * @param {{ role: string, content: string, mode?: string, revisionOf?: { feedbackTable: string, feedbackId: string }|null }} msg
  */
 export async function appendChat(lessonId, msg) {
   const row = stampCreate({ lesson_id: lessonId, role: msg.role, content: msg.content, mode: msg.mode || null });
   await adapter.put('chat_messages', row);
+  if (msg.role === 'user' && (msg.mode === 'check_answer' || msg.mode === 'review')) {
+    const lesson = lessonId ? await adapter.get('lessons', lessonId) : null;
+    await recordEvent({
+      kind: 'answer_sent_for_review',
+      surface: 'tutor',
+      courseId: lesson?.course_id ?? null,
+      lessonId,
+      refId: row.id,
+      meta: { mode: msg.mode },
+    });
+    await maybeLinkRevision({
+      surface: 'tutor',
+      attemptTable: 'chat_messages',
+      attemptRow: row,
+      lessonId,
+      revisionOf: msg.revisionOf ?? null,
+    });
+  }
   emit('chat_messages', row.id, 'create');
   return row;
 }
@@ -507,7 +750,7 @@ export async function deleteWorkspaceFile({ lessonId, path }) {
 }
 
 /**
- * @param {{ lessonId: string, fileId?: string|null, runner?: 'browser'|'local', language?: string|null, stdout?: string, stderr?: string, exitCode?: number|null, checks?: any, durationMs?: number|null }} input
+ * @param {{ lessonId: string, fileId?: string|null, runner?: 'browser'|'local', language?: string|null, stdout?: string, stderr?: string, exitCode?: number|null, checks?: any, durationMs?: number|null, revisionOf?: { feedbackTable: string, feedbackId: string }|null }} input
  */
 export async function saveRunResult({
   lessonId,
@@ -519,6 +762,7 @@ export async function saveRunResult({
   exitCode = null,
   checks = null,
   durationMs = null,
+  revisionOf = null,
 }) {
   const row = stampCreate({
     lesson_id: lessonId,
@@ -532,6 +776,31 @@ export async function saveRunResult({
     duration_ms: durationMs,
   });
   await adapter.put('run_results', row);
+  const list = checksList(checks);
+  const lesson = lessonId ? await adapter.get('lessons', lessonId) : null;
+  const meta =
+    list.length > 0
+      ? {
+          runner,
+          checks_total: list.length,
+          checks_passed: list.filter((c) => c?.passed === true || c?.ok === true).length,
+        }
+      : { runner, checks_total: list.length, ...(typeof exitCode === 'number' ? { exit_code: exitCode } : {}) };
+  await recordEvent({
+    kind: list.length > 0 ? 'exercise_completed' : 'workspace_run',
+    surface: 'workspace',
+    courseId: lesson?.course_id ?? null,
+    lessonId,
+    refId: row.id,
+    meta,
+  });
+  await maybeLinkRevision({
+    surface: 'workspace',
+    attemptTable: 'run_results',
+    attemptRow: row,
+    lessonId,
+    revisionOf,
+  });
   emit('run_results', row.id, 'create');
   return row;
 }
@@ -635,7 +904,7 @@ export async function createCapstone({
  * Append a submission. Attempts are never overwritten: each call adds a new row with attempt =
  * max(existing) + 1. When `externalId` matches an existing row the existing one is returned
  * unchanged (idempotent CLI import).
- * @param {{ capstoneId: string, content_md?: string, repo_url?: string|null, files?: object|null, testResults?: any, review?: any, verdict?: string|null, externalId?: string|null }} input
+ * @param {{ capstoneId: string, content_md?: string, repo_url?: string|null, files?: object|null, testResults?: any, review?: any, verdict?: string|null, externalId?: string|null, revisionOf?: { feedbackTable: string, feedbackId: string }|null }} input
  * @returns {Promise<object>}
  */
 export async function createCapstoneSubmission({
@@ -647,6 +916,7 @@ export async function createCapstoneSubmission({
   review = null,
   verdict = null,
   externalId = null,
+  revisionOf = null,
 } = {}) {
   if (!capstoneId) throw new Error('createCapstoneSubmission needs a capstoneId');
   const existing = await adapter.list('capstone_submissions', { where: { capstone_id: capstoneId } });
@@ -667,6 +937,24 @@ export async function createCapstoneSubmission({
     external_id: externalId,
   });
   await adapter.put('capstone_submissions', row);
+  const capstone = await adapter.get('capstones', capstoneId);
+  await recordEvent({
+    kind: 'capstone_checkpoint',
+    surface: 'capstone',
+    courseId: capstone?.course_id ?? null,
+    refId: row.id,
+    meta: {
+      source: testResults?.source === 'external' ? 'external' : 'in_app',
+      attempt,
+    },
+  });
+  await maybeLinkRevision({
+    surface: 'capstone',
+    attemptTable: 'capstone_submissions',
+    attemptRow: row,
+    capstoneId,
+    revisionOf,
+  });
   emit('capstone_submissions', row.id, 'create');
   return decodeCapstoneSubmission(row);
 }
@@ -723,6 +1011,123 @@ export async function logActivity(kind, refId = null) {
 
 export async function listActivity() {
   return adapter.list('activity', { orderBy: { field: 'created_at', dir: 'asc' } });
+}
+
+/* ------------------------------------------------------------------ beta events */
+
+/**
+ * Create the singleton beta profile row without activating it (D-08).
+ * @returns {Promise<object>}
+ */
+export async function getBetaProfile() {
+  const existing = await adapter.get('beta_profile', 'local');
+  if (existing) return existing;
+  const row = stampCreate({ id: 'local', participant_id: uuid(), activated_at: null, activated_day: null });
+  await adapter.put('beta_profile', row);
+  return row;
+}
+
+/**
+ * Activate the singleton profile on its first meaningful event, never rewriting it afterwards.
+ * @param {object} event a stored `learning_events` row
+ */
+async function ensureBetaProfile(event) {
+  const existing = await adapter.get('beta_profile', 'local');
+  if (!existing) {
+    return adapter.put(
+      'beta_profile',
+      stampCreate(
+        { id: 'local', participant_id: uuid(), activated_at: event.created_at, activated_day: event.day },
+        event.created_at
+      )
+    );
+  }
+  if (existing.activated_at == null) {
+    return adapter.put(
+      'beta_profile',
+      stampUpdate(existing, { activated_at: event.created_at, activated_day: event.day })
+    );
+  }
+  return existing;
+}
+
+/**
+ * Record one meaningful learning event (D-01..D-05).
+ * @param {{ kind: string, surface: string, courseId?: string|null, lessonId?: string|null, refId?: string|null, meta?: object, now?: Date|string }} input
+ * @returns {Promise<object>} the stored event row
+ */
+export async function recordEvent({
+  kind,
+  surface,
+  courseId = null,
+  lessonId = null,
+  refId = null,
+  meta = {},
+  now = new Date(),
+} = {}) {
+  validateEventKind(kind);
+  validateEventSurface(kind, surface);
+  const compact = compactMeta(meta);
+  validateMeta(kind, compact);
+  const at = now instanceof Date ? now : new Date(now);
+  const row = buildEventRow({ kind, surface, courseId, lessonId, refId, meta: compact, now: at });
+  const event = stampCreate(row, at.toISOString());
+  await adapter.put('learning_events', event);
+  await ensureBetaProfile(event);
+  emit('learning_events', event.id, 'create');
+  return event;
+}
+
+/**
+ * List meaningful events, oldest first. Unknown filter keys are passed to the adapter so its
+ * indexed-field guard rejects them (adapter parity, P4).
+ * @param {{ kind?: string, day?: string, surface?: string, courseId?: string, lessonId?: string, includeDeleted?: boolean }} [query]
+ * @returns {Promise<object[]>}
+ */
+export async function listEvents({ kind, day, surface, courseId, lessonId, includeDeleted, ...rest } = {}) {
+  const where = {};
+  if (kind != null) where.kind = kind;
+  if (day != null) where.day = day;
+  if (surface != null) where.surface = surface;
+  if (courseId != null) where.course_id = courseId;
+  if (lessonId != null) where.lesson_id = lessonId;
+  for (const [key, value] of Object.entries(rest)) {
+    if (value !== undefined) where[key] = value;
+  }
+  const opts = { where, orderBy: { field: 'created_at', dir: 'asc' } };
+  if (includeDeleted !== undefined) opts.includeDeleted = includeDeleted;
+  return adapter.list('learning_events', opts);
+}
+
+/**
+ * Read revision links through indexed equality filters only (D-06, adapter parity).
+ * Unknown filter keys are forwarded so `assertIndexedField` rejects them.
+ * @param {{ surface?: string, courseId?: string, lessonId?: string, attemptId?: string, revisedId?: string, linkKind?: string, includeDeleted?: boolean }} [query]
+ * @returns {Promise<object[]>}
+ */
+export async function listRevisionLinks({
+  surface,
+  courseId,
+  lessonId,
+  attemptId,
+  revisedId,
+  linkKind,
+  includeDeleted,
+  ...rest
+} = {}) {
+  const where = {};
+  if (surface != null) where.surface = surface;
+  if (courseId != null) where.course_id = courseId;
+  if (lessonId != null) where.lesson_id = lessonId;
+  if (attemptId != null) where.attempt_id = attemptId;
+  if (revisedId != null) where.revised_id = revisedId;
+  if (linkKind != null) where.link_kind = linkKind;
+  for (const [key, value] of Object.entries(rest)) {
+    if (value !== undefined) where[key] = value;
+  }
+  const opts = { where, orderBy: { field: 'created_at', dir: 'asc' } };
+  if (includeDeleted !== undefined) opts.includeDeleted = includeDeleted;
+  return adapter.list('revision_links', opts);
 }
 
 /* ------------------------------------------------------------------ portability */
