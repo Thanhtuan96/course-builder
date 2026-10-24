@@ -60,7 +60,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 7: Beta Report UI and Nudges** - Learner previews and downloads the beta report; day-7/day-14 reminders (Wave 2) (completed 2026-10-25)
 - [ ] **Phase 8: Revision Loop UI and Run-Location Disclosure** - "Revise this attempt", rubric-anchored feedback, attempt history and honest local-run copy (Wave 2)
 - [ ] **Phase 9: Playwright Template and Verify Externally** - Fixed Playwright course with rubric R1–R7 and self-reported external evidence review (Wave 2)
-- [ ] **Phase 10: Beta Kit and Aggregation** - Onboarding, screener, check-in script, thresholds and report aggregation script (Wave 2)
+- [x] **Phase 10: Beta Kit and Aggregation** - Onboarding, screener, check-in script, thresholds and report aggregation script (Wave 2) (completed 2026-10-25)
 - [ ] **Phase 11: Product Boundary Docs** - README, CLI help, `init` and CHANGELOG route new users to Studio (Wave 3)
 - [ ] **Phase 12: Full-Loop E2E, CI Completion and UAT** - Chromium E2E of the whole loop in CI plus a manual real-provider UAT gate (Wave 3)
 - [ ] **Phase 13: Private Beta Cohort** - Owner dogfood, then 3–5 builders run four weeks and a decision memo is written (Wave 4, human-run)
@@ -293,7 +293,7 @@ Wave 0 (Phase 1) → Wave 1 (Phases 2, 3, 4, 5, 6 in parallel) → Wave 2 (Phase
 | 7. Beta Report UI and Nudges | 2 | 2/2 | Complete | 2026-10-25 |
 | 8. Revision Loop UI and Run-Location Disclosure | 2 | 0/TBD | Not started | - |
 | 9. Playwright Template and Verify Externally | 2 | 0/TBD | Not started | - |
-| 10. Beta Kit and Aggregation | 2 | 0/TBD | Not started | - |
+| 10. Beta Kit and Aggregation | 2 | 2/2 | Complete | 2026-10-25 |
 | 11. Product Boundary Docs | 3 | 0/TBD | Not started | - |
 | 12. Full-Loop E2E, CI Completion and UAT | 3 | 0/TBD | Not started | - |
 | 13. Private Beta Cohort | 4 | 0/TBD | Not started | - |

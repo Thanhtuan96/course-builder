@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "participantId": "11111111-1111-4111-8111-111111111111",
+  "generatedAtDayOffset": 14,
+  "app": {
+    "version": "1.6.0-beta.1",
+    "storage": "sqlite",
+    "provider": "claude"
+  },
+  "activation": {
+    "activated": true,
+    "firstEventKind": "quiz_completed"
+  },
+  "window": {
+    "activeDayOffsets": [0, 3, 7, 10, 14]
+  },
+  "loops": {
+    "byKind": {
+      "quiz_completed": 2,
+      "recall_completed": 1,
+      "answer_sent_for_review": 1,
+      "workspace_run": 2,
+      "exercise_completed": 0,
+      "capstone_checkpoint": 1
+    },
+    "revisions": {
+      "quiz": 1,
+      "tutor": 0,
+      "workspace": 1,
+      "capstone": 0,
+      "explicit": 1,
+      "inferred": 1
+    }
+  },
+  "retention": {
+    "week1Active": true,
+    "week2Return": true,
+    "week2MeaningfulDays": 3
+  },
+  "capstone": {
+    "started": true,
+    "submissions": 1,
+    "externalEvidence": 0,
+    "verdict": null
+  }
+}
