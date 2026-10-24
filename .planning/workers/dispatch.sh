@@ -24,7 +24,8 @@ fi
 
 mkdir -p "$W/logs"
 echo "WORKER_START $NAME $(date +%H:%M:%S) model=$MODEL branch=$BRANCH dir=$DIR" >> "$W/status.log"
-export OPENCODE_CONFIG_CONTENT='{"permission":{"edit":"allow","bash":"allow","webfetch":"allow","external_directory":"allow"}}'
+# OpenCode v2 dropped the TUI -m flag; the model is set through the inline config instead.
+export OPENCODE_CONFIG_CONTENT="{\"model\":\"$MODEL\",\"permission\":{\"edit\":\"allow\",\"bash\":\"allow\",\"webfetch\":\"allow\",\"external_directory\":\"allow\"}}"
 cd "$DIR"
 
 # OpenCode TUI's --prompt only pre-fills the input box; submit it once the TUI is ready.
@@ -44,4 +45,4 @@ fi
 
 PROMPT="You are worker '$NAME' for GSD Phase $PHASE of this repo. Your git worktree is $DIR (branch $BRANCH, from develop); work only there. Run the full GSD cycle for Phase $PHASE by executing the GSD command /gsd-autonomous with arguments '--only $PHASE --interactive' — read ~/.config/opencode/commands/gsd-autonomous.md and follow its workflow exactly (discuss -> plan -> execute -> verify; verifier is enabled). Ask the human in this TUI whenever the workflow needs a decision. Rules from .planning/ROADMAP.md 'Execution Rules': edit only files listed under Phase $PHASE 'Owns' (plus its 'Touch points'); never add a migration other than the one your phase owns; commit atomically on your branch; do NOT merge into develop and do NOT push. When the phase is executed and verified, as your LAST action run: $W/notify.sh $NAME DONE \"<one-line summary incl. verification result>\" . If blocked, run: $W/notify.sh $NAME BLOCKED \"<reason>\" ."
 
-opencode "$DIR" -m "$MODEL" --prompt "$PROMPT"
+opencode "$DIR" --prompt "$PROMPT"
