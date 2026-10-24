@@ -150,8 +150,11 @@ export async function run({ args = [], style, startServerImpl } = {}) {
     }
   }
 
+  // Mirror web/server.js: the legacy Vite dev server only runs when NODE_ENV is not production,
+  // so its client dependencies are only needed then.
   const clientDir = join(webDir, 'client');
-  if (legacy && !isProduction && existsSync(clientDir) && !existsSync(join(clientDir, 'node_modules'))) {
+  const needsLegacyDevClient = legacy && !isProduction && process.env.NODE_ENV !== 'production';
+  if (needsLegacyDevClient && existsSync(clientDir) && !existsSync(join(clientDir, 'node_modules'))) {
     const spinner = ora('Installing client dependencies…').start();
     try {
       execSync('npm install', { cwd: clientDir, stdio: 'pipe' });
