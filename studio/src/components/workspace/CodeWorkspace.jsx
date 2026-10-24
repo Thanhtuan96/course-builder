@@ -9,7 +9,7 @@
  *
  * Props are fixed by Lesson.jsx: `{ lesson, course }`.
  */
-import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { listWorkspaceFiles, saveWorkspaceFile, deleteWorkspaceFile, saveRunResult, listRunResults } from '../../lib/repo/index.js';
 import { useSettings } from '../../lib/settings.js';
 import { useT } from '../../lib/i18n/index.js';
@@ -17,10 +17,19 @@ import { Card } from '../ui/Card.jsx';
 import { Button } from '../ui/Button.jsx';
 import { Spinner } from '../ui/Spinner.jsx';
 import { ErrorNotice } from '../ui/ErrorNotice.jsx';
-import { Badge } from '../ui/Badge.jsx';
 import { FileTabs } from './FileTabs.jsx';
 import { OutputPanel } from './OutputPanel.jsx';
 import { HistoryDrawer } from './HistoryDrawer.jsx';
+import { RunnerNotice } from '../revision/RunnerNotice.jsx';
+import { AttemptHistory } from '../revision/AttemptHistory.jsx';
+import { needsRunnerAck, acknowledgeRunner, shouldBlockLocalRun } from '../revision/runner-notice.jsx';
+import {
+  workspaceCriteria,
+  workspacePassed,
+  armRevision,
+  consumeRevision,
+  workspaceRevisionIntent,
+} from '../revision/history.js';
 import {
   seedFiles,
   filesFromRows,
@@ -89,6 +98,9 @@ export function CodeWorkspace({ lesson, course }) {
   const [history, setHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [toolchains, setToolchains] = useState(null);
+  const [acknowledged, setAcknowledged] = useState(() => !needsRunnerAck(settings));
+  const [lastCriteria, setLastCriteria] = useState([]);
+  const [lastRunId, setLastRunId] = useState(null);
 
   const abortRef = useRef(null);
   const outRef = useRef({ ...EMPTY_OUTPUT });
@@ -97,8 +109,12 @@ export function CodeWorkspace({ lesson, course }) {
   const dirtyRef = useRef(new Set());
   const saveTimerRef = useRef(null);
   const idByPathRef = useRef(new Map());
+  const revisionRef = useRef(null);
 
   filesRef.current = files;
+
+  const ackRef = useRef(acknowledged);
+  ackRef.current = acknowledged;
 
   const scheduleRender = useCallback(() => {
     if (typeof requestAnimationFrame === 'undefined') {
@@ -253,15 +269,29 @@ export function CodeWorkspace({ lesson, course }) {
   const start = useCallback(
     async (kind) => {
       if (running || !filesRef.current.length) return;
+
+      const current = filesRef.current;
+      const active = current.find((f) => f.path === activePath) || current[0];
+      const language = normalizeLanguage(active?.language) || guessCourseLanguage(course) || languageForPath(active?.path) || 'javascript';
+
+      // LOOP-04 / D-13: the first local run never starts before the acknowledgement. Nothing below
+      // this guard executes — no error reset, no spinner, no run, no saved row.
+      const runnerKind = describeRunner(language, { toolchains }).kind;
+      if (shouldBlockLocalRun({ runnerKind, acknowledged: ackRef.current })) {
+        setError(
+          Object.assign(new Error(t('runnerNotice.notice.blocked')), {
+            hint: t('runnerNotice.notice.blockedHint'),
+          })
+        );
+        return;
+      }
+
       setError(null);
       setRunning(kind);
       abortRef.current = new AbortController();
       outRef.current = { ...EMPTY_OUTPUT };
       setOutput({ ...outRef.current });
-
-      const current = filesRef.current;
-      const active = current.find((f) => f.path === activePath) || current[0];
-      const language = normalizeLanguage(active?.language) || guessCourseLanguage(course) || languageForPath(active?.path) || 'javascript';
+      setLastCriteria([]);
 
       try {
         const result = await runCode({
@@ -277,13 +307,21 @@ export function CodeWorkspace({ lesson, course }) {
         setOutput({ ...outRef.current });
 
         if (!result.aborted) {
+          // Derive the rubric before the save so the review is visible even if the write fails.
+          setLastCriteria(
+            workspaceCriteria(result.checks ?? [], (criterion) =>
+              t('revision.workspace.fallbackQuestion', { label: criterion.label })
+            )
+          );
           const payload = encodeRunPayload({
             checks: result.checks,
             files: toMap(current),
             entry: active?.path,
             language,
           });
-          await saveRunResult({
+          // Consumed before the await: a failed write cannot leak the revision onto the next run.
+          const revisionOf = consumeRevision(revisionRef);
+          const saved = await saveRunResult({
             lessonId: lesson.id,
             fileId: idByPathRef.current.get(active?.path) || null,
             runner: result.runner,
@@ -293,7 +331,9 @@ export function CodeWorkspace({ lesson, course }) {
             exitCode: result.exitCode,
             checks: payload,
             durationMs: result.durationMs,
+            revisionOf,
           });
+          setLastRunId(saved?.id ?? null);
           await refreshHistory();
         }
       } catch (err) {
@@ -308,12 +348,22 @@ export function CodeWorkspace({ lesson, course }) {
         abortRef.current = null;
       }
     },
-    [activePath, course, courseSlug, lesson?.id, pushChunk, refreshHistory, running, settings]
+    [activePath, course, courseSlug, lesson?.id, pushChunk, refreshHistory, running, settings, t, toolchains]
   );
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
   }, []);
+
+  const handleAcknowledge = useCallback(() => {
+    acknowledgeRunner(settings);
+    setAcknowledged(true);
+  }, [settings]);
+
+  const handleReviseRun = useCallback(() => {
+    armRevision(revisionRef, workspaceRevisionIntent(lastRunId));
+    setError(null);
+  }, [lastRunId]);
 
   /* --------------------------------------------------------------- file actions */
   const addFile = useCallback(async () => {
@@ -422,6 +472,26 @@ export function CodeWorkspace({ lesson, course }) {
   const activeFile = files.find((f) => f.path === activePath) || files[0] || null;
   const runnerInfo = describeRunner(activeFile?.language, { toolchains });
 
+  // LOOP-01: the CTA is offered only for a failing run that actually produced checks. A compile or
+  // provider failure yields zero checks, and `workspacePassed([])` is false, so the length gate is
+  // what keeps "Revise this attempt" off an empty review.
+  const onRevise =
+    lastRunId && (output?.checks?.length ?? 0) > 0 && !workspacePassed(output?.checks)
+      ? handleReviseRun
+      : null;
+
+  const runAttempts = useMemo(
+    () =>
+      history.map((run, index) => ({
+        id: run.id,
+        label: t('revision.history.attempt', { n: index + 1 }),
+        criteria: workspaceCriteria(run.checks ?? [], (criterion) =>
+          t('revision.workspace.fallbackQuestion', { label: criterion.label })
+        ),
+      })),
+    [history, t]
+  );
+
   if (!loaded) {
     return (
       <Card className="flex items-center gap-2 text-sm text-neutral-500">
@@ -435,9 +505,6 @@ export function CodeWorkspace({ lesson, course }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <h2 className="font-medium">{t('workspace.title')}</h2>
-          <Badge tone={runnerInfo.kind === 'local' ? 'accent' : 'neutral'}>
-            {runnerInfo.kind === 'local' ? t('workspace.localServer') : t('workspace.browser')}
-          </Badge>
           {runnerInfo.kind === 'local' && !runnerInfo.ready && (
             <span className="text-xs text-amber-600 dark:text-amber-400">
               {runnerInfo.command
@@ -467,6 +534,8 @@ export function CodeWorkspace({ lesson, course }) {
         </div>
       </div>
 
+      <RunnerNotice runnerInfo={runnerInfo} acknowledged={acknowledged} onAcknowledge={handleAcknowledge} />
+
       <FileTabs
         files={files}
         activePath={activeFile?.path}
@@ -489,7 +558,18 @@ export function CodeWorkspace({ lesson, course }) {
 
       {error ? <ErrorNotice error={error} onDismiss={() => setError(null)} /> : null}
 
-      <OutputPanel output={output} runnerInfo={runnerInfo} />
+      <OutputPanel
+        output={output}
+        runnerInfo={runnerInfo}
+        criteria={lastCriteria}
+        criteriaTitle={t('revision.workspace.criteriaTitle')}
+        reviseHint={t('revision.workspace.reviseHint')}
+        onRevise={onRevise}
+      />
+
+      {runAttempts.length > 0 ? (
+        <AttemptHistory attempts={runAttempts} title={t('revision.history.title')} />
+      ) : null}
 
       {showHistory ? (
         <div className="border-t border-neutral-200 pt-3 dark:border-neutral-800">

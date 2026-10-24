@@ -1,0 +1,47 @@
+{
+  "status": {
+    "met": "Met",
+    "partial": "Partly met",
+    "not_met": "Not met"
+  },
+  "review": {
+    "title": "Review",
+    "criteria": "Criteria",
+    "questionLabel": "A question for you",
+    "failed": "The review came back in a format we cannot use.",
+    "failedHint": "Your attempt is already saved. Try the review again.",
+    "retry": "Try the review again",
+    "empty": "Nothing to review yet."
+  },
+  "revise": {
+    "label": "Revise this attempt"
+  },
+  "quiz": {
+    "criteriaTitle": "How each answer landed",
+    "fallbackQuestion": "What led you to that answer for “{label}”, and what would change your mind?",
+    "reviseHint": "Answer the same questions again. This attempt is recorded as a revision of the feedback above."
+  },
+  "tutor": {
+    "reviewAction": "Review my attempt",
+    "reviewUserText": "Review my attempt against the lesson criteria.",
+    "reviewEmpty": "Write or send an attempt first, then ask for a review.",
+    "reviseHint": "Write your revised answer below. Your next message is linked to this review."
+  },
+  "workspace": {
+    "criteriaTitle": "How each check landed",
+    "fallbackQuestion": "Which part of “{label}” is still unclear, and what have you tried so far?",
+    "reviseHint": "Change your code, then Run or Check again. The next run is linked to this feedback."
+  },
+  "history": {
+    "title": "Attempt history",
+    "toggle": "Attempt history ({count})",
+    "empty": "No attempts yet.",
+    "attempt": "Attempt {n}",
+    "summary": "{from} → {to} of {total} met",
+    "firstSummary": "{to} of {total} met",
+    "new": "new",
+    "removed": "removed",
+    "transition": "{key}: {from} → {to}",
+    "noChange": "No criteria changed since the previous attempt."
+  }
+}

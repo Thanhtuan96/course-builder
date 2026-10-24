@@ -4,17 +4,17 @@ milestone: v3.0
 current_phase: 2
 current_phase_name: Security Release Gate and Legacy Gating
 status: planning
-stopped_at: Wave 2 in progress (Phases 7-10 in parallel workers); Phases 7, 10 merged
+stopped_at: Wave 2 in progress (Phases 7-10 in parallel workers); Phases 7, 8, 10 merged
 last_updated: "2026-10-16T17:59:55.029Z"
 last_activity: 2026-10-25
-last_activity_desc: Phase 10 Beta Kit and Aggregation squash-merged into develop
+last_activity_desc: Phase 8 Revision Loop UI squash-merged into develop
 state_head: b17f055b1e3396a76cff241fa525f4ea00d2e194
 progress:
   total_phases: 13
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 20
   completed_plans: 20
-  percent: 62
+  percent: 69
 ---
 
 # Project State
@@ -29,11 +29,11 @@ See: .planning/PROJECT.md (updated 2026-10-17)
 ## Current Position
 
 Phase: Wave 2 (Phases 7–10) of 13 — running in parallel OpenCode workers
-Plan: Phases 7, 10 complete; Phases 8, 9 in progress
+Plan: Phases 7, 8, 10 complete; Phase 9 in progress
 Status: In progress
-Last activity: 2026-10-25 — Phase 10 Beta Kit merged (npm test 1191); THRESHOLDS.md awaits owner sign-off
+Last activity: 2026-10-25 — Phase 8 Revision Loop merged (npm test 1288); 2 real-env checks queued for Phase 12 UAT
 
-Progress: [██████░░░░] 62%
+Progress: [███████░░░] 69%
 
 ## Performance Metrics
 

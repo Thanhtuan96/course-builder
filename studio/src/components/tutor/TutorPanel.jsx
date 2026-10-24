@@ -11,9 +11,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from '../../lib/router.js';
 import { appendChat, listChat, getLessonContent, onChange } from '../../lib/repo/index.js';
-import { getProvider, MAX_TOKENS } from '../../lib/ai/index.js';
+import { getProvider, MAX_TOKENS, ProviderError } from '../../lib/ai/index.js';
 import { useStream } from '../../lib/ai/useStream.js';
-import { buildTutorMessages, TUTOR_MODES } from '../../lib/prompts/tutor.js';
+import {
+  buildTutorMessages,
+  TUTOR_MODES,
+  buildTutorReviewMessages,
+  validateTutorReview,
+  normalizeTutorReview,
+} from '../../lib/prompts/tutor.js';
 import { useHintLevel } from '../../lib/chat-store.js';
 import { currentCodeBlock } from '../../lib/runner/current-code.js';
 import { useSettings } from '../../lib/settings.js';
@@ -26,6 +32,17 @@ import { ErrorNotice } from '../ui/ErrorNotice.jsx';
 import { EmptyState } from '../ui/EmptyState.jsx';
 import { ChatMessage } from './ChatMessage.jsx';
 import { QuickActions } from './QuickActions.jsx';
+import {
+  armRevision,
+  tutorRevisionIntent,
+  consumeRevision,
+  buildReviewRecord,
+  tutorRubricFromReviews,
+  parseReviewRecord,
+} from '../revision/history.js';
+import { ReviewMessage, reviewSurface } from '../revision/ReviewMessage.jsx';
+import { AttemptHistory } from '../revision/AttemptHistory.jsx';
+import { requestReviewJson } from '../revision/review-request.js';
 
 /** True when the active provider can plausibly run without further setup. */
 function providerReady(settings) {
@@ -58,6 +75,7 @@ export function TutorPanel({ lesson, course, capstone = false, capstoneBrief = n
   const [input, setInput] = useState('');
   const [pendingMode, setPendingMode] = useState(null);
   const [dismissedError, setDismissedError] = useState(false);
+  const [reviewError, setReviewError] = useState(null);
   const [langNotice, setLangNotice] = useState(false);
 
   const lessonContentRef = useRef('');
@@ -67,6 +85,7 @@ export function TutorPanel({ lesson, course, capstone = false, capstoneBrief = n
   const draftRef = useRef('');
   const pendingRef = useRef(null);
   const persistRef = useRef(() => {});
+  const revisionRef = useRef(null);
 
   const { text, status, error, start, stop } = useStream();
   const statusRef = useRef(status);
@@ -135,7 +154,15 @@ export function TutorPanel({ lesson, course, capstone = false, capstoneBrief = n
 
       const level = mode === 'hint' ? hint.advance() : undefined;
 
-      const userRow = await appendChat(lesson.id, { role: 'user', content: trimmed, mode });
+      // Only a check-answer message can carry a revise intent, consumed before the write so a
+      // failed append cannot leak it onto a later message (D-07).
+      const revisionOf = mode === 'check_answer' ? consumeRevision(revisionRef) : null;
+      const userRow = await appendChat(lesson.id, {
+        role: 'user',
+        content: trimmed,
+        mode,
+        revisionOf,
+      });
       const history = [...messagesRef.current, userRow];
 
       // "Check my answer" in a programming lesson: attach the learner's current code (if any) as
@@ -205,12 +232,100 @@ export function TutorPanel({ lesson, course, capstone = false, capstoneBrief = n
     [appendChat, applyMessages, capstone, capstoneBrief, course, hint, lesson, persistDraft, start]
   );
 
+  // The review turn (D-03/D-09): one user row, then a strict-JSON review row carrying the rubric.
+  // `useStream` rethrows after setting `error`, so the outer catch is mandatory — otherwise every
+  // failed review would raise an unhandled rejection.
+  const runReview = useCallback(async () => {
+    if (statusRef.current === 'streaming') return;
+    const transcript = messagesRef.current;
+    if (!transcript.some((message) => message?.role === 'user')) {
+      setReviewError(new Error(t('revision.tutor.reviewEmpty')));
+      return;
+    }
+    setReviewError(null);
+    setDismissedError(false);
+
+    let userRow;
+    try {
+      userRow = await appendChat(lesson.id, {
+        role: 'user',
+        content: t('revision.tutor.reviewUserText'),
+        mode: 'review',
+      });
+    } catch (err) {
+      setReviewError(err);
+      return;
+    }
+
+    const history = [...transcript, userRow];
+    // The earliest persisted tutor review fixes the rubric keys for every later review (D-01).
+    const rubric = tutorRubricFromReviews(transcript);
+
+    try {
+      await start(async ({ signal }) => {
+        try {
+          const provider = await getProvider(settingsRef.current);
+          const { system, messages: built } = buildTutorReviewMessages({
+            course,
+            lesson,
+            lessonContent: lessonContentRef.current,
+            history,
+            rubric,
+            language: course?.language ?? settingsRef.current.language,
+          });
+          const raw = await requestReviewJson({
+            provider,
+            system,
+            messages: built,
+            signal,
+            validate: (value) => validateTutorReview(value, { rubric }),
+          });
+          const criteria = normalizeTutorReview(raw, { rubric });
+          const record = buildReviewRecord({
+            surface: 'tutor',
+            attemptTable: 'chat_messages',
+            attemptId: userRow.id,
+            criteria,
+          });
+          return appendChat(lesson.id, {
+            role: 'assistant',
+            content: JSON.stringify(record),
+            mode: 'review',
+          });
+        } catch (err) {
+          setReviewError(
+            new ProviderError(
+              'bad_json',
+              t('revision.review.failed'),
+              t('revision.review.failedHint')
+            )
+          );
+          throw err;
+        }
+      });
+    } catch {
+      /* useStream rethrows; the failure is already surfaced via reviewError */
+    }
+  }, [appendChat, course, lesson, start, t]);
+
   const handleSend = useCallback(() => {
     runTurn({ content: input, mode: pendingMode });
   }, [input, pendingMode, runTurn]);
 
+  const handleRevise = useCallback((rowId) => {
+    armRevision(revisionRef, tutorRevisionIntent(rowId));
+    setPendingMode('check_answer');
+    textareaRef.current?.focus();
+  }, []);
+
   const handleAction = useCallback(
     (modeId) => {
+      // Capstone mode is concept-only: no review, no revision and no hint path may run.
+      if (capstone) return;
+      if (modeId === 'review') {
+        runReview();
+        return;
+      }
       if (modeId === 'check_answer') {
         setPendingMode('check_answer');
         textareaRef.current?.focus();
@@ -219,7 +334,7 @@ export function TutorPanel({ lesson, course, capstone = false, capstoneBrief = n
       const def = TUTOR_MODES.find((m) => m.id === modeId);
       runTurn({ content: def?.userText || '', mode: modeId });
     },
-    [runTurn]
+    [capstone, runReview, runTurn]
   );
 
   const handleStop = useCallback(async () => {
@@ -247,7 +362,7 @@ export function TutorPanel({ lesson, course, capstone = false, capstoneBrief = n
   }, [messages, text]);
 
   const showDraft = Boolean(text) && (status === 'streaming' || pendingRef.current != null);
-  const showError = error && !dismissedError;
+  const shownError = reviewError || (dismissedError ? null : error);
   const ready = providerReady(settings);
   const canSend = input.trim().length > 0 && !streaming;
 
@@ -255,6 +370,21 @@ export function TutorPanel({ lesson, course, capstone = false, capstoneBrief = n
     () => ({ id: '__draft', role: 'assistant', content: text, mode: pendingRef.current?.mode || null }),
     [text]
   );
+
+  // Tutor reviews in transcript order — one history entry per persisted review (LOOP-03).
+  const tutorAttempts = useMemo(() => {
+    const reviews = messages.filter(
+      (message) =>
+        message.role === 'assistant' &&
+        message.mode === 'review' &&
+        reviewSurface(message) === 'tutor'
+    );
+    return reviews.map((message, index) => ({
+      id: message.id,
+      label: t('revision.history.attempt', { n: index + 1 }),
+      criteria: parseReviewRecord(message.content)?.criteria ?? [],
+    }));
+  }, [messages, t]);
 
   return (
     <Card className="flex flex-col gap-3">
@@ -296,13 +426,40 @@ export function TutorPanel({ lesson, course, capstone = false, capstoneBrief = n
             className="border-0 bg-transparent"
           />
         )}
-        {messages.map((message) => (
-          <ChatMessage key={message.id} message={message} />
-        ))}
+        {messages.map((message) =>
+          message.role === 'assistant' &&
+          message.mode === 'review' &&
+          reviewSurface(message) === 'tutor' ? (
+            <ReviewMessage
+              key={message.id}
+              message={message}
+              title={t('revision.review.criteria')}
+              onRevise={() => handleRevise(message.id)}
+              reviseHint={t('revision.tutor.reviseHint')}
+            />
+          ) : (
+            <ChatMessage key={message.id} message={message} />
+          )
+        )}
         {showDraft && <ChatMessage message={draftMessage} streaming={streaming} />}
       </div>
 
-      {showError && <ErrorNotice error={error} onDismiss={() => setDismissedError(true)} />}
+      {shownError && (
+        <div className="space-y-2">
+          <ErrorNotice
+            error={shownError}
+            onDismiss={() => {
+              setDismissedError(true);
+              setReviewError(null);
+            }}
+          />
+          {reviewError ? (
+            <Button variant="secondary" size="sm" onClick={runReview}>
+              {t('revision.review.retry')}
+            </Button>
+          ) : null}
+        </div>
+      )}
 
       {langNotice && !streaming && (
         <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
@@ -322,6 +479,10 @@ export function TutorPanel({ lesson, course, capstone = false, capstoneBrief = n
           pendingMode={pendingMode}
         />
       )}
+
+      {!capstone && tutorAttempts.length > 0 ? (
+        <AttemptHistory attempts={tutorAttempts} title={t('revision.history.title')} />
+      ) : null}
 
       <div className="space-y-2">
         <label htmlFor={`tutor-input-${lesson.id}`} className="sr-only">

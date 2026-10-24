@@ -5,6 +5,8 @@
 import { useEffect, useRef } from 'react';
 import { Badge } from '../ui/Badge.jsx';
 import { useT } from '../../lib/i18n/index.js';
+import { RunnerBadge } from '../revision/RunnerNotice.jsx';
+import { ReviewFeedback } from '../revision/ReviewFeedback.jsx';
 
 function CheckList({ checks }) {
   const t = useT();
@@ -91,9 +93,23 @@ function RowsTable({ columns, rows }) {
 }
 
 /**
- * @param {{ output: object|null, runnerInfo?: object|null }} props
+ * @param {object} props
+ * @param {object|null} props.output
+ * @param {object|null} [props.runnerInfo]
+ * @param {object[]} [props.criteria] already-derived rubric criteria for this run
+ * @param {(() => void)|null} [props.onRevise] supplied by the parent only when a failing,
+ *   check-bearing run may be revised — `OutputPanel` never re-derives passing state
+ * @param {string|null} [props.reviseHint]
+ * @param {string|null} [props.criteriaTitle]
  */
-export function OutputPanel({ output, runnerInfo = null }) {
+export function OutputPanel({
+  output,
+  runnerInfo = null,
+  criteria = [],
+  onRevise = null,
+  reviseHint = null,
+  criteriaTitle = null,
+}) {
   const t = useT();
   if (!output) {
     return (
@@ -109,12 +125,17 @@ export function OutputPanel({ output, runnerInfo = null }) {
     );
   }
 
+  // T-08-08: a pending/aborted run has `runner: null`. Falling back to "browser" there would claim
+  // the code ran in the browser when it did not (or had not yet). Prefer what the run actually
+  // reported, then the known runner for the target language, and render nothing when truly unknown.
+  const runKind = output.runner === 'local' || output.runner === 'browser' ? output.runner : null;
+  const knownKind =
+    runKind ?? (runnerInfo?.kind === 'local' || runnerInfo?.kind === 'browser' ? runnerInfo.kind : null);
+
   return (
     <div className="space-y-3 text-sm">
       <div className="flex flex-wrap items-center gap-2">
-        <Badge tone={output.runner === 'local' ? 'accent' : 'neutral'}>
-          {output.runner === 'local' ? t('workspace.localServer') : t('workspace.browser')}
-        </Badge>
+        {knownKind ? <RunnerBadge runnerInfo={{ kind: knownKind }} /> : null}
         {typeof output.exitCode === 'number' && (
           <Badge tone={output.exitCode === 0 ? 'success' : 'warning'}>{t('workspace.exit', { code: output.exitCode })}</Badge>
         )}
@@ -127,6 +148,16 @@ export function OutputPanel({ output, runnerInfo = null }) {
       {output.statusText && <p className="text-xs text-neutral-500">{output.statusText}</p>}
 
       <CheckList checks={output.checks} />
+
+      {Array.isArray(criteria) && criteria.length > 0 ? (
+        <ReviewFeedback
+          criteria={criteria}
+          title={criteriaTitle}
+          showRevise={typeof onRevise === 'function'}
+          onRevise={onRevise}
+          reviseHint={reviseHint}
+        />
+      ) : null}
 
       {output.stdout ? (
         <div>

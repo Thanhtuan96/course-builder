@@ -8,8 +8,15 @@
  *
  * This is retrieval practice, not a grade — the wording is always "Check your understanding".
  */
-import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
-import { getLessonContent, saveQuizAttempt, logActivity } from '../../lib/repo/index.js';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import {
+  getLessonContent,
+  saveQuizAttempt,
+  logActivity,
+  appendChat,
+  listQuizAttempts,
+  listChat,
+} from '../../lib/repo/index.js';
 import { useSettings } from '../../lib/settings.js';
 import { useT } from '../../lib/i18n/index.js';
 import { getProvider, ProviderError } from '../../lib/ai/index.js';
@@ -22,13 +29,95 @@ import {
   initialQuizState,
   currentQuestion,
   scoreQuiz,
+  buildQuizReviewMessages,
+  validateReviewQuestions,
 } from '../../lib/prompts/practice.js';
+import {
+  buildQuizReview,
+  buildReviewRecord,
+  parseReviewRecord,
+  decodeQuizAttempt,
+  quizPassed,
+  mergeReviewQuestions,
+  armRevision,
+  consumeRevision,
+  quizRevisionIntent,
+} from '../revision/history.js';
+import { ReviewFeedback } from '../revision/ReviewFeedback.jsx';
+import { AttemptHistory } from '../revision/AttemptHistory.jsx';
 import { Card } from '../ui/Card.jsx';
 import { Button } from '../ui/Button.jsx';
 import { Spinner } from '../ui/Spinner.jsx';
 import { ErrorNotice } from '../ui/ErrorNotice.jsx';
 
 const OPTION_LETTERS = ['A', 'B', 'C', 'D'];
+
+/** Question enrichment is opportunistic — a slow provider must not delay the deterministic card. */
+const REVIEW_TIMEOUT_MS = 6000;
+
+/**
+ * True when the active provider can plausibly run without further setup. Deliberately local: the
+ * quiz surface does not import from the tutor surface (one-way).
+ * @param {object} settings
+ * @returns {boolean}
+ */
+function providerReady(settings) {
+  switch (settings.provider) {
+    case 'anthropic':
+      return Boolean(settings.anthropic?.apiKey);
+    case 'openai':
+      return Boolean(settings.openai?.apiKey);
+    case 'ollama':
+    case 'bridge':
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Ask the provider for one Socratic question per unmet quiz criterion (D-04). Any failure throws;
+ * the caller keeps the deterministic fallback questions instead.
+ * @param {{ course?: object, lesson?: object, settings: object, criteria: object[],
+ *   answers: any[] }} input
+ * @returns {Promise<object[]>} criteria with provider questions merged in
+ */
+async function enrichCriteria({ course, lesson, settings, criteria, answers }) {
+  if (!providerReady(settings)) return criteria;
+  const unmetKeys = criteria
+    .filter((criterion) => criterion.status !== 'met')
+    .map((criterion) => criterion.key);
+  if (!unmetKeys.length) return criteria;
+
+  const provider = await getProvider(settings);
+  const { system, messages } = buildQuizReviewMessages({
+    course,
+    lesson,
+    criteria,
+    answers,
+    language: course?.language ?? settings.language,
+  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REVIEW_TIMEOUT_MS);
+  try {
+    // No `language` option: a locale retry would double the model budget (research Pitfall 4).
+    const entries = await provider.generateJson({
+      system,
+      messages,
+      signal: controller.signal,
+      validate: (value) => validateReviewQuestions(value, { keys: unmetKeys }),
+    });
+    const byKey = {};
+    for (const entry of Array.isArray(entries) ? entries : []) {
+      if (entry?.key && typeof entry.question === 'string' && entry.question.trim()) {
+        byKey[entry.key] = entry.question;
+      }
+    }
+    return mergeReviewQuestions(criteria, byKey);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 function seedQuestions(lesson) {
   if (!lesson?.quiz_seed) return null;
@@ -50,16 +139,22 @@ export function QuizPanel({ lesson, course, onAttemptSaved }) {
   );
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [review, setReview] = useState(null);
+  const [attempts, setAttempts] = useState([]);
+  const [historyKey, setHistoryKey] = useState(0);
+  const revisionRef = useRef(null);
   const { status, error: streamError, start, stop } = useStream();
 
   useEffect(() => {
     setError(null);
+    setReview(null);
     if (seeded) dispatch({ type: 'load', questions: seeded, source: 'seed' });
     else dispatch({ type: 'reset' });
   }, [seeded, lesson?.id]);
 
   const generate = useCallback(async () => {
     setError(null);
+    setReview(null);
     dispatch({ type: 'reset' });
     const content = await getLessonContent(lesson.id).catch(() => null);
     if (!content?.content_md) {
@@ -90,24 +185,129 @@ export function QuizPanel({ lesson, course, onAttemptSaved }) {
       setSaving(true);
       try {
         const score = scoreQuiz(questions, answers);
-        await saveQuizAttempt(lesson.id, { questions, answers, score, total: questions.length });
+        // Consumed before the await so a failed write cannot double-apply the intent (D-07).
+        const revisionOf = consumeRevision(revisionRef);
+        const attempt = await saveQuizAttempt(lesson.id, {
+          questions,
+          answers,
+          score,
+          total: questions.length,
+          revisionOf,
+        });
         await logActivity('quiz', lesson.id);
         onAttemptSaved?.();
+
+        // Deterministic first: the review exists even with no provider (D-04).
+        const baseCriteria = buildQuizReview({
+          questions,
+          answers,
+          questionText: (criterion) =>
+            t('revision.quiz.fallbackQuestion', { label: criterion.label }),
+        });
+        setReview({
+          rowId: null,
+          record: buildReviewRecord({
+            surface: 'quiz',
+            attemptTable: 'quiz_attempts',
+            attemptId: attempt.id,
+            criteria: baseCriteria,
+          }),
+        });
+
+        // A review-write failure must never hide the card the learner just earned, so it does NOT
+        // go through `setError` (that renders the standalone error card instead of the review).
+        try {
+          const criteria = await enrichCriteria({
+            course,
+            lesson,
+            settings,
+            criteria: baseCriteria,
+            answers,
+          });
+          const record = buildReviewRecord({
+            surface: 'quiz',
+            attemptTable: 'quiz_attempts',
+            attemptId: attempt.id,
+            criteria,
+          });
+          const reviewRow = await appendChat(lesson.id, {
+            role: 'assistant',
+            content: JSON.stringify(record),
+            mode: 'review',
+          });
+          setReview({ rowId: reviewRow?.id ?? null, record });
+          setHistoryKey((key) => key + 1);
+        } catch (err) {
+          if (import.meta.env?.DEV) console.warn('[quiz] review write failed', err);
+        }
       } catch (err) {
         setError(err);
       } finally {
         setSaving(false);
       }
     },
-    [lesson?.id, onAttemptSaved]
+    [course, lesson, onAttemptSaved, settings, t]
   );
+
+  // Attempt history: stored attempts oldest first, each paired with its own quiz review when one
+  // was persisted (D-10/D-11). The read API cannot filter by mode, so parse in JS.
+  useEffect(() => {
+    if (!lesson?.id) return undefined;
+    let alive = true;
+    Promise.all([listQuizAttempts(lesson.id), listChat(lesson.id)])
+      .then(([rows, messages]) => {
+        if (!alive) return;
+        const reviews = (Array.isArray(messages) ? messages : [])
+          .filter((message) => message?.role === 'assistant' && message?.mode === 'review')
+          .map((message) => parseReviewRecord(message.content))
+          .filter((record) => record?.surface === 'quiz');
+        setAttempts(
+          (Array.isArray(rows) ? rows : []).map((row, index) => {
+            const decoded = decodeQuizAttempt(row);
+            const matched = reviews.find((record) => record.attemptId === row.id);
+            return {
+              id: row.id,
+              label: t('revision.history.attempt', { n: index + 1 }),
+              criteria:
+                matched?.criteria ??
+                buildQuizReview({
+                  questions: decoded.questions,
+                  answers: decoded.answers,
+                  questionText: (criterion) =>
+                    t('revision.quiz.fallbackQuestion', { label: criterion.label }),
+                }),
+            };
+          })
+        );
+      })
+      .catch(() => {
+        if (alive) setAttempts([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [lesson?.id, historyKey, t]);
 
   const question = currentQuestion(state);
   const total = state.questions.length;
   const isLast = state.current === total - 1;
   const chosen = state.answers[state.current];
   const score = state.stage === 'complete' ? scoreQuiz(state.questions, state.answers) : 0;
+  const reviewCriteria = review?.record?.criteria ?? null;
+  const passing = quizPassed({ score, total, criteria: reviewCriteria });
   const busy = status === 'streaming';
+
+  const handleRevise = useCallback(() => {
+    armRevision(
+      revisionRef,
+      quizRevisionIntent({
+        reviewId: review?.rowId ?? null,
+        attemptId: review?.record?.attemptId ?? null,
+      })
+    );
+    setReview(null);
+    dispatch({ type: 'retake' });
+  }, [review]);
 
   const next = () => {
     const completing = state.revealed && isLast;
@@ -162,6 +362,13 @@ export function QuizPanel({ lesson, course, onAttemptSaved }) {
             {saving ? t('practice.quiz.saving') : t('practice.quiz.saved')}
           </p>
         </div>
+        <ReviewFeedback
+          criteria={reviewCriteria ?? []}
+          title={t('revision.quiz.criteriaTitle')}
+          showRevise={!passing}
+          onRevise={handleRevise}
+          reviseHint={t('revision.quiz.reviseHint')}
+        />
         <ul className="space-y-1.5 text-sm">
           {state.questions.map((q, i) => {
             const right = state.answers[i] === q.answerIndex;
@@ -176,11 +383,11 @@ export function QuizPanel({ lesson, course, onAttemptSaved }) {
           })}
         </ul>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => dispatch({ type: 'retake' })}>{t('practice.quiz.retake')}</Button>
           <Button variant="secondary" onClick={generate}>
             {t('practice.quiz.newQuiz')}
           </Button>
         </div>
+        <AttemptHistory attempts={attempts} title={t('revision.history.title')} />
       </Card>
     );
   }

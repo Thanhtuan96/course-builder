@@ -1,0 +1,14 @@
+{
+  "badge": {
+    "browser": "Trình duyệt",
+    "local": "Máy của bạn"
+  },
+  "notice": {
+    "title": "Mã chạy trên máy của bạn",
+    "body": "Mã của bạn chạy trên thiết bị này với quyền người dùng của bạn và có thể đọc, ghi tệp của bạn.",
+    "acknowledge": "Tôi hiểu — chạy mã của tôi",
+    "acknowledged": "Bạn đã xác nhận rằng mã chạy trên máy của bạn.",
+    "blocked": "Hãy xác nhận nơi mã của bạn chạy trước lần chạy cục bộ đầu tiên.",
+    "blockedHint": "Nhấn “Tôi hiểu — chạy mã của tôi”, rồi Chạy lại."
+  }
+}

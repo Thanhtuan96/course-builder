@@ -1,0 +1,47 @@
+{
+  "status": {
+    "met": "Đạt",
+    "partial": "Đạt một phần",
+    "not_met": "Chưa đạt"
+  },
+  "review": {
+    "title": "Nhận xét",
+    "criteria": "Tiêu chí",
+    "questionLabel": "Câu hỏi dành cho bạn",
+    "failed": "Nhận xét trả về ở định dạng không dùng được.",
+    "failedHint": "Bài làm của bạn đã được lưu. Hãy thử nhận xét lại.",
+    "retry": "Thử nhận xét lại",
+    "empty": "Chưa có gì để nhận xét."
+  },
+  "revise": {
+    "label": "Làm lại bài này"
+  },
+  "quiz": {
+    "criteriaTitle": "Từng câu trả lời của bạn",
+    "fallbackQuestion": "Điều gì khiến bạn chọn câu trả lời đó cho “{label}”, và điều gì sẽ khiến bạn đổi ý?",
+    "reviseHint": "Trả lời lại chính những câu hỏi đó. Lần làm này được ghi là bản sửa của nhận xét ở trên."
+  },
+  "tutor": {
+    "reviewAction": "Nhận xét bài của tôi",
+    "reviewUserText": "Hãy nhận xét bài của tôi theo các tiêu chí của bài học.",
+    "reviewEmpty": "Hãy viết hoặc gửi một bài làm trước, rồi yêu cầu nhận xét.",
+    "reviseHint": "Viết câu trả lời đã sửa ở dưới. Tin nhắn tiếp theo của bạn sẽ được liên kết với nhận xét này."
+  },
+  "workspace": {
+    "criteriaTitle": "Từng bước kiểm tra của bạn",
+    "fallbackQuestion": "Phần nào của “{label}” vẫn chưa rõ, và bạn đã thử những gì?",
+    "reviseHint": "Sửa mã của bạn, rồi Chạy hoặc Kiểm tra lại. Lần chạy tiếp theo sẽ được liên kết với nhận xét này."
+  },
+  "history": {
+    "title": "Lịch sử làm bài",
+    "toggle": "Lịch sử làm bài ({count})",
+    "empty": "Chưa có lần làm bài nào.",
+    "attempt": "Lần {n}",
+    "summary": "{from} → {to}/{total} tiêu chí đạt",
+    "firstSummary": "Đạt {to}/{total} tiêu chí",
+    "new": "mới",
+    "removed": "đã bỏ",
+    "transition": "{key}: {from} → {to}",
+    "noChange": "Không có tiêu chí nào thay đổi so với lần trước."
+  }
+}

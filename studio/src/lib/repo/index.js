@@ -43,6 +43,46 @@ function emit(table, id, type) {
   changes.dispatchEvent(new CustomEvent('change', { detail: { table, id, type } }));
 }
 
+/* -------------------------------------------------- best-effort side effects */
+
+/**
+ * Run a post-write side effect (event emission, revision link) without letting its failure reject
+ * the learner's action (D-16). Swallows once — no retry — and logs only in dev (D-17).
+ * @template T
+ * @param {string} label
+ * @param {() => Promise<T>} run
+ * @returns {Promise<T|null>}
+ */
+async function bestEffort(label, run) {
+  try {
+    return await run();
+  } catch (err) {
+    if (import.meta.env?.DEV) console.warn('[repo] ' + label + ' failed', err);
+    return null;
+  }
+}
+
+/**
+ * Best-effort `recordEvent`. Validation inside `recordEvent` still throws — this only tolerates the
+ * failure at the call site, after the primary row is written (D-16/D-17).
+ * @param {string} label
+ * @param {object} input
+ * @returns {Promise<object|null>}
+ */
+function safeRecordEvent(label, input) {
+  return bestEffort(label, () => recordEvent(input));
+}
+
+/**
+ * Best-effort `maybeLinkRevision`. Like `safeRecordEvent`, the write failure is swallowed once.
+ * @param {string} label
+ * @param {object} input
+ * @returns {Promise<object|null>}
+ */
+function safeMaybeLinkRevision(label, input) {
+  return bestEffort(label, () => maybeLinkRevision(input));
+}
+
 /**
  * Subscribe to repository writes.
  * @param {(detail: { table: string, id: string|null, type: string }) => void} handler
@@ -503,7 +543,7 @@ export async function saveQuizAttempt(
   await adapter.put('quiz_attempts', row);
   const lesson = lessonId ? await adapter.get('lessons', lessonId) : null;
   const meta = compactMeta({ total, score, answered: Array.isArray(answers) ? answers.length : 0 });
-  await recordEvent({
+  await safeRecordEvent('quiz_completed event', {
     kind: 'quiz_completed',
     surface: 'quiz',
     courseId: lesson?.course_id ?? null,
@@ -511,7 +551,7 @@ export async function saveQuizAttempt(
     refId: row.id,
     meta,
   });
-  await maybeLinkRevision({
+  await safeMaybeLinkRevision('quiz revision link', {
     surface: 'quiz',
     attemptTable: 'quiz_attempts',
     attemptRow: row,
@@ -635,7 +675,7 @@ export async function appendChat(lessonId, msg) {
   await adapter.put('chat_messages', row);
   if (msg.role === 'user' && (msg.mode === 'check_answer' || msg.mode === 'review')) {
     const lesson = lessonId ? await adapter.get('lessons', lessonId) : null;
-    await recordEvent({
+    await safeRecordEvent('answer_sent_for_review event', {
       kind: 'answer_sent_for_review',
       surface: 'tutor',
       courseId: lesson?.course_id ?? null,
@@ -643,7 +683,7 @@ export async function appendChat(lessonId, msg) {
       refId: row.id,
       meta: { mode: msg.mode },
     });
-    await maybeLinkRevision({
+    await safeMaybeLinkRevision('tutor revision link', {
       surface: 'tutor',
       attemptTable: 'chat_messages',
       attemptRow: row,
@@ -786,7 +826,7 @@ export async function saveRunResult({
           checks_passed: list.filter((c) => c?.passed === true || c?.ok === true).length,
         }
       : { runner, checks_total: list.length, ...(typeof exitCode === 'number' ? { exit_code: exitCode } : {}) };
-  await recordEvent({
+  await safeRecordEvent('workspace run event', {
     kind: list.length > 0 ? 'exercise_completed' : 'workspace_run',
     surface: 'workspace',
     courseId: lesson?.course_id ?? null,
@@ -794,7 +834,7 @@ export async function saveRunResult({
     refId: row.id,
     meta,
   });
-  await maybeLinkRevision({
+  await safeMaybeLinkRevision('workspace revision link', {
     surface: 'workspace',
     attemptTable: 'run_results',
     attemptRow: row,
@@ -938,7 +978,7 @@ export async function createCapstoneSubmission({
   });
   await adapter.put('capstone_submissions', row);
   const capstone = await adapter.get('capstones', capstoneId);
-  await recordEvent({
+  await safeRecordEvent('capstone checkpoint event', {
     kind: 'capstone_checkpoint',
     surface: 'capstone',
     courseId: capstone?.course_id ?? null,
@@ -948,7 +988,7 @@ export async function createCapstoneSubmission({
       attempt,
     },
   });
-  await maybeLinkRevision({
+  await safeMaybeLinkRevision('capstone revision link', {
     surface: 'capstone',
     attemptTable: 'capstone_submissions',
     attemptRow: row,

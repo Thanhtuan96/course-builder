@@ -1,0 +1,14 @@
+{
+  "badge": {
+    "browser": "Browser",
+    "local": "Local machine"
+  },
+  "notice": {
+    "title": "Code runs on your machine",
+    "body": "Your code runs on this device with your own user permissions and can read and write your files.",
+    "acknowledge": "I understand — run my code",
+    "acknowledged": "You have acknowledged that code runs on your machine.",
+    "blocked": "Confirm where your code runs before the first local run.",
+    "blockedHint": "Press “I understand — run my code”, then Run again."
+  }
+}

@@ -16,6 +16,10 @@ export function QuickActions({ onAction, disabled = false, hintLevel = 0, pendin
       {TUTOR_MODES.map((mode) => {
         const active = pendingMode === mode.id;
         const suffix = mode.id === 'hint' && hintLevel > 0 ? ` · ${hintLevelLabel(hintLevel)}` : '';
+        // The review chip's copy lives in the `revision` namespace. A literal key keeps it visible
+        // to the i18n scanner; the other chips resolve through their own catalog namespace.
+        const label =
+          mode.id === 'review' ? t('revision.tutor.reviewAction') : t(`tutor.mode.${mode.id}`);
         return (
           <Button
             key={mode.id}
@@ -25,7 +29,7 @@ export function QuickActions({ onAction, disabled = false, hintLevel = 0, pendin
             aria-pressed={active}
             onClick={() => onAction(mode.id)}
           >
-            {t(`tutor.mode.${mode.id}`)}
+            {label}
             {suffix}
           </Button>
         );
