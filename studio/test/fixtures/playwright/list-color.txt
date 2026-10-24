@@ -1,0 +1,6 @@
+Running 2 tests using 2 workers
+
+  [32m✓[39m  [2m1[22m [chromium] › [2mtests/checkout.spec.js:3:1[22m › adds an item to the cart [2m(438ms)[22m
+  [32m✓[39m  [2m2[22m [chromium] › [2mtests/checkout.spec.js:8:1[22m › shows the cart total [2m(1.1s)[22m
+
+  [32m2 passed[39m [2m(3.1s)[22m

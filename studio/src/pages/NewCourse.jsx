@@ -16,6 +16,7 @@ import { useT } from '../lib/i18n/index.js';
 import { uiLanguageOptions } from '../lib/i18n/languages.js';
 import { buildSyllabusMessages, syllabusValidator } from '../lib/prompts/course.js';
 import { generateCapstoneForCourse, capstoneCopy } from '../lib/capstone.js';
+import { playwrightTemplateFor, seedPlaywrightTemplate } from '../data/templates/playwright-e2e.js';
 import { Card } from '../components/ui/Card.jsx';
 import { Button } from '../components/ui/Button.jsx';
 import { Input, Textarea, Select } from '../components/ui/Input.jsx';
@@ -45,8 +46,14 @@ export function NewCourse() {
   const [draft, setDraft] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  // D-15: the template is a card on this page, not a new route. Its checklist is a required gate.
+  const [templateChecked, setTemplateChecked] = useState({});
+  const [templateSeeding, setTemplateSeeding] = useState(false);
+  const [templateError, setTemplateError] = useState(null);
 
   const effectiveLanguage = useDifferentLanguage ? language : settings.language;
+  const template = playwrightTemplateFor(settings.language);
+  const templateReady = template.preflight.every((item) => templateChecked[item.id]);
 
   const gen = useStream();
   const copy = capstoneCopy(effectiveLanguage);
@@ -137,9 +144,24 @@ export function NewCourse() {
     }
   };
 
+  // PW-01: start the fixed Playwright course. Seeding makes zero model calls, so it works with no
+  // provider configured; the card's checklist is the only gate.
+  const startTemplate = async () => {
+    if (!templateReady || templateSeeding) return;
+    setTemplateSeeding(true);
+    setTemplateError(null);
+    try {
+      const result = await seedPlaywrightTemplate({ language: effectiveLanguage });
+      navigate(`/course/${result.course.id}`);
+    } catch (err) {
+      setTemplateError(err);
+    } finally {
+      setTemplateSeeding(false);
+    }
+  };
+
   const errorObj = error || gen.error;
   const busy = gen.status === 'streaming';
-
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       <div>
@@ -148,81 +170,121 @@ export function NewCourse() {
       </div>
 
       {!draft ? (
-        <Card className="space-y-4">
-          <Input
-            label={t('newCourse.topic.label')}
-            name="topic"
-            placeholder={t('newCourse.topic.placeholder')}
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-          />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Select label={t('newCourse.level')} name="level" value={level} onChange={(e) => setLevel(e.target.value)}>
-              {LEVELS.map((l) => (
-                <option key={l} value={l}>
-                  {l}
-                </option>
+        <div className="space-y-4">
+          <Card className="space-y-3">
+            <div>
+              <h2 className="text-sm font-semibold">{t('playwrightTemplate.card.title')}</h2>
+              <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
+                {t('playwrightTemplate.card.description')}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">{t('playwrightTemplate.card.checklistTitle')}</p>
+              {template.preflight.map((item) => (
+                <label
+                  key={item.id}
+                  className="flex items-start gap-2 text-sm text-neutral-600 dark:text-neutral-300"
+                >
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={Boolean(templateChecked[item.id])}
+                    onChange={(e) =>
+                      setTemplateChecked((prev) => ({ ...prev, [item.id]: e.target.checked }))
+                    }
+                  />
+                  <span>{item.label}</span>
+                </label>
               ))}
-            </Select>
-            {useDifferentLanguage && (
-              <Select
-                label={t('newCourse.language')}
-                name="language"
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-              >
-                {uiLanguageOptions().map((l) => (
-                  <option key={l.code} value={l.code}>
-                    {l.name}
+              <p className="text-xs text-neutral-500">{t('playwrightTemplate.card.checklistHint')}</p>
+            </div>
+            <ErrorNotice error={templateError} onDismiss={() => setTemplateError(null)} />
+            <Button onClick={startTemplate} disabled={!templateReady || templateSeeding}>
+              {templateSeeding && <Spinner />}
+              {templateSeeding
+                ? t('playwrightTemplate.card.seeding')
+                : templateReady
+                  ? t('playwrightTemplate.card.cta')
+                  : t('playwrightTemplate.card.notReady')}
+            </Button>
+          </Card>
+
+          <Card className="space-y-4">
+            <Input
+              label={t('newCourse.topic.label')}
+              name="topic"
+              placeholder={t('newCourse.topic.placeholder')}
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+            />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Select label={t('newCourse.level')} name="level" value={level} onChange={(e) => setLevel(e.target.value)}>
+                {LEVELS.map((l) => (
+                  <option key={l} value={l}>
+                    {l}
                   </option>
                 ))}
               </Select>
-            )}
-          </div>
-          <label className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-300">
-            <input
-              type="checkbox"
-              checked={useDifferentLanguage}
-              onChange={(e) => setUseDifferentLanguage(e.target.checked)}
+              {useDifferentLanguage && (
+                <Select
+                  label={t('newCourse.language')}
+                  name="language"
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                >
+                  {uiLanguageOptions().map((l) => (
+                    <option key={l.code} value={l.code}>
+                      {l.name}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </div>
+            <label className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-300">
+              <input
+                type="checkbox"
+                checked={useDifferentLanguage}
+                onChange={(e) => setUseDifferentLanguage(e.target.checked)}
+              />
+              {t('newCourse.useDifferent')}
+            </label>
+            <Input
+              label={t('newCourse.goal.label')}
+              name="goal"
+              placeholder={t('newCourse.goal.placeholder')}
+              value={goal}
+              onChange={(e) => setGoal(e.target.value)}
             />
-            {t('newCourse.useDifferent')}
-          </label>
-          <Input
-            label={t('newCourse.goal.label')}
-            name="goal"
-            placeholder={t('newCourse.goal.placeholder')}
-            value={goal}
-            onChange={(e) => setGoal(e.target.value)}
-          />
 
-          <ErrorNotice error={errorObj} onDismiss={() => setError(null)} />
+            <ErrorNotice error={errorObj} onDismiss={() => setError(null)} />
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={propose} disabled={busy || !topic.trim()}>
-              {busy && <Spinner />}
-              {busy ? t('newCourse.proposing') : t('newCourse.propose')}
-            </Button>
-            {busy && (
-              <Button variant="secondary" onClick={gen.stop}>
-                {t('newCourse.stop')}
+            <div className="flex flex-wrap items-center gap-2">
+              <Button onClick={propose} disabled={busy || !topic.trim()}>
+                {busy && <Spinner />}
+                {busy ? t('newCourse.proposing') : t('newCourse.propose')}
               </Button>
-            )}
-            <button
-              type="button"
-              className="text-sm text-neutral-500 underline hover:text-neutral-800 dark:hover:text-neutral-200"
-              onClick={() => start(makeSyllabus(topic, level, goal))}
-            >
-              {t('newCourse.skipAi')}
-            </button>
-          </div>
-          <p className="text-xs text-neutral-500">
-            {t('newCourse.hint.before')}{' '}
-            <Link to="/settings" className="underline">
-              {t('newCourse.hint.settingsLink')}
-            </Link>
-            {t('newCourse.hint.after')}
-          </p>
-        </Card>
+              {busy && (
+                <Button variant="secondary" onClick={gen.stop}>
+                  {t('newCourse.stop')}
+                </Button>
+              )}
+              <button
+                type="button"
+                className="text-sm text-neutral-500 underline hover:text-neutral-800 dark:hover:text-neutral-200"
+                onClick={() => start(makeSyllabus(topic, level, goal))}
+              >
+                {t('newCourse.skipAi')}
+              </button>
+            </div>
+            <p className="text-xs text-neutral-500">
+              {t('newCourse.hint.before')}{' '}
+              <Link to="/settings" className="underline">
+                {t('newCourse.hint.settingsLink')}
+              </Link>
+              {t('newCourse.hint.after')}
+            </p>
+          </Card>
+        </div>
       ) : (
         <div className="space-y-4">
           <Card className="space-y-3">

@@ -1,0 +1,20 @@
+{
+  "card": {
+    "title": "Bắt đầu từ một mẫu có sẵn",
+    "description": "Viết bài kiểm thử E2E Playwright đáng tin đầu tiên cho một quy trình web thật — năm bài đã viết sẵn cùng một capstone bảy tiêu chí cố định. Không cần API key.",
+    "checklistTitle": "Trước khi bắt đầu",
+    "checklistHint": "Hãy đánh dấu đủ năm mục. Khoá này kiểm thử ứng dụng của chính bạn bằng lần chạy Playwright của bạn; Studio không bao giờ chạy Playwright thay bạn.",
+    "cta": "Bắt đầu khoá Playwright",
+    "notReady": "Đánh dấu đủ năm mục để bắt đầu",
+    "seeding": "Đang tạo khoá học…"
+  },
+  "rubric": {
+    "r1": "Quy trình thật trong ứng dụng của bạn",
+    "r2": "Định vị phần tử theo ngữ nghĩa",
+    "r3": "Assertion web-first",
+    "r4": "Không chờ cố định, không force, không click theo toạ độ",
+    "r5": "Cô lập và lặp lại được",
+    "r6": "Bằng chứng một lần chạy Chromium xanh",
+    "r7": "Bạn giải thích được lựa chọn của mình"
+  }
+}

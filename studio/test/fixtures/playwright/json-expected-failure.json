@@ -1,0 +1,65 @@
+{
+  "config": {
+    "configFile": "/tmp/playwright-evidence/playwright.config.js",
+    "rootDir": "/tmp/playwright-evidence",
+    "version": "1.64.1",
+    "projects": [
+      {
+        "name": "",
+        "retries": 0,
+        "timeout": 30000
+      }
+    ]
+  },
+  "suites": [
+    {
+      "title": "checkout.spec.js",
+      "file": "tests/checkout.spec.js",
+      "line": 0,
+      "column": 0,
+      "specs": [
+        {
+          "title": "documents the bug we have not fixed yet",
+          "file": "tests/checkout.spec.js",
+          "line": 3,
+          "column": 1,
+          "tests": [
+            {
+              "projectName": "",
+              "projectId": "",
+              "status": "expected",
+              "expectedStatus": "failed",
+              "timeout": 30000,
+              "annotations": [],
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "failed",
+                  "duration": 120,
+                  "retry": 0,
+                  "errors": [
+                    {
+                      "message": "Error: expect(locator).toHaveText() failed"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "steps": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-24T14:20:30.010Z",
+    "duration": 120.5,
+    "expected": 1,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

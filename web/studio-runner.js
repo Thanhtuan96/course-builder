@@ -62,6 +62,33 @@ export const COMMAND_DENYLIST = new Set([
 ]);
 
 /**
+ * Executable shim extensions a package manager or tool can be wrapped in (Windows `.cmd`/`.ps1`,
+ * npm's `.cmd` shims, Cygwin's `.exe`, …). They are stripped from the end of a command name before
+ * the allow/deny checks so `npx.cmd` and `NPM.EXE` cannot bypass `COMMAND_DENYLIST`.
+ */
+export const COMMAND_SHIM_EXTENSIONS = Object.freeze(['.exe', '.cmd', '.bat', '.com', '.ps1']);
+
+/**
+ * Reduce any spelling of a command to the bare executable name the lists are written against:
+ * the last path segment (POSIX `/` or Windows `\`), lowercased, with any trailing shim extension
+ * removed repeatedly (so `npm.cmd.exe` → `npm`).
+ * @param {unknown} command
+ * @returns {string} the normalized command name (empty string when nothing usable was supplied)
+ */
+export function normalizeCommandName(command) {
+  let name = String(command ?? '')
+    .trim()
+    .split(/[\\/]/)
+    .pop()
+    .toLowerCase();
+  for (;;) {
+    const ext = COMMAND_SHIM_EXTENSIONS.find((candidate) => name.endsWith(candidate));
+    if (!ext) return name;
+    name = name.slice(0, -ext.length);
+  }
+}
+
+/**
  * Reject a deny-listed command. Bash is the single exception and only for the explicit `bash`
  * language with `allowBash` true.
  * @param {string} command
@@ -69,10 +96,7 @@ export const COMMAND_DENYLIST = new Set([
  * @returns {true}
  */
 export function assertCommandAllowed(command, { allowBash = false } = {}) {
-  const name = String(command || '')
-    .split(/[\\/]/)
-    .pop()
-    .toLowerCase();
+  const name = normalizeCommandName(command);
   if (!name) {
     const err = new Error('No command supplied.');
     err.code = 'command_denied';

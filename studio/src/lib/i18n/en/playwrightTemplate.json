@@ -1,0 +1,20 @@
+{
+  "card": {
+    "title": "Start from a template",
+    "description": "Ship your first reliable Playwright E2E test for a real web workflow — five written lessons plus a fixed seven-criterion capstone. No API key needed.",
+    "checklistTitle": "Before you start",
+    "checklistHint": "Tick every item. This course tests your own app with your own Playwright run; Studio never runs Playwright for you.",
+    "cta": "Start the Playwright course",
+    "notReady": "Tick all five to start",
+    "seeding": "Setting up your course…"
+  },
+  "rubric": {
+    "r1": "Real workflow in your own app",
+    "r2": "Semantic locators",
+    "r3": "Web-first assertions",
+    "r4": "No fixed waits, force or coordinate clicks",
+    "r5": "Isolated and repeatable",
+    "r6": "Evidence of a passing Chromium run",
+    "r7": "You can explain your choices"
+  }
+}

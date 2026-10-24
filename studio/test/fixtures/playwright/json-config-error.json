@@ -1,0 +1,97 @@
+{
+  "config": {
+    "configFile": "/tmp/playwright-evidence/playwright.config.js",
+    "rootDir": "/tmp/playwright-evidence",
+    "version": "1.64.1",
+    "projects": [
+      {
+        "name": "",
+        "retries": 0,
+        "timeout": 30000
+      }
+    ]
+  },
+  "suites": [
+    {
+      "title": "checkout.spec.js",
+      "file": "tests/checkout.spec.js",
+      "line": 0,
+      "column": 0,
+      "specs": [
+        {
+          "title": "adds an item to the cart",
+          "file": "tests/checkout.spec.js",
+          "line": 3,
+          "column": 1,
+          "tests": [
+            {
+              "projectName": "",
+              "projectId": "",
+              "status": "unexpected",
+              "expectedStatus": "passed",
+              "timeout": 30000,
+              "annotations": [],
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "failed",
+                  "duration": 0,
+                  "retry": 0,
+                  "errors": [
+                    {
+                      "message": "Error: Project(s) \"\" not found. Available projects: \"netscape\""
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "steps": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "shows the cart total",
+          "file": "tests/checkout.spec.js",
+          "line": 8,
+          "column": 1,
+          "tests": [
+            {
+              "projectName": "",
+              "projectId": "",
+              "status": "unexpected",
+              "expectedStatus": "passed",
+              "timeout": 30000,
+              "annotations": [],
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "failed",
+                  "duration": 0,
+                  "retry": 0,
+                  "errors": [
+                    {
+                      "message": "Error: browserName: expected one of \"chromium\", \"firefox\", \"webkit\""
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "steps": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-24T14:19:41.220Z",
+    "duration": 95.2,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 2,
+    "flaky": 0
+  }
+}

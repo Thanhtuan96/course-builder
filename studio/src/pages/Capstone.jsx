@@ -6,6 +6,11 @@
  * tests through the Phase 29 runner (programming) and a rubric review through `generateJson`, then
  * stores an immutable submission row. A Course Complete verdict shows the completion panel and the
  * COMPLETION.md export.
+ *
+ * Two evidence modes (D-03): a template capstone (`capstoneEvidenceMode` → `'external'`) never runs
+ * anything here. The learner pastes their own Playwright report, the parsed evidence is the only
+ * source of run facts, and the verdict comes from `computeCapstoneVerdict` — never from the model.
+ * The in-app branch (a generated capstone with `tests`) is unchanged.
  */
 import { useEffect, useState } from 'react';
 import { Link } from '../lib/router.js';
@@ -28,16 +33,22 @@ import {
   capstoneReviewValidator,
   validateCapstoneReview,
   clampReviewVerdict,
+  buildExternalCapstoneReviewMessages,
+  validateExternalCapstoneReview,
 } from '../lib/prompts/capstone.js';
 import {
   capstoneUnlocked,
   capstoneProgress,
   capstoneHasTests,
+  capstoneEvidenceMode,
   runCapstoneTests,
   generateCapstoneForCourse,
   toCompletionMarkdown,
   completionFilename,
   artifactLabel,
+  computeCapstoneFacts,
+  finalizeExternalReview,
+  computeCapstoneVerdict,
 } from '../lib/capstone.js';
 import { slugify } from '../lib/course.js';
 import { download } from '../lib/course-export.js';
@@ -53,6 +64,7 @@ import { RubricList } from '../components/capstone/RubricList.jsx';
 import { SubmissionForm } from '../components/capstone/SubmissionForm.jsx';
 import { SubmissionHistory } from '../components/capstone/SubmissionHistory.jsx';
 import { ReviewPanel } from '../components/capstone/ReviewPanel.jsx';
+import { ExternalEvidenceForm } from '../components/capstone/ExternalEvidenceForm.jsx';
 import { CompletionPanel } from '../components/capstone/CompletionPanel.jsx';
 import { TutorPanel } from '../components/tutor/TutorPanel.jsx';
 
@@ -68,6 +80,10 @@ export function Capstone({ id }) {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(null);
   const [runnerError, setRunnerError] = useState(null);
+  const [evidenceResult, setEvidenceResult] = useState({ text: '', evidence: null, confirmed: false });
+  const [revisionTarget, setRevisionTarget] = useState(null);
+  const [draft, setDraft] = useState('');
+  const [spec, setSpec] = useState({ path: '', code: '' });
   const gen = useStream();
 
   const refresh = async () => {
@@ -120,6 +136,11 @@ export function Capstone({ id }) {
 
   const unlocked = capstoneUnlocked(course);
   const progress = capstoneProgress(course);
+  const evidenceMode = capstoneEvidenceMode(capstone);
+  const external = evidenceMode === 'external';
+  // One spec-code source (A3): this exact object feeds the evidence form's warnings and
+  // `computeCapstoneFacts`, so the two can never disagree about the learner's files.
+  const submittedFiles = spec.path.trim() && spec.code.trim() ? { [spec.path.trim()]: spec.code } : null;
   const latest = submissions[submissions.length - 1] || null;
   const completionSubmission = [...submissions].reverse().find((s) => s.verdict === 'course_complete') || null;
   const completed = Boolean(completionSubmission);
@@ -143,63 +164,137 @@ export function Capstone({ id }) {
     setError(null);
     setRunnerError(null);
 
+    // Captured before the insert (pitfall 10): the link must point at a row that already existed.
+    const revisionOf =
+      revisionTarget && submissions.some((submission) => submission.id === revisionTarget)
+        ? { feedbackTable: 'capstone_submissions', feedbackId: revisionTarget }
+        : null;
+
     let testResults = null;
-    let testsFailed = false;
-    if (capstoneHasTests(capstone)) {
-      if (input.files) {
-        try {
-          testResults = await runCapstoneTests({
-            capstone,
-            files: input.files,
-            courseSlug: slugify(course.title),
-          });
-          testsFailed = Boolean(testResults?.failed);
-        } catch (err) {
-          setRunnerError(err);
-        }
-      } else {
-        setRunnerError(
-          Object.assign(new Error(t('capstone.noWorkspaceFiles')), {
-            hint: t('capstone.noWorkspaceFilesHint'),
+    let review = null;
+    let verdict = null;
+    let submissionFiles = input.files ?? null;
+
+    if (external) {
+      if (!(evidenceResult.confirmed && evidenceResult.evidence)) {
+        setError(
+          Object.assign(new Error(t('externalEvidence.submitRequiresEvidence')), {
+            hint: t('externalEvidence.confirmHint'),
           })
         );
+        setSubmitting(false);
+        return;
       }
-    }
 
-    let review = null;
-    try {
-      const provider = await getProvider(settings);
-      const generateJson = createGenerateJson(provider.streamText.bind(provider));
-      const { system, messages } = buildCapstoneReviewMessages({ capstone, submission: input, testResults, course });
-      const raw = await gen.start(({ signal }) =>
-        generateJson({
-          system,
-          messages,
-          signal,
-          validate: capstoneReviewValidator({ testsFailed, rubric: capstone.rubric }),
+      const files = input.files ?? submittedFiles;
+      submissionFiles = files;
+      const facts = computeCapstoneFacts({ files, contentMd: input.content_md });
+      const evidence = { ...evidenceResult.evidence, facts };
+      testResults = evidence;
+
+      try {
+        const provider = await getProvider(settings);
+        const generateJson = createGenerateJson(provider.streamText.bind(provider));
+        const { system, messages } = buildExternalCapstoneReviewMessages({
+          capstone,
+          submission: input,
+          evidence,
+          facts,
+          course,
+        });
+        const raw = await gen.start(({ signal }) =>
+          generateJson({
+            system,
+            messages,
+            signal,
+            validate: (obj) => {
+              const validated = validateExternalCapstoneReview(obj, {
+                capstone,
+                language: course?.language,
+              });
+              return validated.ok ? true : validated.error;
+            },
+            language: course?.language,
+          })
+        );
+        const finalized = finalizeExternalReview(raw, {
+          capstone,
+          evidence,
+          facts,
           language: course?.language,
-        })
-      );
-      const validated = validateCapstoneReview(raw, { testsFailed, rubric: capstone.rubric });
-      if (!validated.ok) throw new Error(validated.error);
-      review = clampReviewVerdict(validated.value, { testsFailed });
-    } catch (err) {
-      setError(err);
+        });
+        const computed = computeCapstoneVerdict({ review: finalized, evidence, facts });
+        review = { ...finalized, verdict: computed.verdict };
+        verdict = computed.verdict;
+      } catch (err) {
+        // A failed review never loses the paste: store the evidence with a computed needs_work.
+        setError(err);
+        verdict = 'needs_work';
+      }
+    } else {
+      let testsFailed = false;
+      if (capstoneHasTests(capstone)) {
+        if (input.files) {
+          try {
+            testResults = await runCapstoneTests({
+              capstone,
+              files: input.files,
+              courseSlug: slugify(course.title),
+            });
+            testsFailed = Boolean(testResults?.failed);
+          } catch (err) {
+            setRunnerError(err);
+          }
+        } else {
+          setRunnerError(
+            Object.assign(new Error(t('capstone.noWorkspaceFiles')), {
+              hint: t('capstone.noWorkspaceFilesHint'),
+            })
+          );
+        }
+      }
+
+      try {
+        const provider = await getProvider(settings);
+        const generateJson = createGenerateJson(provider.streamText.bind(provider));
+        const { system, messages } = buildCapstoneReviewMessages({ capstone, submission: input, testResults, course });
+        const raw = await gen.start(({ signal }) =>
+          generateJson({
+            system,
+            messages,
+            signal,
+            validate: capstoneReviewValidator({ testsFailed, rubric: capstone.rubric }),
+            language: course?.language,
+          })
+        );
+        const validated = validateCapstoneReview(raw, { testsFailed, rubric: capstone.rubric });
+        if (!validated.ok) throw new Error(validated.error);
+        review = clampReviewVerdict(validated.value, { testsFailed });
+      } catch (err) {
+        setError(err);
+      }
+      verdict = review?.verdict || null;
     }
 
     await createCapstoneSubmission({
       capstoneId: capstone.id,
       content_md: input.content_md,
       repo_url: input.repo_url,
-      files: input.files,
+      files: submissionFiles,
       testResults,
       review,
-      verdict: review?.verdict || null,
+      verdict,
+      revisionOf,
     });
 
-    if (review?.verdict === 'course_complete') {
+    if (verdict === 'course_complete') {
       await updateCourse(course.id, { status: 'completed' });
       await logActivity('capstone_complete', course.id);
+    }
+
+    if (external) {
+      setEvidenceResult({ text: '', evidence: null, confirmed: false });
+      setRevisionTarget(null);
     }
 
     await refresh();
@@ -286,10 +381,37 @@ export function Capstone({ id }) {
         <RubricList rubric={capstone.rubric} />
       </Card>
 
-      {latest && <ReviewPanel review={latest.review} testResults={latest.testResults} />}
+      {latest && (
+        <ReviewPanel review={latest.review} testResults={latest.testResults} verdict={latest.verdict} />
+      )}
 
       {unlocked && (
         <>
+          {external && latest && latest.verdict !== 'course_complete' && (
+            <Card className="space-y-2">
+              <p className="text-sm">{t('externalEvidence.reviseHint')}</p>
+              {revisionTarget === latest.id ? (
+                <Badge tone="accent">{t('externalEvidence.revisingAttempt', { n: latest.attempt })}</Badge>
+              ) : (
+                <Button onClick={() => setRevisionTarget(latest.id)}>{t('externalEvidence.revise')}</Button>
+              )}
+            </Card>
+          )}
+
+          {external && (
+            <section aria-label={t('externalEvidence.evidenceSectionTitle')}>
+              <ExternalEvidenceForm
+                result={evidenceResult}
+                onChange={setEvidenceResult}
+                submittedFiles={submittedFiles}
+                writeup={draft}
+                busy={submitting || gen.status === 'streaming'}
+                error={error}
+                onDismissError={() => setError(null)}
+              />
+            </section>
+          )}
+
           <SubmissionForm
             programming={course.kind === 'programming'}
             workspaceFiles={workspaceFiles}
@@ -300,6 +422,12 @@ export function Capstone({ id }) {
               setError(null);
               setRunnerError(null);
             }}
+            external={evidenceMode === 'external'}
+            spec={spec}
+            onSpecChange={setSpec}
+            onDraftChange={setDraft}
+            evidenceReady={Boolean(evidenceResult.confirmed && evidenceResult.evidence)}
+            evidenceLabel={`${evidenceResult.evidence?.format ?? ''} · ${evidenceResult.evidence?.stats?.passed ?? 0}/${evidenceResult.evidence?.stats?.total ?? 0}`}
           />
           <TutorPanel lesson={tutorLesson} course={course} capstone capstoneBrief={capstone.brief_md} />
         </>

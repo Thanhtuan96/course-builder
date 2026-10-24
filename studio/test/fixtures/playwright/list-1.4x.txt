@@ -1,0 +1,6 @@
+Running 2 tests using 2 workers
+
+  ✓  1 tests/checkout.spec.js:5:5 › checkout › guest › adds an item to the cart (395ms)
+  ✓  2 tests/checkout.spec.js:14:3 › checkout › guest › shows the total (1.1s)
+
+  2 passed (3.1s)

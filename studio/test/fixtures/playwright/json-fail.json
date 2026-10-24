@@ -1,0 +1,123 @@
+{
+  "config": {
+    "configFile": "/tmp/playwright-evidence/playwright.config.js",
+    "rootDir": "/tmp/playwright-evidence",
+    "version": "1.64.1",
+    "projects": [
+      {
+        "name": "chromium",
+        "testDir": "/tmp/playwright-evidence/tests",
+        "retries": 0,
+        "timeout": 30000
+      }
+    ]
+  },
+  "suites": [
+    {
+      "title": "checkout.spec.js",
+      "file": "tests/checkout.spec.js",
+      "line": 0,
+      "column": 0,
+      "specs": [
+        {
+          "title": "adds an item to the cart",
+          "file": "tests/checkout.spec.js",
+          "line": 3,
+          "column": 1,
+          "tests": [
+            {
+              "projectName": "chromium",
+              "projectId": "chromium",
+              "status": "expected",
+              "expectedStatus": "passed",
+              "timeout": 30000,
+              "annotations": [],
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "passed",
+                  "duration": 438,
+                  "retry": 0,
+                  "stdout": [],
+                  "stderr": [],
+                  "steps": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "shows the cart total",
+          "file": "tests/checkout.spec.js",
+          "line": 8,
+          "column": 1,
+          "tests": [
+            {
+              "projectName": "chromium",
+              "projectId": "chromium",
+              "status": "unexpected",
+              "expectedStatus": "passed",
+              "timeout": 30000,
+              "annotations": [],
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "status": "failed",
+                  "duration": 1100,
+                  "retry": 0,
+                  "error": {
+                    "message": "Error: expect(locator).toBeVisible() failed"
+                  },
+                  "errors": [
+                    {
+                      "message": "Error: expect(locator).toBeVisible() failed",
+                      "stack": "Error: expect(locator).toBeVisible() failed\n    at /tmp/playwright-evidence/tests/checkout.spec.js:9:10",
+                      "location": {
+                        "file": "/tmp/playwright-evidence/tests/checkout.spec.js",
+                        "line": 9,
+                        "column": 10
+                      }
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/tmp/playwright-evidence/tests/checkout.spec.js",
+                    "line": 9,
+                    "column": 10
+                  },
+                  "stdout": [
+                    {
+                      "text": "learner app debug output must not be stored"
+                    }
+                  ],
+                  "stderr": [],
+                  "steps": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "test-results/checkout-shows-the-cart-total/test-failed-1.png"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "test-results/checkout-shows-the-cart-total/trace.zip"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-24T14:16:02.119Z",
+    "duration": 3555.655,
+    "expected": 1,
+    "skipped": 0,
+    "unexpected": 1,
+    "flaky": 0
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "config": {
+    "configFile": "/tmp/playwright-evidence/playwright.config.js",
+    "rootDir": "/tmp/playwright-evidence",
+    "version": "1.64.1",
+    "projects": [
+      {
+        "name": "chromium",
+        "testDir": "/tmp/playwright-evidence/tests",
+        "retries": 0,
+        "repeatEach": 1,
+        "timeout": 30000,
+        "outputDir": "/tmp/playwright-evidence/test-results"
+      }
+    ]
+  },
+  "suites": [
+    {
+      "title": "checkout.spec.js",
+      "file": "tests/checkout.spec.js",
+      "line": 0,
+      "column": 0,
+      "specs": [
+        {
+          "title": "adds an item to the cart",
+          "file": "tests/checkout.spec.js",
+          "line": 3,
+          "column": 1,
+          "tests": [
+            {
+              "projectName": "chromium",
+              "projectId": "chromium",
+              "status": "expected",
+              "expectedStatus": "passed",
+              "timeout": 30000,
+              "annotations": [],
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "passed",
+                  "duration": 438,
+                  "retry": 0,
+                  "stdout": [],
+                  "stderr": [],
+                  "steps": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "shows the cart total",
+          "file": "tests/checkout.spec.js",
+          "line": 8,
+          "column": 1,
+          "tests": [
+            {
+              "projectName": "chromium",
+              "projectId": "chromium",
+              "status": "expected",
+              "expectedStatus": "passed",
+              "timeout": 30000,
+              "annotations": [],
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "status": "passed",
+                  "duration": 1100,
+                  "retry": 0,
+                  "stdout": [],
+                  "stderr": [],
+                  "steps": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-24T14:15:30.381Z",
+    "duration": 3100.42,
+    "expected": 2,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

@@ -1,0 +1,122 @@
+Running 1 test using 1 worker
+
+  ✓  1 [chromium] › tests/checkout.spec.js:3:1 › buys a button (438ms)
+
+  1 passed (3.1s)
+
+  debug: locator getByRole("button", { name: "Buy" }) resolved in 12ms
+
+{
+  "config": {
+    "configFile": "/tmp/playwright-evidence/playwright.config.js",
+    "rootDir": "/tmp/playwright-evidence",
+    "version": "1.64.1",
+    "projects": [
+      {
+        "name": "chromium",
+        "retries": 0,
+        "timeout": 30000
+      }
+    ]
+  },
+  "suites": [
+    {
+      "title": "checkout.spec.js",
+      "file": "tests/checkout.spec.js",
+      "line": 0,
+      "column": 0,
+      "specs": [
+        {
+          "title": "adds an item to the cart",
+          "file": "tests/checkout.spec.js",
+          "line": 3,
+          "column": 1,
+          "tests": [
+            {
+              "projectName": "chromium",
+              "projectId": "chromium",
+              "status": "expected",
+              "expectedStatus": "passed",
+              "timeout": 30000,
+              "annotations": [],
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "passed",
+                  "duration": 438,
+                  "retry": 0,
+                  "stdout": [],
+                  "stderr": [],
+                  "steps": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "shows the cart total",
+          "file": "tests/checkout.spec.js",
+          "line": 8,
+          "column": 1,
+          "tests": [
+            {
+              "projectName": "chromium",
+              "projectId": "chromium",
+              "status": "expected",
+              "expectedStatus": "passed",
+              "timeout": 30000,
+              "annotations": [],
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "passed",
+                  "duration": 1100,
+                  "retry": 0,
+                  "stdout": [],
+                  "stderr": [],
+                  "steps": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "applies a discount code",
+          "file": "tests/checkout.spec.js",
+          "line": 24,
+          "column": 1,
+          "tests": [
+            {
+              "projectName": "chromium",
+              "projectId": "chromium",
+              "status": "expected",
+              "expectedStatus": "passed",
+              "timeout": 30000,
+              "annotations": [],
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "passed",
+                  "duration": 395,
+                  "retry": 0,
+                  "stdout": [],
+                  "stderr": [],
+                  "steps": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-24T14:21:00.000Z",
+    "duration": 4200.5,
+    "expected": 3,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

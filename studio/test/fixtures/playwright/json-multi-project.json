@@ -1,0 +1,89 @@
+{
+  "config": {
+    "configFile": "/tmp/playwright-evidence/playwright.config.js",
+    "rootDir": "/tmp/playwright-evidence",
+    "version": "1.64.1",
+    "projects": [
+      {
+        "name": "chromium",
+        "retries": 0,
+        "timeout": 30000
+      },
+      {
+        "name": "firefox",
+        "retries": 0,
+        "timeout": 30000
+      }
+    ]
+  },
+  "suites": [
+    {
+      "title": "checkout.spec.js",
+      "file": "tests/checkout.spec.js",
+      "line": 0,
+      "column": 0,
+      "specs": [
+        {
+          "title": "adds an item to the cart",
+          "file": "tests/checkout.spec.js",
+          "line": 3,
+          "column": 1,
+          "tests": [
+            {
+              "projectName": "chromium",
+              "projectId": "chromium",
+              "status": "expected",
+              "expectedStatus": "passed",
+              "timeout": 30000,
+              "annotations": [],
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "passed",
+                  "duration": 438,
+                  "retry": 0,
+                  "stdout": [],
+                  "stderr": [],
+                  "steps": []
+                }
+              ]
+            },
+            {
+              "projectName": "firefox",
+              "projectId": "firefox",
+              "status": "unexpected",
+              "expectedStatus": "passed",
+              "timeout": 30000,
+              "annotations": [],
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "status": "failed",
+                  "duration": 900,
+                  "retry": 0,
+                  "errors": [
+                    {
+                      "message": "browserType.launch: Executable doesn't exist at /tmp/firefox"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "steps": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-24T14:18:10.550Z",
+    "duration": 2400.75,
+    "expected": 1,
+    "skipped": 0,
+    "unexpected": 1,
+    "flaky": 0
+  }
+}

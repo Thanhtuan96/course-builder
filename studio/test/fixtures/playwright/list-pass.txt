@@ -1,0 +1,6 @@
+Running 2 tests using 2 workers
+
+  ✓  1 [chromium] › tests/checkout.spec.js:3:1 › adds an item to the cart (438ms)
+  ✓  2 [chromium] › tests/checkout.spec.js:8:1 › shows the cart total (1.1s)
+
+  2 passed (3.1s)

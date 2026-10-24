@@ -1,0 +1,75 @@
+{
+  "config": {
+    "configFile": "/tmp/playwright-evidence/playwright.config.js",
+    "rootDir": "/tmp/playwright-evidence",
+    "version": "1.64.1",
+    "projects": [
+      {
+        "name": "chromium",
+        "testDir": "/tmp/playwright-evidence/tests",
+        "retries": 1,
+        "timeout": 30000
+      }
+    ]
+  },
+  "suites": [
+    {
+      "title": "checkout.spec.js",
+      "file": "tests/checkout.spec.js",
+      "line": 0,
+      "column": 0,
+      "specs": [
+        {
+          "title": "flaky on the first try",
+          "file": "tests/checkout.spec.js",
+          "line": 3,
+          "column": 1,
+          "tests": [
+            {
+              "projectName": "chromium",
+              "projectId": "chromium",
+              "status": "flaky",
+              "expectedStatus": "passed",
+              "timeout": 30000,
+              "annotations": [],
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "failed",
+                  "duration": 109,
+                  "retry": 0,
+                  "errors": [
+                    {
+                      "message": "Error: expect(locator).toBeVisible() failed"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "steps": []
+                },
+                {
+                  "workerIndex": 0,
+                  "status": "passed",
+                  "duration": 72,
+                  "retry": 1,
+                  "stdout": [],
+                  "stderr": [],
+                  "steps": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-24T14:17:44.002Z",
+    "duration": 812.3,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 1
+  }
+}
