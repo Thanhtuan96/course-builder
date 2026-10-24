@@ -16,6 +16,7 @@ import { useT } from '../../lib/i18n/index.js';
 import { exportAll, importAll, getAdapterInfo, listCourses } from '../../lib/repo/index.js';
 import { createIdbAdapter } from '../../lib/repo/idb-adapter.js';
 import { download, exportCourseMarkdown } from '../../lib/course-export.js';
+import { BetaReportPanel } from './BetaReportPanel.jsx';
 
 function countRows(dump) {
   const tables = dump?.tables || {};
@@ -166,74 +167,77 @@ export function DataPanel() {
   const isRemote = adapter?.kind === 'remote';
 
   return (
-    <Card className="space-y-4">
-      <div>
-        <p className="font-medium">{t('data.title')}</p>
-        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">{t('data.subtitle')}</p>
-      </div>
+    <>
+      <Card className="space-y-4">
+        <div>
+          <p className="font-medium">{t('data.title')}</p>
+          <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">{t('data.subtitle')}</p>
+        </div>
 
-      <div className="rounded-lg bg-neutral-100 p-3 text-sm dark:bg-neutral-800">
-        <p>
-          <span className="text-neutral-500">{t('data.storageLabel')}</span>{' '}
-          <span className="font-medium">{adapter ? kindLabel(adapter.kind) : t('data.checking')}</span>
-        </p>
-        {adapter?.path && <p className="mt-0.5 break-all text-xs text-neutral-500">{adapter.path}</p>}
-        <p>
-          <span className="text-neutral-500">{t('data.persistentLabel')}</span>{' '}
-          <span className="font-medium">
-            {adapter ? (adapter.persistent ? t('data.granted') : t('data.bestEffort')) : '—'}
-          </span>
-        </p>
-      </div>
+        <div className="rounded-lg bg-neutral-100 p-3 text-sm dark:bg-neutral-800">
+          <p>
+            <span className="text-neutral-500">{t('data.storageLabel')}</span>{' '}
+            <span className="font-medium">{adapter ? kindLabel(adapter.kind) : t('data.checking')}</span>
+          </p>
+          {adapter?.path && <p className="mt-0.5 break-all text-xs text-neutral-500">{adapter.path}</p>}
+          <p>
+            <span className="text-neutral-500">{t('data.persistentLabel')}</span>{' '}
+            <span className="font-medium">
+              {adapter ? (adapter.persistent ? t('data.granted') : t('data.bestEffort')) : '—'}
+            </span>
+          </p>
+        </div>
 
-      <div className="flex flex-wrap gap-2">
-        <Button onClick={onExportBackup} disabled={busy === 'export'}>
-          {t('data.exportBackup')}
-        </Button>
-        <Button variant="secondary" onClick={() => fileRef.current?.click()} disabled={busy === 'restore'}>
-          {t('data.restoreBackup')}
-        </Button>
-        <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={onRestore} />
-      </div>
-
-      <div className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
-        <p className="text-sm font-medium">{t('data.moveTitle')}</p>
-        <p className="mt-1 text-xs text-neutral-500">{isRemote ? t('data.moveRemote') : t('data.moveLocal')}</p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          <Button size="sm" variant="secondary" onClick={onImportBrowserData} disabled={!isRemote || busy === 'import'}>
-            {t('data.importBrowser')}
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={onExportBackup} disabled={busy === 'export'}>
+            {t('data.exportBackup')}
           </Button>
-          {importResult && (
-            <Button size="sm" variant="ghost" onClick={onClearBrowserCopy}>
-              {t('data.clearBrowser')}
+          <Button variant="secondary" onClick={() => fileRef.current?.click()} disabled={busy === 'restore'}>
+            {t('data.restoreBackup')}
+          </Button>
+          <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={onRestore} />
+        </div>
+
+        <div className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
+          <p className="text-sm font-medium">{t('data.moveTitle')}</p>
+          <p className="mt-1 text-xs text-neutral-500">{isRemote ? t('data.moveRemote') : t('data.moveLocal')}</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button size="sm" variant="secondary" onClick={onImportBrowserData} disabled={!isRemote || busy === 'import'}>
+              {t('data.importBrowser')}
             </Button>
+            {importResult && (
+              <Button size="sm" variant="ghost" onClick={onClearBrowserCopy}>
+                {t('data.clearBrowser')}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <p className="text-sm font-medium">{t('data.exportCourseTitle')}</p>
+          <p className="mt-1 text-xs text-neutral-500">
+            {t('data.exportCourseBody')} <code>professor:*</code> {t('data.exportCourseAfter')}
+          </p>
+          {courses.length === 0 ? (
+            <p className="mt-2 text-xs text-neutral-500">{t('data.noCourses')}</p>
+          ) : (
+            <ul className="mt-2 space-y-1">
+              {courses.map((course) => (
+                <li key={course.id} className="flex items-center justify-between gap-2 text-sm">
+                  <span className="truncate">{course.title}</span>
+                  <Button size="sm" variant="ghost" onClick={() => onExportCourse(course)} disabled={busy === `course:${course.id}`}>
+                    {t('data.exportCourse')}
+                  </Button>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
-      </div>
 
-      <div>
-        <p className="text-sm font-medium">{t('data.exportCourseTitle')}</p>
-        <p className="mt-1 text-xs text-neutral-500">
-          {t('data.exportCourseBody')} <code>professor:*</code> {t('data.exportCourseAfter')}
-        </p>
-        {courses.length === 0 ? (
-          <p className="mt-2 text-xs text-neutral-500">{t('data.noCourses')}</p>
-        ) : (
-          <ul className="mt-2 space-y-1">
-            {courses.map((course) => (
-              <li key={course.id} className="flex items-center justify-between gap-2 text-sm">
-                <span className="truncate">{course.title}</span>
-                <Button size="sm" variant="ghost" onClick={() => onExportCourse(course)} disabled={busy === `course:${course.id}`}>
-                  {t('data.exportCourse')}
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      {message && <p className="text-sm text-green-700 dark:text-green-400">{message}</p>}
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-    </Card>
+        {message && <p className="text-sm text-green-700 dark:text-green-400">{message}</p>}
+        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      </Card>
+      <BetaReportPanel />
+    </>
   );
 }

@@ -4,7 +4,13 @@
  */
 import { useEffect, useState } from 'react';
 import { Link, navigate } from '../lib/router.js';
-import { listCourses, getCourse, deleteCourse, onChange } from '../lib/repo/index.js';
+import {
+  listCourses,
+  getCourse,
+  deleteCourse,
+  getBetaProfile,
+  onChange,
+} from '../lib/repo/index.js';
 import { progress, nextLesson, statusIcon } from '../lib/course.js';
 import { useT } from '../lib/i18n/index.js';
 import { DEMO_COURSE_ID } from '../data/demo-course.js';
@@ -15,10 +21,18 @@ import { Badge } from '../components/ui/Badge.jsx';
 import { EmptyState } from '../components/ui/EmptyState.jsx';
 import { StreakBadge } from '../components/practice/StreakBadge.jsx';
 import { DueBadge } from '../components/practice/DueBadge.jsx';
+import {
+  BetaReportNudge,
+  activationOffset,
+  nudgeVisible,
+  readNudgeMarkers,
+  writeNudgeMarker,
+} from '../components/data/BetaReportPanel.jsx';
 
 export function Home() {
   const t = useT();
   const [courses, setCourses] = useState(null);
+  const [nudge, setNudge] = useState(null);
 
   useEffect(() => {
     let alive = true;
@@ -36,6 +50,31 @@ export function Home() {
       off();
     };
   }, []);
+
+  // INSTR-06: one read-through of the beta profile per mount. Deliberately NOT folded into the
+  // repository `onChange` refresh above — that fires on every course write, while the profile is
+  // created once. The read-through is allowed to create the singleton with `activated_at: null`
+  // (D-14); a profile without `activated_day` simply shows no banner. No event is recorded and no
+  // meaningful row is written here: the only side effect of the nudge is a localStorage marker.
+  useEffect(() => {
+    let alive = true;
+    getBetaProfile()
+      .then((profile) => {
+        if (!alive) return;
+        setNudge(nudgeVisible({ offset: activationOffset(profile), ...readNudgeMarkers() }));
+      })
+      .catch(() => {
+        /* no profile, no banner */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const dismissNudge = () => {
+    writeNudgeMarker('dismissed', nudge);
+    setNudge(null);
+  };
 
   const remove = async (course) => {
     if (!window.confirm(t('home.deleteConfirm', { title: course.title }))) return;
@@ -57,6 +96,8 @@ export function Home() {
           <Button>{t('home.newCourse')}</Button>
         </Link>
       </div>
+
+      {nudge && <BetaReportNudge checkpoint={nudge} onDismiss={dismissNudge} />}
 
       {courses === null && <p className="text-sm text-neutral-500">{t('home.loading')}</p>}
 

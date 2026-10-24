@@ -1,0 +1,55 @@
+{
+  "title": "Export beta report",
+  "subtitle": "A small, content-free summary of how you have been learning. Nothing is uploaded unless you send the file yourself.",
+  "open": "Preview beta report",
+  "jump": "Beta report",
+  "building": "Building your report…",
+  "summaryTitle": "What the file says",
+  "everythingInFile": "This is everything in the file — nothing is hidden and nothing is uploaded.",
+  "download": "Download beta report",
+  "error": "The beta report could not be built.",
+  "invalid": "This report did not pass validation, so no file was created.",
+  "summary": {
+    "activation": "Activation",
+    "window": "Active days (offsets)",
+    "loops": "Learning loops",
+    "revisions": "Revisions",
+    "retention": "Retention",
+    "capstone": "Capstone",
+    "version": "App version",
+    "storage": "Storage"
+  },
+  "kinds": {
+    "quiz_completed": "Quizzes completed",
+    "recall_completed": "Recall sessions",
+    "answer_sent_for_review": "Answers reviewed",
+    "workspace_run": "Workspace runs",
+    "exercise_completed": "Exercises completed",
+    "capstone_checkpoint": "Capstone checkpoints"
+  },
+  "values": {
+    "yes": "yes",
+    "no": "no",
+    "activated": "activated",
+    "notActivated": "not activated yet",
+    "none": "none",
+    "week1": "week 1 active",
+    "week2": "week 2 return",
+    "started": "started",
+    "notStarted": "not started",
+    "courseComplete": "course complete",
+    "needsWork": "needs work"
+  },
+  "storage": {
+    "indexeddb": "IndexedDB (this browser)",
+    "sqlite": "SQLite",
+    "memory": "In-memory (not persistent)",
+    "remote": "SQLite file (local server)"
+  },
+  "nudge": {
+    "day7": "You are one week into the beta. Export your week-1 report so the first seven days are counted.",
+    "day14": "Two weeks in. Export your week-2 report to finish your beta check-in.",
+    "action": "Export beta report",
+    "dismiss": "Dismiss"
+  }
+}

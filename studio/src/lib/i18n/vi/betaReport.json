@@ -1,0 +1,55 @@
+{
+  "title": "Xuất báo cáo beta",
+  "subtitle": "Bản tóm tắt nhỏ, không chứa nội dung học, về cách bạn đã học. Không có gì được tải lên trừ khi chính bạn gửi tệp đi.",
+  "open": "Xem trước báo cáo beta",
+  "jump": "Báo cáo beta",
+  "building": "Đang tạo báo cáo…",
+  "summaryTitle": "Tệp chứa những gì",
+  "everythingInFile": "Đây là toàn bộ nội dung của tệp — không giấu gì và không tải gì lên.",
+  "download": "Tải báo cáo beta",
+  "error": "Không thể tạo báo cáo beta.",
+  "invalid": "Báo cáo này không vượt qua kiểm tra, nên chưa có tệp nào được tạo.",
+  "summary": {
+    "activation": "Kích hoạt",
+    "window": "Các ngày hoạt động (độ lệch)",
+    "loops": "Vòng học",
+    "revisions": "Lượt sửa lại",
+    "retention": "Duy trì",
+    "capstone": "Đồ án tổng kết",
+    "version": "Phiên bản ứng dụng",
+    "storage": "Lưu trữ"
+  },
+  "kinds": {
+    "quiz_completed": "Bài kiểm tra đã làm",
+    "recall_completed": "Buổi ôn tập",
+    "answer_sent_for_review": "Câu trả lời đã gửi duyệt",
+    "workspace_run": "Lần chạy workspace",
+    "exercise_completed": "Bài tập đã hoàn thành",
+    "capstone_checkpoint": "Mốc đồ án tổng kết"
+  },
+  "values": {
+    "yes": "có",
+    "no": "không",
+    "activated": "đã kích hoạt",
+    "notActivated": "chưa kích hoạt",
+    "none": "không có",
+    "week1": "tuần 1 có hoạt động",
+    "week2": "tuần 2 quay lại",
+    "started": "đã bắt đầu",
+    "notStarted": "chưa bắt đầu",
+    "courseComplete": "hoàn thành khóa học",
+    "needsWork": "cần làm thêm"
+  },
+  "storage": {
+    "indexeddb": "IndexedDB (trình duyệt này)",
+    "sqlite": "SQLite",
+    "memory": "Bộ nhớ tạm (không bền)",
+    "remote": "Tệp SQLite (máy chủ cục bộ)"
+  },
+  "nudge": {
+    "day7": "Bạn đã ở tuần đầu của bản beta. Hãy xuất báo cáo tuần 1 để bảy ngày đầu được ghi nhận.",
+    "day14": "Đã hai tuần. Hãy xuất báo cáo tuần 2 để hoàn tất phần báo cáo beta của bạn.",
+    "action": "Xuất báo cáo beta",
+    "dismiss": "Bỏ qua"
+  }
+}
