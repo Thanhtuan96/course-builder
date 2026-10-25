@@ -74,9 +74,16 @@ test.describe('RON-168 generated programming course', () => {
     await page.getByRole('button', { name: 'Workspace', exact: true }).click();
     await expect(page.getByText('Local machine', { exact: true }).first()).toBeVisible();
     await expect(page.getByText('Code runs on your machine', { exact: true })).toBeVisible();
-    // RON-196: the skeleton is seeded from the current lesson version, so the exercise fence in
-    // replies/lesson.md is already in the editor before the learner types anything.
-    await expect(page.getByRole('textbox').first()).toContainText('echo "TODO: finish the exercise"');
+    // RON-196 + RON-197: the skeleton is seeded from the current lesson version, and the exercise
+    // fence keeps its column-0 "#" comment, so the whole fence — comment included — is already in
+    // the editor before the learner edits anything.
+    const seedComment =
+      '# Replace the echo line below so the script prints the completion message.';
+    const exerciseEditor = page.getByRole('textbox').first();
+    await expect(exerciseEditor).toContainText('#!/usr/bin/env bash');
+    await expect(exerciseEditor).toContainText(seedComment);
+    await expect(exerciseEditor).toContainText('echo "TODO: finish the exercise"');
+    await expect(exerciseEditor).toContainText('exit 1');
     await page.getByRole('button', { name: 'Run', exact: true }).click();
     await expect(
       page.getByText('Confirm where your code runs before the first local run.', { exact: true })
@@ -85,10 +92,10 @@ test.describe('RON-168 generated programming course', () => {
     await page.getByRole('button', { name: 'Run', exact: true }).click();
     await expect(page.getByText('exit 1', { exact: true }).last()).toBeVisible();
 
-    // Edit the exercise and run again -> exit 0.
+    // Edit the seeded skeleton and run again -> exit 0.
     await replaceEditorText(
       page,
-      '#!/usr/bin/env bash\necho "Exercise complete"\nexit 0\n'
+      `#!/usr/bin/env bash\n${seedComment}\necho "Exercise complete"\nexit 0\n`
     );
     await page.getByRole('button', { name: 'Run', exact: true }).click();
     await expect(page.getByText('exit 0', { exact: true }).last()).toBeVisible();

@@ -26,6 +26,7 @@ line so the script prints the completion message and exits successfully.
 
 ```bash
 #!/usr/bin/env bash
+# Replace the echo line below so the script prints the completion message.
 echo "TODO: finish the exercise"
 exit 1
 ```

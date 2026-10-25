@@ -38,17 +38,26 @@ export function extractFencedBlocks(markdown) {
 /**
  * Locate the first heading whose text starts with "exercise", returning its body and the absolute
  * range of the section (heading → next heading of the same or higher level).
+ *
+ * Heading-looking lines inside a fenced code block are not headings: a `# comment` at column 0 is
+ * ordinary code in Bash, Python, Ruby and friends, and treating it as one used to cut the exercise
+ * section short inside its own fence (RON-197). Fence ranges come from `extractFencedBlocks`, so
+ * there is exactly one fence parser in this module.
+ *
  * @param {string} markdown
  * @returns {{ body: string, start: number, end: number } | null}
  */
 export function findExerciseSection(markdown) {
   const text = String(markdown ?? '');
+  const fenced = extractFencedBlocks(text);
+  const inFence = (index) => fenced.some((block) => index >= block.start && index < block.end);
   const heading = /^(#{1,6})[ \t]+(.+?)[ \t]*$/gm;
   let match;
   let level = 0;
   let start = -1;
   let bodyStart = -1;
   while ((match = heading.exec(text))) {
+    if (inFence(match.index)) continue;
     if (start >= 0) {
       if (match[1].length <= level) {
         return { body: text.slice(bodyStart, match.index), start, end: match.index };
