@@ -31,3 +31,6 @@ dist
 /web/.studio-token
 .gitnexus
 .publish-staging/
+
+# OpenSpec: in-flight changes stay local to each worktree; only openspec/specs/** is committed
+openspec/changes/
