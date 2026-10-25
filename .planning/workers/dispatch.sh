@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Usage: dispatch.sh <ISSUE-ID> <branch> <change-name> [split-from-surface]
 #   e.g. dispatch.sh RON-168 feature/ron-168-v30-p12-full-loop-e2e-ci-completion-and-uat ron-168-full-loop-e2e
+# Pass "-" as <change-name> for a bug fix on the plain loop (no OpenSpec change; templates/brief.md).
 #
 # Starts one OpenCode worker for one Linear issue, following the dev-orchestrator spec-driven cycle
 # (~/.claude/skills/dev-orchestrator/references/openspec-cycle.md):
@@ -32,8 +33,13 @@ FROM="${4:-$REPORT_SURFACE}"
 NUM="$(printf '%s' "$ID" | grep -oE '[0-9]+$')"
 WT="$(cd "$REPO" && bash "$SKILL/scripts/new-worktree.sh" main "$BRANCH" "$NUM")"
 
-KICKOFF="/opsx-propose $CHANGE (full input = the description of Linear issue $ID, read it first with the Linear MCP get_issue; use change name $CHANGE; after propose STOP and report via cmux)"
-SURFACE="$(cd "$REPO" && bash "$SKILL/scripts/dispatch.sh" "$FROM" "$WT" "$ID" "$ID" "$KICKOFF")"
+if [ "$CHANGE" = "-" ]; then
+  # Plain bug loop (templates/brief.md): no OpenSpec change, the skill's default kickoff.
+  SURFACE="$(cd "$REPO" && bash "$SKILL/scripts/dispatch.sh" "$FROM" "$WT" "$ID" "$ID")"
+else
+  KICKOFF="/opsx-propose $CHANGE (full input = the description of Linear issue $ID, read it first with the Linear MCP get_issue; use change name $CHANGE; after propose STOP and report via cmux)"
+  SURFACE="$(cd "$REPO" && bash "$SKILL/scripts/dispatch.sh" "$FROM" "$WT" "$ID" "$ID" "$KICKOFF")"
+fi
 
 mkdir -p "$W"
 echo "WORKER_START $ID $(date +%H:%M:%S) surface=$SURFACE branch=$BRANCH change=$CHANGE dir=$WT" >> "$W/status.log"
