@@ -1,48 +1,40 @@
 #!/usr/bin/env bash
-# Usage: dispatch.sh <phase-number> [branch-slug]
-# Opens an OpenCode TUI worker in its own git worktree (.worktrees/phase-NN, branch gsd/phase-NN-<slug>)
-# branched from develop. The worker runs the full GSD cycle for that phase via
-# /gsd-autonomous --only N --interactive (discuss -> plan -> execute -> verify), pausing in the TUI
-# for the human's decisions, and reports back to the orchestrator pane with notify.sh.
-# Run it inside a new cmux pane, e.g.:
-#   cmux new-split right --command ".planning/workers/dispatch.sh 1 seams"
-set -u
-PHASE="$1"; SLUG="${2:-work}"
+# Usage: dispatch.sh <ISSUE-ID> <branch> <change-name> [split-from-surface]
+#   e.g. dispatch.sh RON-168 feature/ron-168-v30-p12-full-loop-e2e-ci-completion-and-uat ron-168-full-loop-e2e
+#
+# Starts one OpenCode worker for one Linear issue, following the dev-orchestrator spec-driven cycle
+# (~/.claude/skills/dev-orchestrator/references/openspec-cycle.md):
+#   1. a git worktree <repo>-wt-<number> on <branch> from fresh origin/develop (use the issue's
+#      Linear gitBranchName so commits and the PR link to the ticket);
+#   2. a split-down cmux pane running opencode in that worktree;
+#   3. the Stage 1 kickoff `/opsx-propose <change-name>`, reading the brief from the Linear issue
+#      description through the Linear MCP.
+# The worker stops after propose (CP1) and after apply + verify (CP2); the coordinator types the
+# next /opsx-* command into the pane and reviews in between. The worker never merges.
+#
+# Before running: the issue description must hold the brief (templates/brief-openspec.md), the
+# config .claude/dev-orchestrator.env must exist (scripts/init.sh), and develop must be pushed.
+set -euo pipefail
+
+ID="${1:?issue id, e.g. RON-168}"
+BRANCH="${2:?branch (the issue gitBranchName)}"
+CHANGE="${3:?OpenSpec change name, e.g. ron-168-full-loop-e2e}"
+SKILL="${DEV_ORCH_DIR:-$HOME/.claude/skills/dev-orchestrator}"
 REPO=/Users/tuankhuat/Documents/Pet-Projects/course-learning-plugin
 W="$REPO/.planning/workers"
-NN=$(printf '%02d' "$PHASE")
-NAME="phase-$NN"
-BRANCH="gsd/phase-$NN-$SLUG"
-DIR="$REPO/.worktrees/$NAME"
-MODEL="${WORKER_MODEL:-opencode-go/deepseek-v4.1-flash}"
 
-if [ ! -d "$DIR" ]; then
-  git -C "$REPO" worktree add -b "$BRANCH" "$DIR" develop || exit 1
-fi
-[ ! -d "$DIR/node_modules" ] && (cd "$DIR" && npm install --silent)
-[ -f "$DIR/studio/package.json" ] && [ ! -d "$DIR/studio/node_modules" ] && (cd "$DIR/studio" && npm install --silent)
+[ -x "$SKILL/scripts/dispatch.sh" ] || { echo "dev-orchestrator skill not found at $SKILL" >&2; exit 1; }
+# shellcheck disable=SC1091
+source "$REPO/.claude/dev-orchestrator.env"
+[ -f "$REPO/.claude/dev-orchestrator.local.env" ] && source "$REPO/.claude/dev-orchestrator.local.env"
+FROM="${4:-$REPORT_SURFACE}"
 
-mkdir -p "$W/logs"
-echo "WORKER_START $NAME $(date +%H:%M:%S) model=$MODEL branch=$BRANCH dir=$DIR" >> "$W/status.log"
-# OpenCode v2 dropped the TUI -m flag; the model is set through the inline config instead.
-export OPENCODE_CONFIG_CONTENT="{\"model\":\"$MODEL\",\"permission\":{\"edit\":\"allow\",\"bash\":\"allow\",\"webfetch\":\"allow\",\"external_directory\":\"allow\"}}"
-cd "$DIR"
+NUM="$(printf '%s' "$ID" | grep -oE '[0-9]+$')"
+WT="$(cd "$REPO" && bash "$SKILL/scripts/new-worktree.sh" main "$BRANCH" "$NUM")"
 
-# OpenCode TUI's --prompt only pre-fills the input box; submit it once the TUI is ready.
-if [ -n "${CMUX_SURFACE_ID:-}" ]; then
-  (
-    for _ in $(seq 1 45); do
-      sleep 2
-      SCREEN=$(cmux read-screen --workspace "${CMUX_WORKSPACE_ID:-}" --surface "$CMUX_SURFACE_ID" 2>/dev/null)
-      echo "$SCREEN" | grep -q "interrupt" && exit 0
-      if echo "$SCREEN" | grep -q "You are worker"; then
-        cmux send-key --workspace "${CMUX_WORKSPACE_ID:-}" --surface "$CMUX_SURFACE_ID" enter >/dev/null 2>&1
-        exit 0
-      fi
-    done
-  ) &
-fi
+KICKOFF="/opsx-propose $CHANGE (full input = the description of Linear issue $ID, read it first with the Linear MCP get_issue; use change name $CHANGE; after propose STOP and report via cmux)"
+SURFACE="$(cd "$REPO" && bash "$SKILL/scripts/dispatch.sh" "$FROM" "$WT" "$ID" "$ID" "$KICKOFF")"
 
-PROMPT="You are worker '$NAME' for GSD Phase $PHASE of this repo. Your git worktree is $DIR (branch $BRANCH, from develop); work only there. Run the full GSD cycle for Phase $PHASE by executing the GSD command /gsd-autonomous with arguments '--only $PHASE --interactive' — read ~/.config/opencode/commands/gsd-autonomous.md and follow its workflow exactly (discuss -> plan -> execute -> verify; verifier is enabled). Ask the human in this TUI whenever the workflow needs a decision. Rules from .planning/ROADMAP.md 'Execution Rules': edit only files listed under Phase $PHASE 'Owns' (plus its 'Touch points'); never add a migration other than the one your phase owns; commit atomically on your branch; do NOT merge into develop and do NOT push. When the phase is executed and verified, as your LAST action run: $W/notify.sh $NAME DONE \"<one-line summary incl. verification result>\" . If blocked, run: $W/notify.sh $NAME BLOCKED \"<reason>\" ."
-
-opencode "$DIR" --prompt "$PROMPT"
+mkdir -p "$W"
+echo "WORKER_START $ID $(date +%H:%M:%S) surface=$SURFACE branch=$BRANCH change=$CHANGE dir=$WT" >> "$W/status.log"
+echo "$SURFACE"

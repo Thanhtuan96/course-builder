@@ -184,6 +184,12 @@ change proposals live in **OpenSpec** (`openspec/`, config in `openspec/config.y
 4. `/opsx:verify` + `npm test`, open the PR, move the issue to **In Review**.
 5. After merge: `/opsx:archive` (folds delta specs into `openspec/specs/`), mark the issue **Done**.
 
+Delegated work runs through the dev-orchestrator skill (config in `.claude/dev-orchestrator.env`,
+`TRACKER=linear`): the coordinator writes the brief into the Linear issue description, then
+`.planning/workers/dispatch.sh <ISSUE-ID> <gitBranchName> <change-name>` opens one OpenCode worker
+in its own worktree and starts `/opsx-propose`. The coordinator reviews after propose (CP1) and
+after apply + verify (CP2), releases `/opsx-archive`, and merges the PR; the worker never merges.
+
 Bugs found mid-change get a new Linear issue instead of widening the change. `.planning/` and
 `TODOS.md` are **legacy GSD history (read-only)** — don't add new work there; phases 1–10 map to
 RON-157…RON-166.
