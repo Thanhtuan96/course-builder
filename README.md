@@ -314,19 +314,21 @@ npx course-professor import nextjs --dry-run # preview one course's import
 
 ### Starting the bridge manually
 
-`course-professor web` starts **only the Studio bridge server** — the loopback process Studio talks
-to when you pick **Settings → AI source → My local agent**. Most people do not need it:
-`npx course-professor studio` starts the bridge and the Studio app together and pairs them for you.
+`course-professor web` starts the Studio bridge server **and serves the built Studio app from the
+same port** (3000 by default); it does not build Studio for you. If `studio/dist` is missing, the
+port answers with a 503 page telling you to build. Most people do not need this:
+`npx course-professor studio` builds what is missing, starts the bridge and the Studio app, and
+pairs them for you.
 
 | Command | Description |
 |---|---|
-| `web` | Start the Studio bridge server (default port 3000, prints a pairing token) |
+| `web` | Start the bridge and serve the built Studio (default port 3000, prints a pairing token) |
 | `web --rotate-token` | Generate a new Studio pairing token and exit |
-| `web --production` | Serve the prebuilt Studio from the bridge (requires a build) |
+| `web --production` | Production mode; refuses to start without a Studio build |
 
 Then pair Studio with the printed URL and token, as described in
-[`studio/README.md`](studio/README.md#use-your-own-local-agent-free-no-api-key). The bridge only
-accepts loopback clients and enforces the pairing token, so keep that token private.
+[`studio/README.md`](studio/README.md#use-your-own-local-agent-free-no-api-key). By default the
+bridge accepts only loopback clients and enforces the pairing token, so keep that token private.
 
 The old web UI is **deprecated** and opt-in only: `npx course-professor web --legacy` (or
 `PROFESSOR_LEGACY=1` in the environment). While legacy mode is enabled, `course-professor doctor`

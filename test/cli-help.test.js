@@ -64,14 +64,14 @@ describe('RON-167 CLI help via the real binary', () => {
     expect(text).toContain('Node 22.5+');
   });
 
-  it('RON-167 describes web as the Studio-only bridge server and keeps --production', () => {
+  it('RON-167 describes web as the bridge that also serves the built Studio', () => {
     const row = webRow(text);
     expect(row).toMatch(/bridge/i);
     expect(row).not.toMatch(/web UI/i);
     expect(row).toContain('[port]');
     expect(row).toContain('--production');
-    expect(row).toMatch(/prebuilt Studio/i);
-    expect(row).toMatch(/requires a build/i);
+    expect(row).toMatch(/built Studio/i);
+    expect(row).toMatch(/requires an existing Studio build/i);
   });
 
   it('RON-167 lists --cloud as deprecated and legacy-only without an API-key pitch', () => {
@@ -158,6 +158,13 @@ describe('RON-167 READMEs put Studio before the manual bridge', () => {
     expect(readme).toMatch(/deprecated/i);
   });
 
+  it('RON-167 says web also serves the built Studio and --production needs that build', () => {
+    const readme = readRepoFile('README.md');
+    expect(readme).toMatch(/serves the built Studio app from the\s+same port/i);
+    expect(readme).not.toMatch(/starts \*\*only the Studio bridge server\*\*/i);
+    expect(readme).toMatch(/refuses to start without a Studio build/i);
+  });
+
   it('RON-167 states the Node requirement where studio/README.md introduces the command', () => {
     const readme = readRepoFile('studio/README.md');
     const studio = readme.search(/course-professor(?:@next)? studio/);
@@ -223,6 +230,30 @@ describe('RON-167 SECURITY.md boundary', () => {
 
     const pkg = JSON.parse(readRepoFile('package.json'));
     expect(pkg.files).not.toContain('SECURITY.md');
+  });
+
+  it('RON-167 points reporting at the repository GitHub advisory form', () => {
+    const security = readRepoFile('SECURITY.md');
+    const pkg = JSON.parse(readRepoFile('package.json'));
+    const repo = pkg.repository.url.replace(/\.git$/, '').replace(/\/$/, '');
+    expect(security).toContain(`${repo}/security/advisories/new`);
+    expect(security).not.toMatch(/professor-skills/);
+  });
+
+  it('RON-167 states the support rule and keeps legacy in scope with a mitigation', () => {
+    const security = readRepoFile('SECURITY.md');
+    expect(security).toMatch(/latest published release on each dist-tag/i);
+    expect(security).toMatch(/legacy web UI is in scope/i);
+    expect(security).toMatch(/not use `--legacy` \/ `PROFESSOR_LEGACY=1`/);
+    expect(security).not.toMatch(/within a few days/i);
+  });
+
+  it('RON-167 warns about non-loopback mode and wildcard origins', () => {
+    const security = readRepoFile('SECURITY.md');
+    expect(security).toContain('STUDIO_ALLOW_NON_LOOPBACK');
+    expect(security).toMatch(/cannot be combined[\s\S]{0,60}STUDIO_ORIGINS=\*/);
+    expect(security).toMatch(/Warning/i);
+    expect(security).toMatch(/do not do it unless you understand the exposure/i);
   });
 });
 
