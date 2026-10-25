@@ -1,0 +1,21 @@
+{
+  "brief_md": "# Ship your greeting CLI\n\n## What you'll ship\n\nOne bash script that prints a greeting and exits successfully.\n\n## What you're proving\n\nYou can write a small script, run it, and read its exit status.\n\n## Scope\n\n- Print the greeting.\n- Exit 0 on success.\n\n## Rules\n\nBuild it yourself. Documentation is allowed.\n\n## Definition of Done\n\n- [ ] The script runs.\n- [ ] The greeting appears.\n- [ ] The exit code is 0.\n",
+  "rubric": [
+    { "name": "Runs successfully", "solid": "The script executes with bash and exits 0." },
+    { "name": "Prints the greeting", "solid": "The expected greeting appears in stdout." },
+    { "name": "Handles failure", "solid": "A missing argument or failing command is reported." },
+    { "name": "Readable", "solid": "Names and comments make the script easy to follow." }
+  ],
+  "artifact": {
+    "title": "A greeting CLI",
+    "deliverable": "One bash script that prints a greeting and exits successfully.",
+    "definitionOfDone": ["Runs with bash.", "Prints the greeting.", "Exits 0."]
+  },
+  "tests": {
+    "language": "bash",
+    "entry": "capstone_test.sh",
+    "files": {
+      "capstone_test.sh": "#!/usr/bin/env bash\nset -eu\nout=$(bash greeting.sh Ada)\n[ \"$out\" = \"Hello, Ada!\" ]\n"
+    }
+  }
+}

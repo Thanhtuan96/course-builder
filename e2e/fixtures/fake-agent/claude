@@ -1,0 +1,7 @@
+#!/usr/bin/env node
+/**
+ * Fake `claude` CLI on the bridge PATH (RON-168). See e2e/helpers/fake-agent.js.
+ */
+import { run } from '../../helpers/fake-agent.js';
+
+await run();

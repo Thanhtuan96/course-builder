@@ -1,0 +1,18 @@
+{
+  "criteria": [
+    {
+      "key": "c1",
+      "label": "Explains the exit code",
+      "status": "met",
+      "question": null
+    },
+    {
+      "key": "c2",
+      "label": "Connects failure to a non-zero status",
+      "status": "not_met",
+      "question": "What did the failing run print before the script exited?"
+    }
+  ],
+  "strengths": ["The explanation is concrete."],
+  "nextAction": "Run the script again and read the status."
+}

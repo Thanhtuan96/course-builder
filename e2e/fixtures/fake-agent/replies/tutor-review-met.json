@@ -1,0 +1,22 @@
+{
+  "criteria": [
+    {
+      "key": "c1",
+      "label": "Explains what an exit code is",
+      "status": "met",
+      "question": null
+    },
+    {
+      "key": "c2",
+      "label": "Connects failure to a non-zero status",
+      "status": "met",
+      "question": null
+    },
+    {
+      "key": "c3",
+      "label": "Uses evidence from a run",
+      "status": "met",
+      "question": null
+    }
+  ]
+}

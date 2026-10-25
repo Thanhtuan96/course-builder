@@ -1,0 +1,1 @@
+What do you think happens to the exit code when the last command in a script fails? Try it once and tell me what you observed.

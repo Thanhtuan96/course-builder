@@ -1,0 +1,37 @@
+[
+  {
+    "question": "Which command prints text to the terminal?",
+    "options": ["echo", "exit", "read", "cd"],
+    "answerIndex": 0,
+    "explanation": "echo writes its arguments to standard output."
+  },
+  {
+    "question": "What does exit code 0 mean?",
+    "options": ["Failure", "Success", "The script was skipped", "The shell restarted"],
+    "answerIndex": 1,
+    "explanation": "A zero exit status is the conventional signal for success."
+  },
+  {
+    "question": "Which line makes a bash script fail?",
+    "options": ["exit 0", "exit 1", "echo ok", "true"],
+    "answerIndex": 1,
+    "explanation": "A non-zero status such as 1 reports failure to the caller."
+  },
+  {
+    "question": "How do you run a bash script named main.sh?",
+    "options": ["bash main.sh", "node main.sh", "python main.sh", "bash --open main.sh"],
+    "answerIndex": 0,
+    "explanation": "The bash interpreter takes the script path as its argument."
+  },
+  {
+    "question": "Why should a script exit explicitly?",
+    "options": [
+      "To make the terminal faster",
+      "To tell the caller whether the work succeeded",
+      "To delete old files",
+      "To avoid printing output"
+    ],
+    "answerIndex": 1,
+    "explanation": "The exit code is the script's success/failure contract with its caller."
+  }
+]

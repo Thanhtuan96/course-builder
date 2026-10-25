@@ -13,6 +13,7 @@
         "smoke:pack": "node scripts/smoke-pack.mjs",
         "start": "cd web && node server.js",
         "test": "vitest run",
+        "test:e2e": "playwright test --config e2e/playwright.config.js",
         "test:watch": "vitest",
         "test:security": "vitest run test/security --project root",
         "test:drift": "vitest run test/shared-drift.test.js --project root",

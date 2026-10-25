@@ -1,0 +1,33 @@
+{
+  "title": "Bash Scripting Foundations",
+  "description": "Learn to write small, reliable shell scripts by building one real command-line tool.",
+  "kind": "programming",
+  "kindReason": "The learner writes and runs scripts in a terminal.",
+  "artifact": {
+    "title": "A greeting CLI",
+    "deliverable": "One bash script that prints a greeting and exits successfully.",
+    "definitionOfDone": [
+      "The script runs with bash.",
+      "It prints the expected greeting.",
+      "It exits with status 0."
+    ]
+  },
+  "lessons": [
+    {
+      "title": "Your first Bash script",
+      "summary": "Run a script and read its exit code."
+    },
+    {
+      "title": "Exit codes and failure",
+      "summary": "Use exit status to signal success or failure."
+    },
+    {
+      "title": "Arguments and defaults",
+      "summary": "Read positional arguments and supply a default."
+    },
+    {
+      "title": "Composing small scripts",
+      "summary": "Keep scripts readable and testable."
+    }
+  ]
+}

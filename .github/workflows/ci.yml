@@ -91,3 +91,36 @@ jobs:
           npm --prefix studio ci
       - name: Run shared drift suite
         run: npm run test:drift
+
+  e2e:
+    name: E2E (Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            studio/package-lock.json
+      - name: Install root and Studio package roots
+        run: |
+          npm ci
+          npm --prefix studio ci
+      - name: Build Studio
+        run: npm --prefix studio run build
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run E2E suite
+        run: npm run test:e2e
+      - name: Upload E2E report and traces
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
