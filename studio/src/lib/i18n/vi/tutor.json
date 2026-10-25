@@ -32,7 +32,8 @@
     "explain_simpler": "Giải thích đơn giản hơn",
     "hint": "Cho tôi một gợi ý",
     "check_answer": "Kiểm tra bài của tôi",
-    "quiz": "Đố tôi"
+    "quiz": "Đố tôi",
+    "review": "Nhận xét"
   },
   "languageNotice": "Trả lời về bằng ngôn ngữ khác, nên Professor đã hỏi lại gia sư bằng {language}."
 }
