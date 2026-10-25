@@ -143,13 +143,19 @@ function isBlank(content) {
  * Decide what the Workspace opens with (RON-196).
  *
  * Lesson Markdown lives in `lesson_versions`, never on the `lessons` row the UI holds, so the seed
- * must come from the current version (the row's own `content_md`, when present, wins for backwards
- * compatibility). Stored workspace files still win over the skeleton — unless every one of them is
- * blank and the lesson has no run result: that is an empty seed persisted by an earlier build, so
- * the rows are overwritten with the skeleton instead of trapping the learner on an empty editor.
+ * comes from the current version; the row's own `content_md` is only a backwards-compatible
+ * fallback when there is no version. Stored workspace files still win over the skeleton — unless
+ * every one of them is blank and the lesson has no run result: that is an empty seed persisted by
+ * an earlier build, so the rows are overwritten with the skeleton instead of trapping the learner
+ * on an empty editor.
  *
  * `persist` is false when the seed has no skeleton: keeping the empty file in memory only lets a
  * later lesson version still seed it.
+ *
+ * `stalePaths` lists the blank stored rows the re-seed does not replace — an earlier build guessed
+ * the entry extension from the course (`main.js`), while the skeleton fence resolves to another one
+ * (`main.sh`). The caller soft-deletes them, so the learner does not get a stray empty file next to
+ * the skeleton. It is always empty unless a re-seed actually happens.
  *
  * @param {{
  *   lesson?: object|null,
@@ -158,14 +164,17 @@ function isBlank(content) {
  *   rows?: Array<object>,
  *   runCount?: number,
  * }} [input]
- * @returns {{ files: SeedFile[], persist: boolean }}
+ * @returns {{ files: SeedFile[], persist: boolean, stalePaths: string[] }}
  */
 export function resolveWorkspaceSeed({ lesson = null, course = null, version = null, rows = [], runCount = 0 } = {}) {
   const stored = filesFromRows(rows);
   const untouched = stored.length > 0 && stored.every((f) => isBlank(f.content)) && runCount === 0;
-  if (stored.length && !untouched) return { files: stored, persist: false };
+  if (stored.length && !untouched) return { files: stored, persist: false, stalePaths: [] };
 
   const content_md = version?.content_md || lesson?.content_md || '';
   const files = seedFiles({ ...(lesson || {}), content_md }, course);
-  return { files, persist: files.some((f) => !isBlank(f.content)) };
+  const persist = files.some((f) => !isBlank(f.content));
+  const kept = new Set(files.map((f) => f.path));
+  const stalePaths = persist ? stored.filter((f) => !kept.has(f.path)).map((f) => f.path) : [];
+  return { files, persist, stalePaths };
 }

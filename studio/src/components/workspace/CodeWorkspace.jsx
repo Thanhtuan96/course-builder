@@ -148,6 +148,7 @@ export function CodeWorkspace({ lesson, course }) {
     (async () => {
       let seed = [];
       let persist = false;
+      let stalePaths = [];
       try {
         // The lesson row never carries Markdown — it lives in `lesson_versions` (RON-196).
         const [rows, runs, version] = await Promise.all([
@@ -157,7 +158,7 @@ export function CodeWorkspace({ lesson, course }) {
         ]);
         for (const row of rows) idByPathRef.current.set(row.path, row.id);
         markdownRef.current = version?.content_md || lesson?.content_md || '';
-        ({ files: seed, persist } = resolveWorkspaceSeed({
+        ({ files: seed, persist, stalePaths } = resolveWorkspaceSeed({
           lesson,
           course,
           version,
@@ -181,6 +182,16 @@ export function CodeWorkspace({ lesson, course }) {
             idByPathRef.current.set(file.path, row.id);
           } catch {
             /* keep the seed in memory even if storage is unavailable */
+          }
+        }
+        // RON-196: the empty seed an earlier build stored may use another entry name (main.js while
+        // the skeleton fence resolves to main.sh) — soft-delete it so no stray blank file survives.
+        for (const path of stalePaths) {
+          try {
+            await deleteWorkspaceFile({ lessonId: lesson.id, path });
+            idByPathRef.current.delete(path);
+          } catch {
+            /* the skeleton is already in place; a leftover blank row is harmless */
           }
         }
       }
