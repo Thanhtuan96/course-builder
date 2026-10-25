@@ -27,6 +27,9 @@ Most AI coding assistants will write code for you the moment you ask. Professor 
 - **Git** — required for git worktree-based courses.
 - **Notion or Obsidian** — only needed if you want to use the `professor:export` command. See setup sections below.
 
+Studio runs as a browser app, a loopback bridge and a local code runner on your machine. See
+[`SECURITY.md`](SECURITY.md) for what runs where and how to report a vulnerability.
+
 ---
 
 ## Install
@@ -309,13 +312,27 @@ npx course-professor import nextjs --dry-run # preview one course's import
 
 `import` is idempotent: re-running updates existing rows (matched by `source: 'cli'` + a stable `external_id`) instead of duplicating, and never overwrites graded cards or existing lecture versions.
 
-### Web UI
+### Starting the bridge manually
+
+`course-professor web` starts the Studio bridge server **and serves the built Studio app from the
+same port** (3000 by default); it does not build Studio for you. If `studio/dist` is missing, the
+port answers with a 503 page telling you to build. Most people do not need this:
+`npx course-professor studio` builds what is missing, starts the bridge and the Studio app, and
+pairs them for you.
 
 | Command | Description |
 |---|---|
-| `web` | Start local web UI (default port 3000) |
-| `web [port]` | Start on a specific port |
-| `web --production` | Start in production mode (requires build) |
+| `web` | Start the bridge and serve the built Studio (default port 3000, prints a pairing token) |
+| `web --rotate-token` | Generate a new Studio pairing token and exit |
+| `web --production` | Production mode; refuses to start without a Studio build |
+
+Then pair Studio with the printed URL and token, as described in
+[`studio/README.md`](studio/README.md#use-your-own-local-agent-free-no-api-key). By default the
+bridge accepts only loopback clients and enforces the pairing token, so keep that token private.
+
+The old web UI is **deprecated** and opt-in only: `npx course-professor web --legacy` (or
+`PROFESSOR_LEGACY=1` in the environment). While legacy mode is enabled, `course-professor doctor`
+reports a failing security check. Legacy web mode is slated for removal — use Professor Studio.
 
 ---
 
