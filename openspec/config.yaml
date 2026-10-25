@@ -1,0 +1,31 @@
+schema: spec-driven
+
+context: |
+  Project: Course Learning Plugin ("Professor") + Professor Studio — a Socratic learning assistant
+  shipped as a Claude Code plugin (Markdown agents/commands, no build step), an npx CLI
+  (`bin/cli.js`, ES modules) and a local-first web Studio (`studio/`, `web/`).
+
+  Tickets live in Linear: workspace "ronnie-workspace", team RON, project "Skill-Forces"
+  (https://linear.app/ronnie-workspace/project/skill-forces-3e1c22eb08c9).
+  Every change maps to exactly one Linear issue. Name changes `ron-<number>-<slug>`
+  (e.g. `ron-167-product-boundary-docs`) and link the issue URL at the top of proposal.md.
+
+  Non-negotiable product rules (CLAUDE.md "Core Behavior Rules"): the professor never writes
+  working code or completes exercises for the learner; no hints during capstone; COURSE.md is
+  the single source of truth; CAPSTONE.md is immutable; never fabricate sources.
+
+  Engineering conventions: 2-space indent, semicolons, 100-char lines, `path.join()` for paths;
+  `hooks/pre-compact.js` stays CommonJS. Canonical plugin files are generated into `shared/`
+  by one script and CI fails on drift. Security posture: Studio-only by default, loopback-only
+  bridge, no `shell: true`, no network telemetry. One `npm test` runs root + Studio suites.
+
+  Historical context (read-only): `.planning/` holds the GSD v3.0 roadmap, requirements and
+  per-phase plans/verification for phases 1–10 (Linear RON-157…RON-166).
+
+rules:
+  proposal:
+    - Start with the Linear issue link and copy its acceptance criteria verbatim.
+    - State which requirement IDs (e.g. QA-06, BOUND-01) the change satisfies, if any.
+  tasks:
+    - End with a verification task that runs `npm test` and lists any manual UAT left open.
+    - Product-code bugs found while working get a new Linear issue, not scope creep.

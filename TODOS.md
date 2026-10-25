@@ -1,5 +1,8 @@
 # TODOS
 
+> **Legacy (read-only since 2026-10-25).** Ticket and backlog tracking moved to Linear project
+> [Skill-Forces](https://linear.app/ronnie-workspace/project/skill-forces-3e1c22eb08c9) and the OpenSpec cycle in `openspec/`. Open items are Backlog issues: registry integrity → RON-179 (merged with DEBT-05), multi-platform `installed` → RON-183, version pinning → RON-184, execFileSync hardening → RON-185, NOTES.md insights → RON-186. Add new work in Linear, not here.
+
 ## Registry hash verification / supply chain integrity
 
 **What:** Before writing any file from the registry to disk, verify a SHA-256 checksum against a manifest published in the registry index.

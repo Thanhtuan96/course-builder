@@ -170,6 +170,24 @@ These apply to the professor agent and all commands — never violate them:
 
 `hooks/pre-compact.js` fires on the `PreCompact` event. It checks if token count exceeds 80% of the 200k-token limit. If so, it finds the most recently modified `COURSE.md` (checking `learning/` first, then `courses/`) and writes a `session_state` YAML frontmatter block with `last_active_section`, `last_updated`, and `lecture_summary` so the next session can restore context.
 
+## Work Tracking: Linear + OpenSpec
+
+Tickets and backlog live in **Linear** — team `RON`, project
+[Skill-Forces](https://linear.app/ronnie-workspace/project/skill-forces-3e1c22eb08c9). Specs and
+change proposals live in **OpenSpec** (`openspec/`, config in `openspec/config.yaml`).
+
+1. Pick (or create) a Linear issue; move it to **In Progress**.
+2. Create one OpenSpec change per issue, named `ron-<number>-<slug>`:
+   `/opsx:explore` (optional, for unclear scope) → `/opsx:propose` → `/opsx:apply`.
+3. Branch with the issue's Linear branch name (`feature/ron-<number>-…`) and put `RON-<number>` in
+   commit messages / the PR title so Linear links them.
+4. `/opsx:verify` + `npm test`, open the PR, move the issue to **In Review**.
+5. After merge: `/opsx:archive` (folds delta specs into `openspec/specs/`), mark the issue **Done**.
+
+Bugs found mid-change get a new Linear issue instead of widening the change. `.planning/` and
+`TODOS.md` are **legacy GSD history (read-only)** — don't add new work there; phases 1–10 map to
+RON-157…RON-166.
+
 ## Adding New Features
 
 1. Create `commands/professor/<command-name>.md` with YAML frontmatter + behavior

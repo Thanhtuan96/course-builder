@@ -1,5 +1,8 @@
 # Roadmap: Professor Studio — Security-Hardened Private Beta
 
+> **Legacy (read-only since 2026-10-25).** Ticket and backlog tracking moved to Linear project
+> [Skill-Forces](https://linear.app/ronnie-workspace/project/skill-forces-3e1c22eb08c9) and the OpenSpec cycle in `openspec/`. Linear milestone "v3.0 Security-Hardened Private Beta": phases 1–10 = RON-157…RON-166, P11 = RON-167, P12 = RON-168 (+ UAT RON-169), P13 = RON-170. Phase details below stay as history.
+
 ## Overview
 
 This milestone takes the feature-complete v3.0 Studio to a safe, coherent, testable private beta

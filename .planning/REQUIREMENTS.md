@@ -1,5 +1,8 @@
 # Requirements: Professor Studio
 
+> **Legacy (read-only since 2026-10-25).** Ticket and backlog tracking moved to Linear project
+> [Skill-Forces](https://linear.app/ronnie-workspace/project/skill-forces-3e1c22eb08c9) and the OpenSpec cycle in `openspec/`. v2 (deferred) requirements are Backlog issues RON-171…RON-182; requirement IDs are kept in the issue titles.
+
 **Defined:** 2026-10-17
 **Core Value:** The learner builds real understanding by doing — practice → feedback → revision → a verifiable output they use in a real project — never by reading Claude's code.
 
