@@ -58,8 +58,13 @@ test.describe('RON-168 generated programming course', () => {
     await expect(page.getByText('Saved to your attempts.', { exact: true })).toBeVisible();
     await expect(page.getByText('5 / 5', { exact: true })).toBeVisible();
 
-    // Tutor -> one message, streamed Socratic reply.
+    // Tutor -> the stored quiz review is a read-only card, never its raw JSON (RON-198).
     await page.getByRole('button', { name: 'Tutor', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Quiz review', exact: true, level: 3 })).toBeVisible();
+    await expect(page.locator('body')).not.toContainText('{"surface"');
+    await expect(page.locator('body')).not.toContainText('tutor.mode.');
+
+    // One message -> streamed Socratic reply.
     await page.getByLabel('Message the tutor', { exact: true }).fill('I think the exit code tells the caller if it worked.');
     await page.getByRole('button', { name: 'Send', exact: true }).click();
     await expect(page.getByText(fullTutorReply)).toHaveCount(1);
@@ -69,14 +74,9 @@ test.describe('RON-168 generated programming course', () => {
     await page.getByRole('button', { name: 'Workspace', exact: true }).click();
     await expect(page.getByText('Local machine', { exact: true }).first()).toBeVisible();
     await expect(page.getByText('Code runs on your machine', { exact: true })).toBeVisible();
-    // RON-196: the workspace seeds from lesson.content_md, but generated content lives in
-    // lesson_versions. RON-197: findExerciseSection treats a column-0 # comment inside a fence as
-    // a Markdown heading. Both bugs force this workaround (type the exercise, keep the fixture
-    // comment-free); remove it once RON-196 and RON-197 are fixed.
-    await replaceEditorText(
-      page,
-      '#!/usr/bin/env bash\necho "TODO: finish the exercise"\nexit 1\n'
-    );
+    // RON-196: the skeleton is seeded from the current lesson version, so the exercise fence in
+    // replies/lesson.md is already in the editor before the learner types anything.
+    await expect(page.getByRole('textbox').first()).toContainText('echo "TODO: finish the exercise"');
     await page.getByRole('button', { name: 'Run', exact: true }).click();
     await expect(
       page.getByText('Confirm where your code runs before the first local run.', { exact: true })
