@@ -38,7 +38,6 @@ export function matchReply(system = '', prompt = '') {
   if (both.includes('multiple-choice self-check for the lesson below')) return 'quiz.json';
   if (both.includes('flashcards for the lesson below')) return 'flashcards.json';
   if (both.includes('Create a course syllabus')) return 'syllabus.json';
-  // RON-197: lesson.md has no column-0 "#" comment inside its fence; see replies/README.md.
   if (both.includes('Write the full lesson "')) return 'lesson.md';
   return 'tutor.txt';
 }
