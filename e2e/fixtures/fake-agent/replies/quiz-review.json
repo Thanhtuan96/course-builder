@@ -1,0 +1,7 @@
+[
+  { "key": "q1", "question": "What made you choose that command?" },
+  { "key": "q2", "question": "What would change your mind about the exit status?" },
+  { "key": "q3", "question": "Which observation supports your answer?" },
+  { "key": "q4", "question": "How would you check that in a terminal?" },
+  { "key": "q5", "question": "What is the smallest experiment that would settle it?" }
+]

@@ -1,0 +1,48 @@
+{
+  "criteria": [
+    {
+      "key": "R1",
+      "label": "Real workflow in your own app",
+      "status": "met",
+      "question": null
+    },
+    {
+      "key": "R2",
+      "label": "Semantic locators",
+      "status": "met",
+      "question": null
+    },
+    {
+      "key": "R3",
+      "label": "Web-first assertions",
+      "status": "met",
+      "question": null
+    },
+    {
+      "key": "R4",
+      "label": "No fixed waits, force or coordinate clicks",
+      "status": "met",
+      "question": null
+    },
+    {
+      "key": "R5",
+      "label": "Isolated and repeatable",
+      "status": "met",
+      "question": null
+    },
+    {
+      "key": "R6",
+      "label": "Evidence of a passing Chromium run",
+      "status": "met",
+      "question": null
+    },
+    {
+      "key": "R7",
+      "label": "You can explain your choices",
+      "status": "met",
+      "question": null
+    }
+  ],
+  "strengths": ["One workflow, semantic locators and a web-first assertion."],
+  "nextAction": "Keep the same structure for your next workflow."
+}

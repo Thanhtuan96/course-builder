@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Evidence fixture</title>
+  </head>
+  <body>
+    <main>
+      <h1>Team status</h1>
+      <button type="button" id="publish">Publish update</button>
+      <p id="confirmation" hidden>Update published.</p>
+    </main>
+    <script>
+      document.getElementById('publish').addEventListener('click', () => {
+        document.getElementById('confirmation').hidden = false;
+      });
+    </script>
+  </body>
+</html>

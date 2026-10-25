@@ -13,6 +13,7 @@ const SHARED_EXCLUDE = [
   '**/bin/**',
   '**/web/**',
   '**/skills/**/*.test.ts',
+  'e2e/**',
 ];
 
 const ROOT_DEPENDENCIES = ['express', 'cors'];

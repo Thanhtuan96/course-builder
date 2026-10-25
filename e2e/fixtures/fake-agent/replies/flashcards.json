@@ -1,0 +1,7 @@
+[
+  { "front": "What does exit code 0 mean?", "back": "Success." },
+  { "front": "What does a non-zero exit code mean?", "back": "Failure; the number names the failure." },
+  { "front": "Which builtin prints text?", "back": "echo." },
+  { "front": "How do you run a script?", "back": "bash main.sh (or an executable shebang)." },
+  { "front": "Why exit explicitly?", "back": "To define success or failure for the caller." }
+]
