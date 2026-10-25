@@ -130,6 +130,9 @@ switch (command) {
     } else {
       await init();
     }
+    console.log(
+      chalk.dim('\n  Studio: npx course-professor studio (Studio app + local bridge, Node 22.5+)')
+    );
     break;
   }
 
@@ -713,7 +716,8 @@ Usage: course-professor [command] [options]
 
 Description:
   Socratic learning assistant — teaches by asking questions. Set up for your
-  agent (Claude Code, Gemini, OpenCode, Cursor) or start the web UI.
+  agent (Claude Code, Gemini, OpenCode, Cursor), then start Professor Studio
+  with npx course-professor studio (Node 22.5+).
 
 COMMANDS
   ${chalk.bold('status')} [--json]      Show every course: progress, current section, due cards, streak
@@ -734,9 +738,9 @@ COMMANDS
   ${chalk.bold('update')} --all             Update all installed skills
   ${chalk.bold('installed')}                List all installed skills
   ${chalk.bold('remove')} <skill-name>     Remove an installed skill
-  ${chalk.bold('web')} [port]           Start local web UI (default port: 3000)
+  ${chalk.bold('web')} [--production]   Studio-only bridge server (default port: 3000); --production
+                       serves the prebuilt Studio (requires a build)
   ${chalk.bold('publish')} [options]     Publish a course or skill to the community registry
-  ${chalk.bold('web')} --production     Start web UI in production mode (requires build)
   ${chalk.bold('help')}                 Show this help message
 
 FLAGS
@@ -744,7 +748,9 @@ FLAGS
   --local           Target local scope (current project, .claude/skills/)
   --force           Bypass overwrite/removal confirmation prompts
   --all             Apply to all items (update --all)
-  --cloud           For \`web\`, prefer cloud API flow and API key prompt
+  --cloud           Deprecated: legacy only — no effect without web --legacy
+  --legacy          Deprecated: mount the legacy web UI in web (or set PROFESSOR_LEGACY=1)
+  --rotate-token    For web, generate a new Studio pairing token and exit
   --port <n>        For \`studio\`, the Studio port (default 5180)
   --api-port <n>    For \`studio\`, the local server port (default 3000)
   --no-open         For \`studio\`, do not open the browser
@@ -776,7 +782,6 @@ EXAMPLES
   npx course-professor remove react-hooks-reviewer     # Remove a skill
   npx course-professor publish --dry-run                 # Preview packaged files (no GitHub)
   npx course-professor publish --type skill --name foo   # Publish a skill
-  npx course-professor web                     # Start web UI on port 3000
 
 SUPPORTED AGENTS
   ${SUPPORTED_AGENTS.join(', ')}

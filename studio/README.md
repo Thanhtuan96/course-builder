@@ -27,7 +27,29 @@ npm run dev            # http://localhost:5180
 `npm run dev` also works with zero configuration: a bundled demo course is available immediately
 under **Course** without any AI source.
 
+### One command: `course-professor studio` (recommended)
+
+From the repository root, one command installs and builds what is missing, starts the bridge server
+and the built Studio app, and pairs them for you:
+
+```bash
+npx course-professor studio              # starts server + Studio and opens the browser
+npx course-professor studio --no-open    # print the pairing URL only
+npx course-professor studio --port 5180 --api-port 3000
+```
+
+It prints a **pairing URL** like
+`http://localhost:5180/#/settings?bridge=http%3A%2F%2Flocalhost%3A3000&token=<48 hex chars>` and opens
+it. On load, Studio reads `bridge`/`token` from the URL, saves them as the bridge settings, selects
+**My local agent** on a fresh install, and then removes the secrets from the address bar
+(`history.replaceState`) so they are never bookmarked or shared. Inherited `CLAUDECODE` /
+`CLAUDE_CODE_*` variables are stripped from the server process so a nested agent CLI behaves like a
+normal terminal.
+
 ### Use your own local agent (free, no API key)
+
+Prefer the one-command path above. Run the steps in this section only when you want to start the
+bridge and Studio **separately** — for example to keep an already-built Studio on a static host.
 
 The bridge lets Studio use the subscription you already pay for. Six agents are supported, each
 driven through its own CLI in a read-only, text-only way:
@@ -91,25 +113,6 @@ launched in a repository they read the project and send a large fixed system pro
 runs them in a throwaway empty temp directory (deleted when the run ends) and, for OpenCode, sets
 `OPENCODE_CONFIG_CONTENT` to deny `edit`/`bash`/`webfetch` — so the tutor can only produce text and
 never touches your files. For the cheapest, fastest tutor calls prefer **Claude Code**.
-
-### One command: `course-professor studio` (recommended)
-
-From the repository root, one command installs and builds what is missing, starts the bridge server
-and the built Studio app, and pairs them for you:
-
-```bash
-npx course-professor studio              # starts server + Studio and opens the browser
-npx course-professor studio --no-open    # print the pairing URL only
-npx course-professor studio --port 5180 --api-port 3000
-```
-
-It prints a **pairing URL** like
-`http://localhost:5180/#/settings?bridge=http%3A%2F%2Flocalhost%3A3000&token=<48 hex chars>` and opens
-it. On load, Studio reads `bridge`/`token` from the URL, saves them as the bridge settings, selects
-**My local agent** on a fresh install, and then removes the secrets from the address bar
-(`history.replaceState`) so they are never bookmarked or shared. Inherited `CLAUDECODE` /
-`CLAUDE_CODE_*` variables are stripped from the server process so a nested agent CLI behaves like a
-normal terminal.
 
 ### Terminal review & import (`course-professor review` / `import`)
 
@@ -302,7 +305,7 @@ studio/
 ├── docs/DEPLOY.md           # deploy steps
 └── docs/SAAS-ROADMAP.md     # Cloudflare/D1 SaaS plan
 web/
-├── server.js                # existing CLI web UI + mounts the Studio API
+├── server.js                # Studio bridge server + mounts the Studio API
 ├── studio-api.js            # /api/studio/* (bridge + DB), token + CORS
 └── studio-db.js             # node:sqlite layer + migration runner
 ```

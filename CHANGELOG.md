@@ -4,6 +4,27 @@ All notable changes to **course-professor** are documented here. The format is b
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **`course-professor web` now serves Studio only** by default — it starts the bridge server for
+  Professor Studio (no API-key discovery, no legacy routes or UI) behind a pairing token and a
+  loopback-only CORS allowlist.
+- **The legacy web UI is deprecated and opt-in**: start it with `course-professor web --legacy` or
+  `PROFESSOR_LEGACY=1`. `course-professor doctor` reports a failing security check while legacy
+  mode is enabled.
+- **Every entry point now points at Studio first** — `--help`, `init`/`setup`, `README.md` and
+  `studio/README.md` send new users to `npx course-professor studio` (Node 22.5+) and describe
+  `web` as the Studio bridge server.
+- Added `SECURITY.md` describing what runs where (browser app, loopback bridge, local code runner)
+  and how to report a vulnerability privately.
+
+### Notes
+
+- The `1.6.0-beta.1` note "the legacy `web` command is unchanged" no longer applies: `web` serves
+  Studio only unless you opt into `--legacy` / `PROFESSOR_LEGACY=1`.
+
 ## [1.6.0-beta.1] — 2026-10-15
 
 The "Professor Studio" line — a local-first learning platform on top of the CLI plugin. This beta

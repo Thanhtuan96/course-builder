@@ -27,6 +27,9 @@ Most AI coding assistants will write code for you the moment you ask. Professor 
 - **Git** — required for git worktree-based courses.
 - **Notion or Obsidian** — only needed if you want to use the `professor:export` command. See setup sections below.
 
+Studio runs as a browser app, a loopback bridge and a local code runner on your machine. See
+[`SECURITY.md`](SECURITY.md) for what runs where and how to report a vulnerability.
+
 ---
 
 ## Install
@@ -309,13 +312,25 @@ npx course-professor import nextjs --dry-run # preview one course's import
 
 `import` is idempotent: re-running updates existing rows (matched by `source: 'cli'` + a stable `external_id`) instead of duplicating, and never overwrites graded cards or existing lecture versions.
 
-### Web UI
+### Starting the bridge manually
+
+`course-professor web` starts **only the Studio bridge server** — the loopback process Studio talks
+to when you pick **Settings → AI source → My local agent**. Most people do not need it:
+`npx course-professor studio` starts the bridge and the Studio app together and pairs them for you.
 
 | Command | Description |
 |---|---|
-| `web` | Start local web UI (default port 3000) |
-| `web [port]` | Start on a specific port |
-| `web --production` | Start in production mode (requires build) |
+| `web` | Start the Studio bridge server (default port 3000, prints a pairing token) |
+| `web --rotate-token` | Generate a new Studio pairing token and exit |
+| `web --production` | Serve the prebuilt Studio from the bridge (requires a build) |
+
+Then pair Studio with the printed URL and token, as described in
+[`studio/README.md`](studio/README.md#use-your-own-local-agent-free-no-api-key). The bridge only
+accepts loopback clients and enforces the pairing token, so keep that token private.
+
+The old web UI is **deprecated** and opt-in only: `npx course-professor web --legacy` (or
+`PROFESSOR_LEGACY=1` in the environment). While legacy mode is enabled, `course-professor doctor`
+reports a failing security check. Legacy web mode is slated for removal — use Professor Studio.
 
 ---
 
