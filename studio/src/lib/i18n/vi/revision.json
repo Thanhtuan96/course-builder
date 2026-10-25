@@ -11,7 +11,12 @@
     "failed": "Nhận xét trả về ở định dạng không dùng được.",
     "failedHint": "Bài làm của bạn đã được lưu. Hãy thử nhận xét lại.",
     "retry": "Thử nhận xét lại",
-    "empty": "Chưa có gì để nhận xét."
+    "empty": "Chưa có gì để nhận xét.",
+    "unreadable": "Không hiển thị được nhận xét này.",
+    "surface": {
+      "quiz": "Nhận xét bài kiểm tra",
+      "workspace": "Nhận xét không gian làm việc"
+    }
   },
   "revise": {
     "label": "Làm lại bài này"

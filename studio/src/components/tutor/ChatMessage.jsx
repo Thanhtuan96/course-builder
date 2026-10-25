@@ -8,10 +8,25 @@ import { Badge } from '../ui/Badge.jsx';
 import { Spinner } from '../ui/Spinner.jsx';
 import { useT } from '../../lib/i18n/index.js';
 
+/**
+ * Chip label for a tutor mode. A mode the catalogs do not define yields an empty string instead of
+ * the raw `tutor.mode.*` key (RON-200): the key scanner cannot see template-literal keys, so a
+ * missing translation must never reach the transcript.
+ * @param {(key: string) => string} t
+ * @param {string|null|undefined} mode
+ * @returns {string}
+ */
+function modeLabel(t, mode) {
+  if (!mode) return '';
+  const key = `tutor.mode.${mode}`;
+  const label = t(key);
+  return label === key ? '' : label;
+}
+
 export function ChatMessage({ message, streaming = false }) {
   const t = useT();
   const isUser = message.role === 'user';
-  const label = message.mode ? t(`tutor.mode.${message.mode}`) : '';
+  const label = modeLabel(t, message.mode);
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>

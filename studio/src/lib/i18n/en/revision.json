@@ -11,7 +11,12 @@
     "failed": "The review came back in a format we cannot use.",
     "failedHint": "Your attempt is already saved. Try the review again.",
     "retry": "Try the review again",
-    "empty": "Nothing to review yet."
+    "empty": "Nothing to review yet.",
+    "unreadable": "This review could not be shown.",
+    "surface": {
+      "quiz": "Quiz review",
+      "workspace": "Workspace review"
+    }
   },
   "revise": {
     "label": "Revise this attempt"

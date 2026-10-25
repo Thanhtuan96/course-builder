@@ -44,6 +44,62 @@ import { ReviewMessage, reviewSurface } from '../revision/ReviewMessage.jsx';
 import { AttemptHistory } from '../revision/AttemptHistory.jsx';
 import { requestReviewJson } from '../revision/review-request.js';
 
+/**
+ * Localised surface label for a read-only review row (RON-198). The three calls are literal
+ * translation keys on purpose: the i18n key scanner only sees literal `t()` arguments.
+ * @param {(key: string) => string} t
+ * @param {string} surface
+ * @returns {string}
+ */
+function reviewSurfaceTitle(t, surface) {
+  if (surface === 'quiz') return t('revision.review.surface.quiz');
+  if (surface === 'workspace') return t('revision.review.surface.workspace');
+  return t('revision.review.title');
+}
+
+/**
+ * One row of the tutor transcript (RON-198).
+ *
+ * Every stored `mode: 'review'` row renders as a rubric card — never as its raw JSON `content`.
+ * A tutor review keeps the Revise CTA; a quiz or workspace review is read-only here and carries a
+ * surface label, because revising happens on that surface. An unparseable review row collapses to
+ * a short localised line (decision 2) instead of leaking the stored JSON as text.
+ *
+ * Prop-driven and SSR-safe: no state, no effects, no repo access.
+ * @param {object} props
+ * @param {{ id?: string, role?: string, mode?: string, content?: unknown }|null|undefined} props.message
+ * @param {((id: string) => void)|null} [props.onRevise] used only for a tutor review
+ * @returns {JSX.Element}
+ */
+export function TutorTranscriptRow({ message, onRevise = null }) {
+  const t = useT();
+
+  if (!message || message.role !== 'assistant' || message.mode !== 'review') {
+    return <ChatMessage message={message} />;
+  }
+
+  const surface = reviewSurface(message);
+  if (!surface) {
+    return (
+      <p className="text-sm text-neutral-500" role="note">
+        {t('revision.review.unreadable')}
+      </p>
+    );
+  }
+
+  const tutorSurface = surface === 'tutor';
+  return (
+    <ReviewMessage
+      message={message}
+      title={tutorSurface ? t('revision.review.criteria') : reviewSurfaceTitle(t, surface)}
+      onRevise={
+        tutorSurface && typeof onRevise === 'function' ? () => onRevise(message.id) : null
+      }
+      reviseHint={tutorSurface ? t('revision.tutor.reviseHint') : null}
+    />
+  );
+}
+
 /** True when the active provider can plausibly run without further setup. */
 function providerReady(settings) {
   switch (settings.provider) {
@@ -426,21 +482,9 @@ export function TutorPanel({ lesson, course, capstone = false, capstoneBrief = n
             className="border-0 bg-transparent"
           />
         )}
-        {messages.map((message) =>
-          message.role === 'assistant' &&
-          message.mode === 'review' &&
-          reviewSurface(message) === 'tutor' ? (
-            <ReviewMessage
-              key={message.id}
-              message={message}
-              title={t('revision.review.criteria')}
-              onRevise={() => handleRevise(message.id)}
-              reviseHint={t('revision.tutor.reviseHint')}
-            />
-          ) : (
-            <ChatMessage key={message.id} message={message} />
-          )
-        )}
+        {messages.map((message) => (
+          <TutorTranscriptRow key={message.id} message={message} onRevise={handleRevise} />
+        ))}
         {showDraft && <ChatMessage message={draftMessage} streaming={streaming} />}
       </div>
 

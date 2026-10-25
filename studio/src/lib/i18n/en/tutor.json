@@ -32,7 +32,8 @@
     "explain_simpler": "Explain simpler",
     "hint": "Give me a hint",
     "check_answer": "Check my answer",
-    "quiz": "Quiz me"
+    "quiz": "Quiz me",
+    "review": "Review"
   },
   "languageNotice": "The reply came back in another language, so Professor asked the tutor again in {language}."
 }
