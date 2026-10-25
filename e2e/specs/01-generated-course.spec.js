@@ -58,8 +58,13 @@ test.describe('RON-168 generated programming course', () => {
     await expect(page.getByText('Saved to your attempts.', { exact: true })).toBeVisible();
     await expect(page.getByText('5 / 5', { exact: true })).toBeVisible();
 
-    // Tutor -> one message, streamed Socratic reply.
+    // Tutor -> the stored quiz review is a read-only card, never its raw JSON (RON-198).
     await page.getByRole('button', { name: 'Tutor', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Quiz review', exact: true, level: 3 })).toBeVisible();
+    await expect(page.locator('body')).not.toContainText('{"surface"');
+    await expect(page.locator('body')).not.toContainText('tutor.mode.');
+
+    // One message -> streamed Socratic reply.
     await page.getByLabel('Message the tutor', { exact: true }).fill('I think the exit code tells the caller if it worked.');
     await page.getByRole('button', { name: 'Send', exact: true }).click();
     await expect(page.getByText(fullTutorReply)).toHaveCount(1);
