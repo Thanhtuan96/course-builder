@@ -4,4 +4,4 @@
  */
 import { run } from '../../helpers/fake-agent.js';
 
-run();
+await run();

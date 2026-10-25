@@ -10,6 +10,10 @@ async function replaceEditorText(page, text) {
 
 test.describe('RON-168 generated programming course', () => {
   test('RON-168 walks new course, lesson, quiz, tutor, local run and revision', async ({ page }) => {
+    // Default-off reproduction hook for the CI streaming race; see fake-agent.js slow mode.
+    const slowMarker = process.env.E2E_SLOW_AGENT === '1' ? ' SLOW-STREAM' : '';
+    const fullTutorReply =
+      /What do you think happens to the exit code when the last command in a script fails\? Try it once and tell me what you observed\./;
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'Your courses' })).toBeVisible();
 
@@ -57,6 +61,8 @@ test.describe('RON-168 generated programming course', () => {
     await page.getByLabel('Message the tutor').fill('I think the exit code tells the caller if it worked.');
     await page.getByRole('button', { name: 'Send', exact: true }).click();
     await expect(page.getByText(/What do you think happens to the exit code/)).toBeVisible();
+    await expect(page.getByText(fullTutorReply)).toHaveCount(1);
+    await expect(page.getByText('thinking…')).toHaveCount(0);
 
     // Workspace -> local machine, one-time acknowledgement, first run exits 1.
     await page.getByRole('button', { name: 'Workspace', exact: true }).click();
@@ -97,11 +103,18 @@ test.describe('RON-168 generated programming course', () => {
     await page.getByRole('button', { name: 'Revise this attempt' }).click();
     await page
       .getByLabel('Message the tutor')
-      .fill('REVISED-ATTEMPT: the run exited 1, so a non-zero status signalled failure.');
+      .fill(`REVISED-ATTEMPT: the run exited 1, so a non-zero status signalled failure.${slowMarker}`);
     await page.getByRole('button', { name: 'Send', exact: true }).click();
     await expect(page.getByText(/REVISED-ATTEMPT: the run exited 1/)).toBeVisible();
 
-    await page.getByRole('button', { name: 'Review my attempt' }).click();
+    // CI race: the review click must wait until the revised-message reply has finished streaming
+    // and the quick action is re-enabled. Prefix text appears early, so assert the full reply and
+    // the streaming indicator explicitly instead of clicking from a stale render.
+    await expect(page.getByText(fullTutorReply)).toHaveCount(2);
+    await expect(page.getByText('thinking…')).toHaveCount(0);
+    const reviewButton = page.getByRole('button', { name: 'Review my attempt' });
+    await expect(reviewButton).toBeEnabled();
+    await reviewButton.click();
     await expect(page.getByText('Attempt history (2)').last()).toBeVisible();
     await page.getByText('Attempt history (2)').last().click();
     await expect(page.getByText('2 → 3 of 3 met')).toBeVisible();

@@ -140,12 +140,16 @@ export function parseArgv(argv = []) {
 }
 
 /** Run one fake CLI invocation. */
-export function run() {
+export async function run() {
   const { system, prompt } = parseArgv(process.argv.slice(2));
   const name = matchReply(system, prompt);
   const text = readReply(name);
+  // Test-only slow-stream hook: append SLOW-STREAM to a prompt (E2E_SLOW_AGENT=1) to reproduce
+  // CI-speed races locally. Default off; it never changes reply selection.
+  const slow = /\bSLOW-STREAM\b/.test(prompt);
 
   for (const frame of buildFrames(text)) {
     process.stdout.write(`${JSON.stringify(frame)}\n`);
+    if (slow) await new Promise((resolve) => setTimeout(resolve, 25));
   }
 }
