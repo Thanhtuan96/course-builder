@@ -5,6 +5,6 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('publishes a status update', async ({ page }) => {
-  await page.getByRole('button', { name: 'Publish update' }).click();
-  await expect(page.getByText('Update published.')).toBeVisible();
+  await page.getByRole('button', { name: 'Publish update', exact: true }).click();
+  await expect(page.getByText('Update published.', { exact: true })).toBeVisible();
 });

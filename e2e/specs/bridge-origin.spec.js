@@ -15,7 +15,7 @@ test.describe('RON-168 bridge origin isolation', () => {
     expect(process.env.STUDIO_ALLOW_NON_LOOPBACK).toBeUndefined();
 
     await page.goto(`${FOREIGN_ORIGIN}/`);
-    await expect(page.getByRole('heading', { name: 'Foreign origin' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Foreign origin', exact: true, level: 1 })).toBeVisible();
 
     const withToken = await page.evaluate(
       async ({ url, token }) => window.callBridge(url, token),
