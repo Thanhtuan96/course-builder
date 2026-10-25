@@ -1,7 +1,8 @@
 /**
  * CodeWorkspace (CODE-01, CODE-05) — the Workspace tab of a programming lesson.
  *
- * A lightweight multi-file editor (CodeMirror, lazy-loaded) preloaded with the exercise skeleton.
+ * A lightweight multi-file editor (CodeMirror, lazy-loaded) preloaded with the exercise skeleton
+ * from the current lesson version (RON-196 — the Markdown never lives on the `lessons` row).
  * Run executes in the browser where possible (JS/TS, Python, SQL, HTML/CSS) and otherwise through
  * the learner's local server; Check surfaces the exercise's self-checks as pass/fail (CODE-03).
  * Edits autosave (debounced), every run stores a code snapshot + result, and the tutor can read
@@ -10,7 +11,7 @@
  * Props are fixed by Lesson.jsx: `{ lesson, course }`.
  */
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { listWorkspaceFiles, saveWorkspaceFile, deleteWorkspaceFile, saveRunResult, listRunResults } from '../../lib/repo/index.js';
+import { listWorkspaceFiles, saveWorkspaceFile, deleteWorkspaceFile, saveRunResult, listRunResults, getLessonContent } from '../../lib/repo/index.js';
 import { useSettings } from '../../lib/settings.js';
 import { useT } from '../../lib/i18n/index.js';
 import { Card } from '../ui/Card.jsx';
@@ -32,7 +33,7 @@ import {
 } from '../revision/history.js';
 import {
   seedFiles,
-  filesFromRows,
+  resolveWorkspaceSeed,
 } from '../../lib/runner/skeleton.js';
 import { guessCourseLanguage, getLanguage, languageForPath, normalizeLanguage } from '../../lib/runner/languages.js';
 import { run as runCode, describeRunner, checkToolchains } from '../../lib/runner/index.js';
@@ -110,6 +111,7 @@ export function CodeWorkspace({ lesson, course }) {
   const saveTimerRef = useRef(null);
   const idByPathRef = useRef(new Map());
   const revisionRef = useRef(null);
+  const markdownRef = useRef(lesson?.content_md || '');
 
   filesRef.current = files;
 
@@ -145,17 +147,28 @@ export function CodeWorkspace({ lesson, course }) {
     dirtyRef.current = new Set();
     (async () => {
       let seed = [];
+      let persist = false;
       try {
-        const rows = await listWorkspaceFiles(lesson.id);
-        if (rows.length) {
-          seed = filesFromRows(rows);
-          for (const row of rows) idByPathRef.current.set(row.path, row.id);
-        }
+        // The lesson row never carries Markdown — it lives in `lesson_versions` (RON-196).
+        const [rows, runs, version] = await Promise.all([
+          listWorkspaceFiles(lesson.id),
+          listRunResults(lesson.id).catch(() => []),
+          getLessonContent(lesson.id).catch(() => null),
+        ]);
+        for (const row of rows) idByPathRef.current.set(row.path, row.id);
+        markdownRef.current = version?.content_md || lesson?.content_md || '';
+        ({ files: seed, persist } = resolveWorkspaceSeed({
+          lesson,
+          course,
+          version,
+          rows,
+          runCount: runs.length,
+        }));
       } catch {
-        seed = [];
-      }
-      if (!seed.length) {
+        // Storage unavailable: keep the skeleton in memory, never write a seed we cannot trust.
         seed = seedFiles(lesson, course);
+      }
+      if (persist) {
         for (const file of seed) {
           try {
             const row = await saveWorkspaceFile({
@@ -432,9 +445,11 @@ export function CodeWorkspace({ lesson, course }) {
 
   const resetToSkeleton = useCallback(async () => {
     if (!window.confirm(t('workspace.resetConfirm'))) return;
-    const seed = seedFiles(lesson, course);
+    const seed = seedFiles({ ...lesson, content_md: markdownRef.current || lesson?.content_md || '' }, course);
     setFiles(seed);
     setActivePath(seed[0]?.path || null);
+    // RON-196: an empty seed is never persisted, so a later lesson version can still fill it in.
+    if (!seed.some((file) => String(file.content ?? '').trim())) return;
     for (const file of seed) {
       try {
         const row = await saveWorkspaceFile({ courseId, lessonId: lesson.id, path: file.path, language: file.language, content: file.content });

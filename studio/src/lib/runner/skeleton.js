@@ -130,3 +130,42 @@ export function filesFromRows(rows) {
     }))
     .filter((f) => typeof f.path === 'string' && f.path);
 }
+
+/**
+ * @param {string|null|undefined} content
+ * @returns {boolean} true when the learner never put anything in the file
+ */
+function isBlank(content) {
+  return !String(content ?? '').trim();
+}
+
+/**
+ * Decide what the Workspace opens with (RON-196).
+ *
+ * Lesson Markdown lives in `lesson_versions`, never on the `lessons` row the UI holds, so the seed
+ * must come from the current version (the row's own `content_md`, when present, wins for backwards
+ * compatibility). Stored workspace files still win over the skeleton — unless every one of them is
+ * blank and the lesson has no run result: that is an empty seed persisted by an earlier build, so
+ * the rows are overwritten with the skeleton instead of trapping the learner on an empty editor.
+ *
+ * `persist` is false when the seed has no skeleton: keeping the empty file in memory only lets a
+ * later lesson version still seed it.
+ *
+ * @param {{
+ *   lesson?: object|null,
+ *   course?: object|null,
+ *   version?: { content_md?: string }|null,
+ *   rows?: Array<object>,
+ *   runCount?: number,
+ * }} [input]
+ * @returns {{ files: SeedFile[], persist: boolean }}
+ */
+export function resolveWorkspaceSeed({ lesson = null, course = null, version = null, rows = [], runCount = 0 } = {}) {
+  const stored = filesFromRows(rows);
+  const untouched = stored.length > 0 && stored.every((f) => isBlank(f.content)) && runCount === 0;
+  if (stored.length && !untouched) return { files: stored, persist: false };
+
+  const content_md = version?.content_md || lesson?.content_md || '';
+  const files = seedFiles({ ...(lesson || {}), content_md }, course);
+  return { files, persist: files.some((f) => !isBlank(f.content)) };
+}

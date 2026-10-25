@@ -1,12 +1,9 @@
 # Fake-agent reply fixtures
 
-`lesson.md` deliberately has no column-0 `#` comment inside its Exercise fence, and Journey A
-types the exercise instead of relying on skeleton seeding. This works around two product bugs:
+`lesson.md` has no column-0 `#` comment inside its Exercise fence, so Journey A can assert the
+Workspace seeds that fence as the skeleton before the learner edits anything (RON-196).
 
-- **RON-196** — the workspace seeds from `lesson.content_md`, but generated content lives in
-  `lesson_versions`.
 - **RON-197** — `findExerciseSection` treats a `#` comment inside a fenced code block as a Markdown
   heading.
 
-Remove the fixture constraint and the typing workaround in `e2e/specs/01-generated-course.spec.js`
-once both are fixed.
+Remove the fixture constraint once RON-197 is fixed.
