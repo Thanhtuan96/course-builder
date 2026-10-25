@@ -68,6 +68,7 @@ describe('RON-167 CLI help via the real binary', () => {
     const row = webRow(text);
     expect(row).toMatch(/bridge/i);
     expect(row).not.toMatch(/web UI/i);
+    expect(row).toContain('[port]');
     expect(row).toContain('--production');
     expect(row).toMatch(/prebuilt Studio/i);
     expect(row).toMatch(/requires a build/i);
@@ -147,6 +148,7 @@ describe('RON-167 READMEs put Studio before the manual bridge', () => {
     expect(studio).toBeGreaterThan(-1);
     expect(web).toBeGreaterThan(-1);
     expect(studio).toBeLessThan(web);
+    expect(readme).toMatch(/Prefer the one-command path above/);
   });
 
   it('RON-167 documents the deprecated opt-in and links SECURITY.md from README', () => {
@@ -154,6 +156,36 @@ describe('RON-167 READMEs put Studio before the manual bridge', () => {
     expect(readme).toContain('PROFESSOR_LEGACY=1');
     expect(readme).toMatch(/\[`SECURITY\.md`\]\(SECURITY\.md\)/);
     expect(readme).toMatch(/deprecated/i);
+  });
+
+  it('RON-167 states the Node requirement where studio/README.md introduces the command', () => {
+    const readme = readRepoFile('studio/README.md');
+    const studio = readme.search(/course-professor(?:@next)? studio/);
+    const node = readme.indexOf('Node 22.5+');
+    expect(node).toBeGreaterThan(-1);
+    expect(node).toBeGreaterThan(studio);
+  });
+});
+
+describe('RON-167 unsafe options appear only as warnings', () => {
+  it('RON-167 calls STUDIO_ORIGINS wildcard unsafe in studio/README.md', () => {
+    const lines = readRepoFile('studio/README.md')
+      .split('\n')
+      .filter((line) => line.includes('STUDIO_ORIGINS=*') || /`\*` allows any origin/.test(line));
+    expect(lines.length).toBeGreaterThan(0);
+    for (const line of lines) {
+      expect(line, `wildcard origin not marked unsafe: ${line.trim()}`).toMatch(/unsafe/i);
+    }
+  });
+
+  it('RON-167 says the bridge does not pass --dangerously-skip-permissions', () => {
+    const lines = readRepoFile('studio/README.md')
+      .split('\n')
+      .filter((line) => line.includes('--dangerously-skip-permissions'));
+    expect(lines.length).toBeGreaterThan(0);
+    for (const line of lines) {
+      expect(line, `skip-permissions not negated: ${line.trim()}`).toMatch(/does \*\*not\*\* pass/i);
+    }
   });
 });
 
@@ -165,6 +197,10 @@ describe('RON-167 SECURITY.md boundary', () => {
     expect(security).toMatch(/local code runner/i);
     expect(security).toContain('studio-runner.js');
     expect(security).toMatch(/does \*\*not\*\* start agent CLIs/);
+    expect(security).toContain('shell: false');
+    expect(security).toMatch(/20 s timeout/i);
+    expect(security).toMatch(/200 KB output cap/i);
+    expect(security).toMatch(/workspacesRoot/);
   });
 
   it('RON-167 negates every mention of sandbox', () => {

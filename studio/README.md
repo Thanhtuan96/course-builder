@@ -30,7 +30,8 @@ under **Course** without any AI source.
 ### One command: `course-professor studio` (recommended)
 
 From the repository root, one command installs and builds what is missing, starts the bridge server
-and the built Studio app, and pairs them for you:
+and the built Studio app, and pairs them for you. Studio needs **Node 22.5+** (it uses the built-in
+`node:sqlite` module).
 
 ```bash
 npx course-professor studio              # starts server + Studio and opens the browser

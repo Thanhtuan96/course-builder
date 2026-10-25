@@ -738,8 +738,8 @@ COMMANDS
   ${chalk.bold('update')} --all             Update all installed skills
   ${chalk.bold('installed')}                List all installed skills
   ${chalk.bold('remove')} <skill-name>     Remove an installed skill
-  ${chalk.bold('web')} [--production]   Studio-only bridge server (default port: 3000); --production
-                       serves the prebuilt Studio (requires a build)
+  ${chalk.bold('web')} [port] [--production]   Studio-only bridge server (default port: 3000);
+                              --production serves the prebuilt Studio (requires a build)
   ${chalk.bold('publish')} [options]     Publish a course or skill to the community registry
   ${chalk.bold('help')}                 Show this help message
 
