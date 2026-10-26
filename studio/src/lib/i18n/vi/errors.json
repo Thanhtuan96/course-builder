@@ -11,9 +11,10 @@
   "aborted": "Đã dừng.",
   "server": "Agent cục bộ gặp lỗi khi chạy. Kiểm tra đầu ra terminal của nó, rồi thử lại.",
   "config": "Nguồn AI hoặc agent đó không được hỗ trợ. Hãy chọn agent hợp lệ trong Cài đặt.",
-  "model_not_found": "Mô hình đó không khả dụng. Hãy chọn một mô hình trong Cài đặt.",
+  "model_not_found": "Mô hình đó không khả dụng. Hãy chọn một mô hình trong Cài đặt — với Ollama, tải mô hình trước (`ollama pull <name>`).",
   "unknown": "Đã xảy ra lỗi khi trao đổi với nhà cung cấp.",
   "wrong_language": "Mô hình đã trả lời sai ngôn ngữ hai lần. Hãy thử lại, hoặc chọn mô hình mạnh hơn.",
   "loopback_required": "Studio chỉ kết nối tới bridge hoặc runner trên máy này. Hãy dùng http://localhost:…, không dùng IP LAN hay tunnel.",
-  "csp_blocked": "Content-Security-Policy đang chặn origin của nhà cung cấp đó. Hãy dùng preset có sẵn hoặc endpoint cục bộ."
+  "csp_blocked": "Content-Security-Policy đang chặn origin của nhà cung cấp đó. Hãy dùng preset có sẵn hoặc endpoint cục bộ.",
+  "model_retired": "Mô hình đó đã bị nhà cung cấp ngừng cung cấp nên không còn chạy được. Hãy chọn mô hình khác trong Cài đặt."
 }

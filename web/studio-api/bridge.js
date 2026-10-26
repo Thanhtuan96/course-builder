@@ -5,6 +5,7 @@
  * `studio/src/lib/ai/bridge.js` exactly:
  *     data: {"text":"…"}            (per token)
  *     data: {"error":"…","code":"…"} (on failure, then end)
+ *            + optional "localize": true → the Studio client shows its own localized copy for `code`
  *     data: [DONE]
  */
 import { AGENT_BINARIES, AGENT_PRIORITY, AGENT_LABELS, probeOllama } from './health.js';
@@ -151,7 +152,10 @@ export function registerBridgeRoutes(router, { capabilities, probeReachable, env
     const prompt = flattenConversation(system, messages, includeSystemInPrompt);
 
     let runner = null;
-    const onError = ({ message, code, hint }) => send({ error: message, code: code || 'server', ...(hint ? { hint } : {}) });
+    // `localize: true` asks the Studio client to render the code's localized catalog copy instead of
+    // the English `message` a Node-side runner produced (LANG-02, RON-208).
+    const onError = ({ message, code, hint, localize }) =>
+      send({ error: message, code: code || 'server', ...(hint ? { hint } : {}), ...(localize ? { localize: true } : {}) });
     const onText = (text) => {
       if (typeof text === 'string' && text) {
         firstToken = true;

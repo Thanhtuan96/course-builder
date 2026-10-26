@@ -10,7 +10,7 @@ import { mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
-import { AGENT_BINARIES, describeNoOutput, ollamaBase } from './health.js';
+import { AGENT_BINARIES, describeNoOutput, ollamaHttpFailure, resolveOllamaModel } from './health.js';
 import * as security from '../security.js';
 
 // Permission map injected into OpenCode so the tutor cannot touch the learner's files.
@@ -500,24 +500,24 @@ function spawnAntigravity({ extraEnv, ...ctx }) {
 
 function runOllama(ctx) {
   const { messages, system, model, onText, onError, onDone, log } = ctx;
-  const host = ollamaBase();
-  if (!host.ok) {
-    onError({
-      message: host.error,
-      code: 'config',
-      hint: 'Point OLLAMA_HOST at 127.0.0.1, localhost or [::1], or set PROFESSOR_ALLOW_NON_LOOPBACK_OLLAMA=1.',
-    });
-    onDone();
-    return { kill() {} };
-  }
-  const base = host.base;
-  const selected = model || process.env.OLLAMA_MODEL || 'llama3.2';
   const chatMessages = [];
   if (system) chatMessages.push({ role: 'system', content: system });
   for (const m of messages || []) chatMessages.push({ role: m.role, content: m.content });
 
   const controller = new AbortController();
   (async () => {
+    // "Default" is resolved at run time (RON-208): chosen model → OLLAMA_MODEL → first installed.
+    // Never a hard-coded name, which may not be installed.
+    const resolved = await resolveOllamaModel({ model, env: process.env });
+    if (!resolved.ok) {
+      // `localize` tells the Studio client to render the code's catalog copy instead of this
+      // English text (LANG-02); the message/hint stay useful for non-Studio API consumers.
+      onError({ message: resolved.message, code: resolved.code, hint: resolved.hint, localize: true });
+      onDone();
+      return;
+    }
+    const base = resolved.base;
+    const selected = resolved.model;
     try {
       const response = await fetch(`${base}/api/chat`, {
         method: 'POST',
@@ -527,11 +527,7 @@ function runOllama(ctx) {
       });
       if (!response.ok) {
         const text = await response.text().catch(() => '');
-        if (response.status === 404) {
-          onError({ message: `Ollama has no model "${selected}"`, code: 'model_not_found', hint: 'Pick a model in Settings.' });
-        } else {
-          onError({ message: `Ollama error ${response.status}: ${text.slice(0, 200)}`, code: 'server' });
-        }
+        onError(ollamaHttpFailure(response.status, { model: selected, body: text }));
         onDone();
         return;
       }
@@ -563,6 +559,7 @@ function runOllama(ctx) {
         message: `Ollama is not reachable at ${base}.`,
         code: 'not_running',
         hint: 'Start the Ollama app or run `ollama serve`.',
+        localize: true,
       });
       onDone();
     }

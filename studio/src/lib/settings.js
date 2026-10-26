@@ -81,7 +81,8 @@ export const DEFAULT_SETTINGS = {
     apiKey: '',
     model: 'gpt-4o-mini',
   },
-  ollama: { baseUrl: 'http://localhost:11434/v1', model: 'llama3.2' },
+  // Empty model = "Default": Studio resolves the first installed model at run time (RON-208).
+  ollama: { baseUrl: 'http://localhost:11434/v1', model: '' },
   bridge: {
     bridgeUrl: 'http://localhost:3000',
     bridgeToken: '',

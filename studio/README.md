@@ -131,8 +131,9 @@ instead of duplicating, and never overwrites graded cards or existing lecture ve
 
 ### Use Ollama (free, local)
 
-1. `ollama serve` (and `ollama pull llama3.2` or any model you like).
-2. Settings → **Ollama**: base URL `http://localhost:11434/v1`, pick the model.
+1. `ollama serve` (and `ollama pull <name>` for at least one model).
+2. Settings → **Ollama**: base URL `http://localhost:11434/v1`, pick the model — leave it on
+   **Default** to use the first model you have installed.
 
 Ollama allows loopback origins by default, so this works with `npm run dev` out of the box.
 If you open **the deployed site** and point at your local Ollama, allow the site origin and restart

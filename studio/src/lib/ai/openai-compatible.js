@@ -26,9 +26,11 @@ function attributionHeaders(baseUrl) {
 }
 
 /**
- * @param {{ baseUrl: string, apiKey?: string, model?: string, preset?: string, headers?: Record<string,string> }} config
+ * @param {{ baseUrl: string, apiKey?: string, model?: string, preset?: string, headers?: Record<string,string>,
+ *           httpError?: (res: Response, opts?: { what?: string }) => Promise<Error> }} config
+ *   `httpError` overrides the shared status→error mapping (Ollama maps 404/410 specially).
  */
-export function createOpenAICompatibleProvider({ baseUrl, apiKey, model, preset, headers = {} } = {}) {
+export function createOpenAICompatibleProvider({ baseUrl, apiKey, model, preset, headers = {}, httpError } = {}) {
   const root = String(baseUrl || '').replace(/\/$/, '');
   const presetId = preset || presetForBaseUrl(root);
   const resolvedModel = model || (presetId === 'openrouter' ? OPENROUTER_DEFAULT_MODEL : model);
@@ -59,7 +61,7 @@ export function createOpenAICompatibleProvider({ baseUrl, apiKey, model, preset,
       if (isAbortError(err)) throw providerError('aborted', 'Stopped');
       throw classifyNetworkError(err, { url, what: 'the provider' });
     }
-    if (!res.ok) throw await mapHttpError(res, { what: 'the provider' });
+    if (!res.ok) throw await (httpError || mapHttpError)(res, { what: 'the provider' });
     if (!res.body) throw providerError('unknown', 'The provider returned no stream');
 
     let full = '';
