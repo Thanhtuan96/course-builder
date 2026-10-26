@@ -30,5 +30,20 @@
   "moveBody": "Chuyển {courses} {courseWord} và {cards} {cardWord} sang {target}? Bản cũ vẫn còn cho tới khi bạn xoá.",
   "secretsNote": "Khoá API và cài đặt không bao giờ bị chuyển.",
   "moveData": "Chuyển dữ liệu",
-  "switchAnyway": "Vẫn chuyển"
+  "switchAnyway": "Vẫn chuyển",
+  "openLocalAgent": "Mở Cài đặt → Agent cục bộ của tôi",
+  "reasons": {
+    "not_paired": {
+      "short": "Chưa ghép nối — hãy chạy máy chủ cục bộ (npx course-professor studio) và mở liên kết ghép nối mà nó in ra trong trình duyệt này.",
+      "hint": "Hoặc dán URL bridge và mã ghép nối trong Cài đặt → Agent cục bộ của tôi."
+    },
+    "unreachable": {
+      "short": "Ngoại tuyến — không kết nối được tới máy chủ cục bộ.",
+      "hint": "Hãy chạy npx course-professor studio rồi thử lại. Nếu máy chủ đang chạy, hãy kiểm tra URL bridge và mã ghép nối trong Cài đặt → Agent cục bộ của tôi."
+    },
+    "unexpected": {
+      "short": "Ngoại tuyến — máy chủ cục bộ trả lời không như mong đợi.",
+      "hint": "Hãy xem nhật ký (terminal) của máy chủ cục bộ và kiểm tra mã ghép nối trong Cài đặt → Agent cục bộ của tôi, rồi thử lại."
+    }
+  }
 }

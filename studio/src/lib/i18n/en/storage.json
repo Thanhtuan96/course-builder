@@ -30,5 +30,20 @@
   "moveBody": "Move {courses} {courseWord} and {cards} {cardWord} to {target}? The old copy stays until you remove it.",
   "secretsNote": "API keys and settings are never moved.",
   "moveData": "Move data",
-  "switchAnyway": "Switch anyway"
+  "switchAnyway": "Switch anyway",
+  "openLocalAgent": "Open Settings → My local agent",
+  "reasons": {
+    "not_paired": {
+      "short": "Not paired — start the local server (npx course-professor studio) and open the pairing link it prints in this browser.",
+      "hint": "Or paste the bridge URL and pairing token in Settings → My local agent."
+    },
+    "unreachable": {
+      "short": "Offline — the local server isn’t reachable.",
+      "hint": "Start npx course-professor studio, then retry. If it is already running, check the bridge URL and pairing token in Settings → My local agent."
+    },
+    "unexpected": {
+      "short": "Offline — the local server answered unexpectedly.",
+      "hint": "Check the local server’s terminal output and the pairing token in Settings → My local agent, then retry."
+    }
+  }
 }

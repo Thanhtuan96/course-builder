@@ -7,6 +7,7 @@
 import { Button } from '../ui/Button.jsx';
 import { Spinner } from '../ui/Spinner.jsx';
 import { useT } from '../../lib/i18n/index.js';
+import { sqliteReasonHint, sqliteReasonText } from './StorageChoice.jsx';
 
 /** Fallback labels (English) for non-React callers/tests; the UI uses `storage.*` keys. */
 export const STORAGE_LABELS = {
@@ -18,10 +19,12 @@ export const STORAGE_LABELS = {
 export function StorageMoveDialog({ plan, busy = false, error = '', allowWithoutCopy = false, onConfirm, onCancel }) {
   const t = useT();
   if (!plan) return null;
-  const { counts = {}, to, targetReady = true, targetError = '', sourceUnavailable = false } = plan;
+  const { counts = {}, to, targetReady = true, targetReason, sourceUnavailable = false } = plan;
   const canCopy = targetReady && !sourceUnavailable;
   const canConfirm = canCopy || (sourceUnavailable && allowWithoutCopy);
   const targetLabel = t(to === 'sqlite' ? 'storage.sqlite' : 'storage.browser');
+  const reasonText = sqliteReasonText(targetReason, t);
+  const reasonHint = sqliteReasonHint(targetReason, t);
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" role="dialog" aria-modal="true">
@@ -42,10 +45,11 @@ export function StorageMoveDialog({ plan, busy = false, error = '', allowWithout
           </p>
         )}
 
-        {!targetReady && targetError && (
-          <p className="mt-2 rounded-lg bg-red-50 p-2 text-xs text-red-700 dark:bg-red-500/10 dark:text-red-300">
-            {targetError}
-          </p>
+        {!targetReady && (reasonText || reasonHint) && (
+          <div className="mt-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+            {reasonText && <p>{reasonText}</p>}
+            {reasonHint && <p className="mt-1">{reasonHint}</p>}
+          </div>
         )}
 
         {error && (
