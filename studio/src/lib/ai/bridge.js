@@ -10,11 +10,12 @@
  *   GET  {bridgeUrl}/api/studio/agents/:agent/models  header X-Studio-Token
  *        -> { ok, agent, models: [{ id, label? }], source }
  *   POST {bridgeUrl}/api/studio/complete body { system, messages, agent?, model? }
- *        -> SSE:  data: {"text":"…"} … data: {"error":"…","code":"…","hint":"…"} … data: [DONE]
+ *        -> SSE:  data: {"text":"…"} … data: {"error":"…","code":"…","hint":"…","localize":true} … data: [DONE]
+ *           `localize` marks copy the client should take from its own i18n catalog (LANG-02).
  */
 import { parseSSE } from './sse.js';
 import { createGenerateJson, MAX_TOKENS } from './provider-utils.js';
-import { providerError, isAbortError, ProviderError } from './errors.js';
+import { providerError, isAbortError, ProviderError, ERROR_HINTS } from './errors.js';
 import { localFetch, classifyNetworkError, mapHttpError } from './fetch-local.js';
 import { assertLoopbackBridgeUrl } from '../settings.js';
 
@@ -65,7 +66,13 @@ export function createBridgeProvider({ bridgeUrl = DEFAULT_BRIDGE_URL, bridgeTok
       } catch {
         continue;
       }
-      if (json.error) throw new ProviderError(String(json.code || 'unknown'), json.error, json.hint || RUN_HINT);
+      if (json.error) {
+        const code = String(json.code || 'unknown');
+        // The bridge is a Node process with English-only copy. When it flags a frame as localizable
+        // the UI renders the code's catalog text (en/vi) instead of the server string (LANG-02).
+        if (json.localize && ERROR_HINTS[code]) throw new ProviderError(code);
+        throw new ProviderError(code, json.error, json.hint || RUN_HINT);
+      }
       if (typeof json.text === 'string') {
         full += json.text;
         onText?.(json.text);

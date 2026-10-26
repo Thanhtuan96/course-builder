@@ -271,19 +271,119 @@ export function curatedAgentModels(agent) {
 }
 
 async function listOllamaModels(env = process.env) {
+  const names = await listOllamaModelIds(env);
+  return names.map((id) => ({ id, label: id }));
+}
+
+/* ------------------------------------------------------------------ Ollama model resolution */
+
+/** Hint shown when the daemon answers but has nothing installed (RON-208). */
+export const OLLAMA_NO_MODEL_HINT =
+  'Pull a model first (`ollama pull <name>`), then retry — or pick one in Settings.';
+
+/** Hint shown when `OLLAMA_HOST` is not a loopback address (D-15). */
+export const OLLAMA_HOST_HINT =
+  'Point OLLAMA_HOST at 127.0.0.1, localhost or [::1], or set PROFESSOR_ALLOW_NON_LOOPBACK_OLLAMA=1.';
+
+/**
+ * Names of the models installed in the local daemon (`GET /api/tags`).
+ * @param {NodeJS.ProcessEnv} [env]
+ * @param {{ timeoutMs?: number }} [opts]
+ * @returns {Promise<string[]>} installed model names, in the order Ollama reports them
+ */
+export async function listOllamaModelIds(env = process.env, { timeoutMs = MODEL_PROBE_TIMEOUT_MS } = {}) {
   const host = ollamaBase(env);
   if (!host.ok) throw Object.assign(new Error(host.error), { code: 'config' });
   const base = host.base;
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), MODEL_PROBE_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(`${base}/api/tags`, { signal: controller.signal });
     if (!res.ok) throw new Error(`Ollama returned ${res.status}`);
     const json = await res.json().catch(() => ({}));
-    return (json.models || []).map((m) => ({ id: m.name || m.model, label: m.name || m.model })).filter((m) => m.id);
+    return (json.models || []).map((m) => m?.name || m?.model).filter((name) => typeof name === 'string' && name);
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * Pick the model "Default" should mean: the first installed one. Locally pulled models win over
+ * `:cloud` entries, because a cloud model can be retired by the registry while a pulled one runs.
+ * @param {string[]} names
+ * @returns {string} the model name, or '' when nothing is installed
+ */
+export function pickOllamaDefaultModel(names = []) {
+  const installed = (Array.isArray(names) ? names : [])
+    .map((name) => (typeof name === 'string' ? name.trim() : ''))
+    .filter(Boolean);
+  return installed.find((name) => !/:cloud$/i.test(name)) || installed[0] || '';
+}
+
+/**
+ * Resolve the model a bridge run should use (RON-208): an explicitly chosen model, else
+ * `OLLAMA_MODEL`, else the first installed model from `GET /api/tags`. A hard-coded name is never
+ * used — it may not be installed, and Ollama then answers 404.
+ *
+ * @param {{ model?: string, env?: NodeJS.ProcessEnv }} [opts]
+ * @returns {Promise<{ ok: true, model: string, base: string }
+ *   | { ok: false, code: 'config'|'not_running'|'model_not_found', message: string, hint: string }>}
+ */
+export async function resolveOllamaModel({ model, env = process.env } = {}) {
+  const host = ollamaBase(env);
+  if (!host.ok) return { ok: false, code: 'config', message: host.error, hint: OLLAMA_HOST_HINT };
+
+  const explicit = typeof model === 'string' ? model.trim() : '';
+  if (explicit) return { ok: true, model: explicit, base: host.base };
+  const fromEnv = typeof env.OLLAMA_MODEL === 'string' ? env.OLLAMA_MODEL.trim() : '';
+  if (fromEnv) return { ok: true, model: fromEnv, base: host.base };
+
+  let names;
+  try {
+    names = await listOllamaModelIds(env, { timeoutMs: MODEL_PROBE_TIMEOUT_MS });
+  } catch {
+    return {
+      ok: false,
+      code: 'not_running',
+      message: `Ollama is not reachable at ${host.base}.`,
+      hint: 'Start the Ollama app or run `ollama serve`.',
+    };
+  }
+  const picked = pickOllamaDefaultModel(names);
+  if (!picked) {
+    return {
+      ok: false,
+      code: 'model_not_found',
+      message: 'Ollama has no models installed.',
+      hint: OLLAMA_NO_MODEL_HINT,
+    };
+  }
+  return { ok: true, model: picked, base: host.base };
+}
+
+/**
+ * Map a non-OK Ollama response to an error payload (RON-208). 404 means the model is not installed;
+ * 410 means Ollama retired it. Neither case forwards the daemon's body — the Studio UI renders the
+ * localized copy for the code instead.
+ *
+ * @param {number} status
+ * @param {{ model?: string, body?: string }} [opts]
+ * @returns {{ code: string, message: string, hint?: string, localize?: boolean }}
+ */
+export function ollamaHttpFailure(status, { model = '', body = '' } = {}) {
+  const named = model ? `"${model}"` : 'the selected model';
+  if (status === 404) {
+    return {
+      code: 'model_not_found',
+      message: `Ollama has no model ${named}`,
+      hint: OLLAMA_NO_MODEL_HINT,
+      localize: true,
+    };
+  }
+  if (status === 410) {
+    return { code: 'model_retired', message: `Ollama retired the model ${named}`, localize: true };
+  }
+  return { code: 'server', message: `Ollama error ${status}: ${String(body).slice(0, 200)}`.trim() };
 }
 
 /**
@@ -398,6 +498,10 @@ export function diagnoseAgentFailure(agent, { stderr = '', exitCode } = {}) {
   }
   if (agent === 'ollama' && /(not reachable|not running|connect|refused)/.test(lower)) {
     return { message, code: 'not_running', hint: 'Start the Ollama app or run `ollama serve`.' };
+  }
+  // Ollama answers 410 for a model its registry retired; never leave it as a raw server error.
+  if (/(retired|no longer (available|supported))/.test(lower)) {
+    return { message, code: 'model_retired', localize: true };
   }
   if (/(auth|login|api key|authentication)/.test(lower)) {
     return { message, code: 'auth' };

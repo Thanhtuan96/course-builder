@@ -38,7 +38,11 @@ export function presetForBaseUrl(baseUrl = '') {
 }
 
 export const OLLAMA_DEFAULT_BASE_URL = 'http://localhost:11434/v1';
-export const OLLAMA_DEFAULT_MODEL = 'llama3.2';
+/**
+ * "Default" for Ollama: resolved at run time from the installed models (RON-208). Empty on purpose —
+ * a hard-coded id (previously `llama3.2`) fails with 404 on every machine that never pulled it.
+ */
+export const OLLAMA_DEFAULT_MODEL = '';
 export const BRIDGE_DEFAULT_URL = 'http://localhost:3000';
 export const DEFAULT_BRIDGE_AGENT = 'claude';
 

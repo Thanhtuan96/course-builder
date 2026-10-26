@@ -219,18 +219,18 @@ export function ProviderFields({ settings, update, compact = false }) {
                 label={t('provider.model')}
                 name="ollamaModel"
                 className="flex-1"
-                value={settings.ollama.model}
+                value={settings.ollama.model || ''}
                 onChange={(e) => set({ ollama: { model: e.target.value } })}
               >
-                {models ? (
-                  models.map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))
-                ) : (
+                <option value="">{t('provider.defaultModel')}</option>
+                {settings.ollama.model && !(models || []).includes(settings.ollama.model) && (
                   <option value={settings.ollama.model}>{settings.ollama.model}</option>
                 )}
+                {(models || []).map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
               </Select>
               <Button variant="secondary" onClick={loadOllamaModels}>
                 {t('provider.loadInstalled')}

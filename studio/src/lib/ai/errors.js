@@ -17,6 +17,7 @@ export const ERROR_CODES = [
   'server',
   'config',
   'model_not_found',
+  'model_retired',
   'wrong_language',
   'loopback_required',
   'csp_blocked',
@@ -38,7 +39,9 @@ export const ERROR_HINTS = {
   aborted: 'Stopped.',
   server: 'The local agent failed while running. Check its terminal output, then try again.',
   config: 'That AI source or agent is not supported. Pick a valid agent in Settings.',
-  model_not_found: 'That model is not available. Pick a model in Settings.',
+  model_not_found:
+    'That model is not available. Pick a model in Settings — with Ollama, pull one first (`ollama pull <name>`).',
+  model_retired: 'That model was retired by the provider and no longer runs. Pick another model in Settings.',
   wrong_language: 'The model answered in the wrong language twice. Try again, or pick a stronger model.',
   loopback_required:
     'Studio only connects to a bridge or runner on this machine. Use http://localhost:…, not a LAN IP or tunnel.',
