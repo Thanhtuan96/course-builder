@@ -15,6 +15,7 @@ import { seedDemoCourse } from './data/demo-course.js';
 import { Layout } from './components/Layout.jsx';
 import { Onboarding } from './components/Onboarding.jsx';
 import { StorageMoveDialog } from './components/data/StorageMoveDialog.jsx';
+import { sqliteReasonHint } from './components/data/StorageChoice.jsx';
 import { EmptyState } from './components/ui/EmptyState.jsx';
 import { Link } from './lib/router.js';
 import { Button } from './components/ui/Button.jsx';
@@ -107,15 +108,16 @@ function StorageDecision({ decision, onPick }) {
 }
 
 /** Blocking state when SQLite is chosen but the local server is down (STORE-02). */
-function StorageBlocked({ error, onRetry, onSwitch, busy, switchError }) {
+function StorageBlocked({ reason, onRetry, onSwitch, busy, switchError }) {
   const t = useT();
+  const hint = sqliteReasonHint(reason, t);
   return (
     <div className="grid min-h-full place-items-center bg-neutral-50 px-4 py-10 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
       <Card className="w-full max-w-lg space-y-4">
         <h1 className="text-lg font-semibold">{t('app.storageBlocked.title')}</h1>
         <p className="text-sm text-neutral-600 dark:text-neutral-300">{t('app.storageBlocked.body')}</p>
         <pre className="overflow-auto rounded-lg bg-neutral-100 p-3 text-xs dark:bg-neutral-800">course-professor studio</pre>
-        {error && <p className="text-xs text-amber-700 dark:text-amber-300">{error}</p>}
+        {hint && <p className="text-xs text-amber-700 dark:text-amber-300">{hint}</p>}
         {switchError && <p className="text-xs text-red-600 dark:text-red-400">{switchError}</p>}
         <div className="flex flex-wrap gap-2">
           <Button onClick={onRetry} disabled={busy}>
@@ -168,7 +170,7 @@ export default function App() {
       const info = await initAdapter({ settings: current });
       if (!alive) return;
       if (info.blocked) {
-        setBlocked({ error: info.error });
+        setBlocked({ reason: info.reason });
         setReady(true);
         return;
       }
@@ -194,7 +196,7 @@ export default function App() {
     setBusy(true);
     try {
       const info = await initAdapter({ settings: loadSettings() });
-      if (info.blocked) setBlocked({ error: info.error });
+      if (info.blocked) setBlocked({ reason: info.reason });
       else setBlocked(null);
     } finally {
       setBusy(false);
@@ -244,7 +246,7 @@ export default function App() {
     return (
       <>
         <StorageBlocked
-          error={blocked.error}
+          reason={blocked.reason}
           onRetry={onRetry}
           onSwitch={onStartSwitch}
           busy={busy}

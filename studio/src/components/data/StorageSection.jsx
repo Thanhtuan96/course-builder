@@ -9,7 +9,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Button } from '../ui/Button.jsx';
 import { Card } from '../ui/Card.jsx';
 import { useT } from '../../lib/i18n/index.js';
-import { StorageChoice } from './StorageChoice.jsx';
+import { StorageChoice, sqliteReasonHint, sqliteReasonText } from './StorageChoice.jsx';
 import { StorageMoveDialog } from './StorageMoveDialog.jsx';
 import {
   effectiveStorageKind,
@@ -47,6 +47,16 @@ export function StorageSection({ settings, update }) {
   const current = effectiveStorageKind(settings);
   const label = (kind) => t(kind === 'sqlite' ? 'storage.sqlite' : 'storage.browser');
   const kindLabel = (kind) => (kind ? t(`data.kind.${kind}`) : t('data.checking'));
+
+  // RON-210: an unpaired browser must never be a dead end — point the learner at the pairing fields.
+  const openLocalAgent = () => {
+    if (settings.provider !== 'bridge') update({ provider: 'bridge' });
+    if (typeof document === 'undefined') return;
+    const el = document.getElementById('local-agent');
+    if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const messageFor = (err) => sqliteReasonText(err?.code, t) || err?.message || String(err);
 
   const refresh = useCallback(async () => {
     const [sqlite, info, browserInfo] = await Promise.all([
@@ -108,7 +118,7 @@ export function StorageSection({ settings, update }) {
       setPlan(null);
       await refresh();
     } catch (err) {
-      setError(err?.message || String(err));
+      setError(messageFor(err));
     } finally {
       setBusy(false);
     }
@@ -149,6 +159,16 @@ export function StorageSection({ settings, update }) {
         sqliteStatus={sqliteStatus}
         browserStatus={browser}
       />
+
+      {sqliteStatus?.reason === 'not_paired' && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+          <p>{sqliteReasonText('not_paired', t)}</p>
+          <p className="mt-1">{sqliteReasonHint('not_paired', t)}</p>
+          <button type="button" onClick={openLocalAgent} className="mt-2 text-xs underline">
+            {t('storage.openLocalAgent')}
+          </button>
+        </div>
+      )}
 
       <div className="rounded-lg bg-neutral-100 p-3 text-sm dark:bg-neutral-800">
         <p>

@@ -53,6 +53,11 @@ export default defineConfig({
       dependencies: ['pair'],
       use: { storageState: PAIRING_STATE },
     },
+    {
+      // RON-210: a fresh, unpaired browser profile (no storageState).
+      name: 'unpaired',
+      testMatch: /specs\/storage-unpaired\.spec\.js/,
+    },
   ],
   webServer: [
     {

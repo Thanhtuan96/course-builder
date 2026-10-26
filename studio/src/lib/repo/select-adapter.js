@@ -26,6 +26,17 @@ export const SETTINGS_KEY = SETTINGS_KEY_FROM_SETTINGS;
 export { STORAGE_BROWSER, STORAGE_SQLITE, STORAGE_KINDS };
 const PROBE_TIMEOUT_MS = 1500;
 
+/**
+ * Stable reason codes for a failed SQLite probe (RON-210). The UI localizes these codes; `error`
+ * stays as an English developer-facing detail for logs. Adding a code means adding its `storage.
+ * reasons.<code>.short` / `.hint` strings to BOTH catalogs.
+ */
+export const PROBE_REASONS = Object.freeze({
+  NOT_PAIRED: 'not_paired',
+  UNREACHABLE: 'unreachable',
+  UNEXPECTED: 'unexpected',
+});
+
 /** @returns {object} the stored settings object, or {} when unavailable. */
 export function readStoredSettings() {
   try {
@@ -89,20 +100,46 @@ export function tableCounts(dump) {
 
 /**
  * Probe the paired local server's `/db/health`.
- * @returns {Promise<{ available: boolean, configured: boolean, path: string, health?: object, error?: string }>}
+ *
+ * On failure the result carries a stable `reason` code from `PROBE_REASONS` (the UI localizes it) and
+ * an English `error` detail that is only meant for logs. `reason` is absent when the probe succeeds.
+ *
+ * @returns {Promise<{ available: boolean, configured: boolean, path: string, health?: object, reason?: string, error?: string }>}
  */
 export async function probeSqlite(settings = readStoredSettings(), { fetchImpl, timeoutMs = PROBE_TIMEOUT_MS } = {}) {
   const cfg = bridgeConfigFrom(settings);
   if (!cfg.bridgeUrl || !cfg.bridgeToken) {
-    return { available: false, configured: false, path: '', error: 'No local server is paired.' };
+    return {
+      available: false,
+      configured: false,
+      path: '',
+      reason: PROBE_REASONS.NOT_PAIRED,
+      error: 'No local server is paired.',
+    };
   }
   const adapter = createRemoteAdapter({ baseUrl: cfg.bridgeUrl, token: cfg.bridgeToken, fetchImpl });
   try {
     const health = await withTimeout(adapter.health(), timeoutMs);
     if (health?.ok) return { available: true, configured: true, path: health.path || '', health };
-    return { available: false, configured: true, path: '', error: 'The local server answered unexpectedly.' };
+    return {
+      available: false,
+      configured: true,
+      path: '',
+      reason: PROBE_REASONS.UNEXPECTED,
+      error: 'The local server answered unexpectedly.',
+    };
   } catch (err) {
-    return { available: false, configured: true, path: '', error: err?.message || 'The local server is not reachable.' };
+    // A network failure/timeout means "never answered"; a coded server rejection (bad token, 5xx,
+    // unexpected payload) means it answered, just not the way we need.
+    const code = err?.code;
+    const reason = code && code !== 'network' ? PROBE_REASONS.UNEXPECTED : PROBE_REASONS.UNREACHABLE;
+    return {
+      available: false,
+      configured: true,
+      path: '',
+      reason,
+      error: err?.message || 'The local server is not reachable.',
+    };
   }
 }
 
@@ -182,6 +219,7 @@ export async function selectAdapter({ settings, timeoutMs = PROBE_TIMEOUT_MS, fe
       kind: 'blocked',
       storage,
       blocked: true,
+      reason: probe.reason,
       error: probe.error,
     };
   }
@@ -206,7 +244,7 @@ export async function initAdapter(opts = {}) {
  * Reads the current store; when it is unreachable (blocked), returns `sourceUnavailable`.
  *
  * @param {string} target 'browser' | 'sqlite'
- * @returns {Promise<{ from: string, to: string, counts: object, targetReady: boolean, targetError: string, sourceUnavailable?: boolean, dump?: object, error?: string }>}
+ * @returns {Promise<{ from: string, to: string, counts: object, targetReady: boolean, targetReason?: string, targetError: string, sourceUnavailable?: boolean, dump?: object, error?: string }>}
  */
 export async function planStorageMove(target, { settings, fetchImpl, timeoutMs } = {}) {
   const effective = settings || readStoredSettings();
@@ -224,13 +262,15 @@ export async function planStorageMove(target, { settings, fetchImpl, timeoutMs }
   const counts = { courses: tables.courses || 0, cards: tables.cards || 0, total: countRows(dump.tables), tables };
 
   let targetReady = true;
+  let targetReason;
   let targetError = '';
   if (target === STORAGE_SQLITE) {
     const probe = await probeSqlite(effective, { fetchImpl, timeoutMs });
     targetReady = probe.available;
+    targetReason = probe.reason;
     targetError = probe.error || '';
   }
-  return { from, to: target, counts, targetReady, targetError, dump };
+  return { from, to: target, counts, targetReady, targetReason, targetError, dump };
 }
 
 /**
@@ -250,7 +290,11 @@ export async function performStorageMove(target, { settings, fetchImpl, timeoutM
   if (target === STORAGE_SQLITE) {
     const probe = await probeSqlite(effective, { fetchImpl, timeoutMs });
     if (!probe.available) {
-      throw new StorageUnavailableError(probe.error || 'The local server is not reachable.', { kind: 'sqlite', path: probe.path });
+      throw new StorageUnavailableError(probe.error || 'The local server is not reachable.', {
+        kind: 'sqlite',
+        code: probe.reason || 'storage_unavailable',
+        path: probe.path,
+      });
     }
     targetAdapter = createRemoteAdapter({ baseUrl: cfg.bridgeUrl, token: cfg.bridgeToken, fetchImpl });
   } else {

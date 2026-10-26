@@ -60,7 +60,7 @@ export function Settings() {
         <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">{t('settings.subtitle')}</p>
       </div>
 
-      <section className="space-y-3">
+      <section id="local-agent" className="scroll-mt-6 space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">{t('settings.aiSource')}</h2>
         <ProviderFields settings={settings} update={update} />
         <div>
