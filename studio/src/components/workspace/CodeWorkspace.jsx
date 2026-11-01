@@ -21,6 +21,7 @@ import { ErrorNotice } from '../ui/ErrorNotice.jsx';
 import { FileTabs } from './FileTabs.jsx';
 import { OutputPanel } from './OutputPanel.jsx';
 import { HistoryDrawer } from './HistoryDrawer.jsx';
+import { UnsupportedSkeletonNotice } from './UnsupportedSkeletonNotice.jsx';
 import { RunnerNotice } from '../revision/RunnerNotice.jsx';
 import { AttemptHistory } from '../revision/AttemptHistory.jsx';
 import { needsRunnerAck, acknowledgeRunner, shouldBlockLocalRun } from '../revision/runner-notice.jsx';
@@ -32,7 +33,8 @@ import {
   workspaceRevisionIntent,
 } from '../revision/history.js';
 import {
-  seedFiles,
+  planSeed,
+  planReset,
   resolveWorkspaceSeed,
 } from '../../lib/runner/skeleton.js';
 import { guessCourseLanguage, getLanguage, languageForPath, normalizeLanguage } from '../../lib/runner/languages.js';
@@ -102,6 +104,7 @@ export function CodeWorkspace({ lesson, course }) {
   const [acknowledged, setAcknowledged] = useState(() => !needsRunnerAck(settings));
   const [lastCriteria, setLastCriteria] = useState([]);
   const [lastRunId, setLastRunId] = useState(null);
+  const [unsupportedSkeleton, setUnsupportedSkeleton] = useState(null);
 
   const abortRef = useRef(null);
   const outRef = useRef({ ...EMPTY_OUTPUT });
@@ -149,6 +152,7 @@ export function CodeWorkspace({ lesson, course }) {
       let seed = [];
       let persist = false;
       let stalePaths = [];
+      let unsupported = null;
       try {
         // The lesson row never carries Markdown — it lives in `lesson_versions` (RON-196).
         const [rows, runs, version] = await Promise.all([
@@ -158,7 +162,7 @@ export function CodeWorkspace({ lesson, course }) {
         ]);
         for (const row of rows) idByPathRef.current.set(row.path, row.id);
         markdownRef.current = version?.content_md || lesson?.content_md || '';
-        ({ files: seed, persist, stalePaths } = resolveWorkspaceSeed({
+        ({ files: seed, persist, stalePaths, unsupportedSkeleton: unsupported } = resolveWorkspaceSeed({
           lesson,
           course,
           version,
@@ -167,7 +171,7 @@ export function CodeWorkspace({ lesson, course }) {
         }));
       } catch {
         // Storage unavailable: keep the skeleton in memory, never write a seed we cannot trust.
-        seed = seedFiles(lesson, course);
+        ({ files: seed, unsupportedSkeleton: unsupported } = planSeed(lesson, course));
       }
       if (persist) {
         for (const file of seed) {
@@ -184,18 +188,19 @@ export function CodeWorkspace({ lesson, course }) {
             /* keep the seed in memory even if storage is unavailable */
           }
         }
-        // RON-196: the empty seed an earlier build stored may use another entry name (main.js while
-        // the skeleton fence resolves to main.sh) — soft-delete it so no stray blank file survives.
-        for (const path of stalePaths) {
-          try {
-            await deleteWorkspaceFile({ lessonId: lesson.id, path });
-            idByPathRef.current.delete(path);
-          } catch {
-            /* the skeleton is already in place; a leftover blank row is harmless */
-          }
+      }
+      // The rows an earlier build seeded under another entry name, or the reference fence it picked
+      // instead of the exercise, are dropped even when the new plan seeds nothing.
+      for (const path of stalePaths) {
+        try {
+          await deleteWorkspaceFile({ lessonId: lesson.id, path });
+          idByPathRef.current.delete(path);
+        } catch {
+          /* the new seed is already in place; a leftover row is harmless */
         }
       }
       if (!alive) return;
+      setUnsupportedSkeleton(unsupported);
       setFiles(seed);
       setActivePath(seed[0]?.path || null);
       setLoaded(true);
@@ -456,12 +461,26 @@ export function CodeWorkspace({ lesson, course }) {
 
   const resetToSkeleton = useCallback(async () => {
     if (!window.confirm(t('workspace.resetConfirm'))) return;
-    const seed = seedFiles({ ...lesson, content_md: markdownRef.current || lesson?.content_md || '' }, course);
-    setFiles(seed);
-    setActivePath(seed[0]?.path || null);
+    const plan = planReset({
+      lesson: { ...lesson, content_md: markdownRef.current || lesson?.content_md || '' },
+      course,
+      storedPaths: [...idByPathRef.current.keys()],
+    });
+    for (const path of plan.deletePaths) {
+      dirtyRef.current.delete(path);
+      try {
+        await deleteWorkspaceFile({ lessonId: lesson.id, path });
+        idByPathRef.current.delete(path);
+      } catch {
+        /* keep going: the notice still tells the learner where to run the exercise */
+      }
+    }
+    setUnsupportedSkeleton(plan.unsupportedSkeleton);
+    setFiles(plan.files);
+    setActivePath(plan.files[0]?.path || null);
     // RON-196: an empty seed is never persisted, so a later lesson version can still fill it in.
-    if (!seed.some((file) => String(file.content ?? '').trim())) return;
-    for (const file of seed) {
+    if (!plan.persist) return;
+    for (const file of plan.files) {
       try {
         const row = await saveWorkspaceFile({ courseId, lessonId: lesson.id, path: file.path, language: file.language, content: file.content });
         idByPathRef.current.set(file.path, row.id);
@@ -540,10 +559,10 @@ export function CodeWorkspace({ lesson, course }) {
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" onClick={() => start('run')} disabled={Boolean(running)}>
+          <Button size="sm" onClick={() => start('run')} disabled={Boolean(running) || !files.length}>
             {running === 'run' ? t('workspace.running') : t('workspace.run')}
           </Button>
-          <Button size="sm" variant="secondary" onClick={() => start('check')} disabled={Boolean(running)}>
+          <Button size="sm" variant="secondary" onClick={() => start('check')} disabled={Boolean(running) || !files.length}>
             {running === 'check' ? t('workspace.check') : t('workspace.checkButton')}
           </Button>
           {running && (
@@ -562,14 +581,18 @@ export function CodeWorkspace({ lesson, course }) {
 
       <RunnerNotice runnerInfo={runnerInfo} acknowledged={acknowledged} onAcknowledge={handleAcknowledge} />
 
-      <FileTabs
-        files={files}
-        activePath={activeFile?.path}
-        onSelect={setActivePath}
-        onAdd={addFile}
-        onRename={renameFile}
-        onDelete={deleteFile}
-      />
+      {unsupportedSkeleton ? (
+        <UnsupportedSkeletonNotice skeleton={unsupportedSkeleton} />
+      ) : (
+        <FileTabs
+          files={files}
+          activePath={activeFile?.path}
+          onSelect={setActivePath}
+          onAdd={addFile}
+          onRename={renameFile}
+          onDelete={deleteFile}
+        />
+      )}
 
       {activeFile ? (
         <Suspense fallback={<div className="flex h-64 items-center justify-center text-sm text-neutral-500"><Spinner /> {t('workspace.loadingEditor')}</div>}>

@@ -43,5 +43,8 @@
   "needsCommandShort": "cần `{command}`",
   "needsServerShort": "cần máy chủ cục bộ",
   "local": "Cục bộ",
-  "checkWord": "bài kiểm tra"
+  "checkWord": "bài kiểm tra",
+  "unsupportedNotice": "Bài tập này dùng “{info}”, ngôn ngữ mà Không gian làm việc không chạy được. Hãy làm trong terminal của bạn rồi nhờ Gia sư xem lại kết quả.",
+  "unsupportedCopy": "Sao chép bộ khung",
+  "unsupportedCopied": "Đã sao chép"
 }

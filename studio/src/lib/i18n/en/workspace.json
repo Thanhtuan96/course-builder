@@ -43,5 +43,8 @@
   "needsCommandShort": "needs `{command}`",
   "needsServerShort": "needs the local server",
   "local": "Local",
-  "checkWord": "checks"
+  "checkWord": "checks",
+  "unsupportedNotice": "This exercise uses “{info}”, which the Workspace can't run. Do it in your own terminal and ask the Tutor to review your output.",
+  "unsupportedCopy": "Copy skeleton",
+  "unsupportedCopied": "Copied"
 }
