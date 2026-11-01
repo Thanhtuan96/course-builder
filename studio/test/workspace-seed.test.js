@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { resolveWorkspaceSeed } from '../src/lib/runner/skeleton.js';
+import { planReset, resolveWorkspaceSeed } from '../src/lib/runner/skeleton.js';
 import { createMemoryAdapter } from '../src/lib/repo/memory-adapter.js';
 import * as repo from '../src/lib/repo/index.js';
 
@@ -232,5 +232,146 @@ describe('RON-265 unsupported exercise skeleton', () => {
     expect(files.map((f) => f.path)).toEqual(['Dockerfile']);
     expect(persist).toBe(false);
     expect(unsupportedSkeleton).toBeNull();
+  });
+});
+
+// MUST-1 — a lesson opened before the fix already has the reference fence persisted, so the stored
+// rows won unless they are recognised as a stale seed.
+const HEALTH_JS = '// health.js — có sẵn, không cần sửa\nconsole.log("ok");';
+
+describe('RON-265 stale reference seed', () => {
+  it('RON-265 replaces a stored reference fence with the unsupported notice', () => {
+    const { files, persist, stalePaths, unsupportedSkeleton } = resolveWorkspaceSeed({
+      lesson: LESSON,
+      course: DOCKER_COURSE,
+      version: { content_md: DOCKER_LESSON_MD },
+      rows: [{ id: 'f1', path: 'main.js', language: 'javascript', content: HEALTH_JS }],
+      runCount: 0,
+    });
+
+    expect(files).toEqual([]);
+    expect(persist).toBe(false);
+    expect(stalePaths).toEqual(['main.js']);
+    expect(unsupportedSkeleton.info).toBe('dockerfile');
+  });
+
+  it('RON-265 replaces a stored reference fence with the runnable skeleton', () => {
+    const { files, persist, stalePaths, unsupportedSkeleton } = resolveWorkspaceSeed({
+      lesson: LESSON,
+      course: COURSE,
+      version: { content_md: LESSON_MD },
+      rows: [{ id: 'f1', path: 'main.js', language: 'javascript', content: 'echo "hello"' }],
+      runCount: 0,
+    });
+
+    expect(files.map((f) => f.path)).toEqual(['main.sh']);
+    expect(files[0].content).toContain('TODO: finish the exercise');
+    expect(persist).toBe(true);
+    expect(stalePaths).toEqual(['main.js']);
+    expect(unsupportedSkeleton).toBeNull();
+  });
+
+  it('RON-265 keeps a stored file the learner edited', () => {
+    const { files, persist, stalePaths, unsupportedSkeleton } = resolveWorkspaceSeed({
+      lesson: LESSON,
+      course: DOCKER_COURSE,
+      version: { content_md: DOCKER_LESSON_MD },
+      rows: [
+        { id: 'f1', path: 'main.js', language: 'javascript', content: `${HEALTH_JS}\n// my notes` },
+      ],
+      runCount: 0,
+    });
+
+    expect(files).toHaveLength(1);
+    expect(files[0].path).toBe('main.js');
+    expect(files[0].content).toContain('// my notes');
+    expect(persist).toBe(false);
+    expect(stalePaths).toEqual([]);
+    expect(unsupportedSkeleton).toBeNull();
+  });
+
+  it('RON-265 keeps every stored file when one of them is learner work', () => {
+    const { files, stalePaths } = resolveWorkspaceSeed({
+      lesson: LESSON,
+      course: DOCKER_COURSE,
+      version: { content_md: DOCKER_LESSON_MD },
+      rows: [
+        { id: 'f1', path: 'main.js', language: 'javascript', content: HEALTH_JS },
+        { id: 'f2', path: 'util.js', language: 'javascript', content: 'export const x = 1;\n' },
+      ],
+      runCount: 0,
+    });
+
+    expect(files.map((f) => f.path)).toEqual(['main.js', 'util.js']);
+    expect(stalePaths).toEqual([]);
+  });
+});
+
+// MUST-2 — reset has to drop the stored rows itself: the unsupported plan seeds nothing, so nothing
+// would overwrite the reference seed and a reload would bring it back.
+describe('RON-265 workspace reset', () => {
+  it('RON-265 reset drops every stored file when the skeleton cannot run', () => {
+    const plan = planReset({
+      lesson: { ...LESSON, content_md: DOCKER_LESSON_MD },
+      course: DOCKER_COURSE,
+      storedPaths: ['main.js', 'util.js'],
+    });
+
+    expect(plan.files).toEqual([]);
+    expect(plan.persist).toBe(false);
+    expect(plan.unsupportedSkeleton.info).toBe('dockerfile');
+    expect(plan.deletePaths).toEqual(['main.js', 'util.js']);
+  });
+
+  it('RON-265 reset keeps stored files when the skeleton can run', () => {
+    const plan = planReset({
+      lesson: { ...LESSON, content_md: LESSON_MD },
+      course: COURSE,
+      storedPaths: ['main.js'],
+    });
+
+    expect(plan.files.map((f) => f.path)).toEqual(['main.sh']);
+    expect(plan.persist).toBe(true);
+    expect(plan.unsupportedSkeleton).toBeNull();
+    expect(plan.deletePaths).toEqual([]);
+  });
+});
+
+describe('RON-265 stale seed through the adapter', () => {
+  it('RON-265 soft-deletes the reference seed the load effect replaces', async () => {
+    const course = await repo.createCourse({ title: 'Docker cơ bản', lessons: [{ title: 'L1' }] });
+    const lesson = course.lessons[0];
+    await repo.saveWorkspaceFile({
+      lessonId: lesson.id,
+      path: 'main.js',
+      language: 'javascript',
+      content: HEALTH_JS,
+    });
+    const version = await repo.addLessonVersion(lesson.id, { content_md: DOCKER_LESSON_MD });
+
+    const { files, stalePaths, unsupportedSkeleton } = resolveWorkspaceSeed({
+      lesson,
+      course,
+      version,
+      rows: await repo.listWorkspaceFiles(lesson.id),
+      runCount: 0,
+    });
+
+    expect(unsupportedSkeleton.info).toBe('dockerfile');
+    expect(stalePaths).toEqual(['main.js']);
+
+    // Same writes the load effect performs: seed (nothing here), then drop the stale rows.
+    for (const file of files) {
+      await repo.saveWorkspaceFile({
+        courseId: course.id,
+        lessonId: lesson.id,
+        path: file.path,
+        language: file.language,
+        content: file.content,
+      });
+    }
+    for (const path of stalePaths) await repo.deleteWorkspaceFile({ lessonId: lesson.id, path });
+
+    expect(await repo.listWorkspaceFiles(lesson.id)).toEqual([]);
   });
 });

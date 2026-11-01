@@ -84,7 +84,7 @@ function blockMatches(info, language) {
   return normalised === language;
 }
 
-const TODO_MARKER = /\btodo\b/i;
+const TODO_MARKER = /\bTODO\b/;
 
 /**
  * A TODO fence is the exercise skeleton; a reference file or a self-check block next to it is not.
@@ -94,6 +94,33 @@ const TODO_MARKER = /\btodo\b/i;
  */
 function isTodoSkeleton(block) {
   return TODO_MARKER.test(block.code);
+}
+
+/**
+ * @param {Array<{ info: string, code: string }>} candidates
+ * @param {string|null} lang
+ */
+function chooseSkeleton(candidates, lang) {
+  const todos = candidates.filter(isTodoSkeleton);
+  return (
+    todos.find((b) => blockMatches(b.info, lang)) ||
+    todos[0] ||
+    candidates.find((b) => blockMatches(b.info, lang)) ||
+    (!lang ? candidates[0] : null)
+  );
+}
+
+/**
+ * The fences the exercise section offers, falling back to the whole lesson.
+ * @param {string} markdown
+ * @param {Array<{ start: number, end: number }>} blocks
+ */
+function exerciseCandidates(markdown, blocks) {
+  const section = findExerciseSection(markdown);
+  const pool = section
+    ? blocks.filter((b) => b.start >= section.start && b.end <= section.end)
+    : blocks;
+  return pool.length ? pool : blocks;
 }
 
 /**
@@ -107,18 +134,7 @@ export function extractSkeleton(markdown, { language = null, course = null } = {
   const blocks = extractFencedBlocks(markdown);
   if (!blocks.length) return null;
 
-  const section = findExerciseSection(markdown);
-  const pool = section
-    ? blocks.filter((b) => b.start >= section.start && b.end <= section.end)
-    : blocks;
-
-  const candidates = pool.length ? pool : blocks;
-  const todos = candidates.filter(isTodoSkeleton);
-  const chosen =
-    todos.find((b) => blockMatches(b.info, lang)) ||
-    todos[0] ||
-    candidates.find((b) => blockMatches(b.info, lang)) ||
-    (!lang ? candidates[0] : null);
+  const chosen = chooseSkeleton(exerciseCandidates(markdown, blocks), lang);
   if (!chosen) return null;
   const normalised = normalizeLanguage(chosen.info);
   if (!normalised && chosen.info) return { content: chosen.code, language: null, unsupported: chosen.info };
@@ -171,6 +187,54 @@ export function seedFiles(lesson, course = null, opts = {}) {
 }
 
 /**
+ * What a reset writes and which stored files it must soft-delete.
+ *
+ * When the exercise cannot be seeded at all, a reset drops every stored file: otherwise the row an
+ * earlier build wrote (the reference fence in `main.js`) comes straight back on the next load.
+ *
+ * @param {{ lesson?: object|null, course?: object|null, storedPaths?: string[] }} [input]
+ * @returns {{
+ *   files: SeedFile[],
+ *   persist: boolean,
+ *   unsupportedSkeleton: { info: string, content: string }|null,
+ *   deletePaths: string[],
+ * }}
+ */
+export function planReset({ lesson = null, course = null, storedPaths = [] } = {}) {
+  const { files, unsupportedSkeleton } = planSeed(lesson, course);
+  const persist = !unsupportedSkeleton && files.some((f) => !isBlank(f.content));
+  return {
+    files,
+    persist,
+    unsupportedSkeleton,
+    deletePaths: unsupportedSkeleton ? [...new Set(storedPaths)] : [],
+  };
+}
+
+/**
+ * True when every stored file is a verbatim copy of a lesson fence that is not the exercise skeleton
+ * — the reference or self-check block an earlier build seeded. Any difference is a learner edit and
+ * keeps the file untouched.
+ * @param {SeedFile[]} stored
+ * @param {string} markdown
+ * @param {string|null} language
+ */
+function isStaleReferenceSeed(stored, markdown, language) {
+  if (!stored.length) return false;
+  const blocks = extractFencedBlocks(markdown);
+  if (!blocks.length) return false;
+  const chosen = chooseSkeleton(exerciseCandidates(markdown, blocks), language);
+  const references = new Set(
+    blocks
+      .filter((b) => b !== chosen)
+      .map((b) => b.code.trim())
+      .filter(Boolean)
+  );
+  if (!references.size) return false;
+  return stored.every((f) => references.has(String(f.content ?? '').trim()));
+}
+
+/**
  * Normalise stored repo rows into `{ path, content, language }`. Soft-deleted rows never reach
  * here — the adapter filters them out (see `repo.deleteWorkspaceFile`).
  * @param {Array<object>} rows
@@ -204,13 +268,17 @@ function isBlank(content) {
  * an earlier build, so the rows are overwritten with the skeleton instead of trapping the learner
  * on an empty editor.
  *
+ * A stored row that is a verbatim copy of a non-skeleton fence is the same kind of stale seed: an
+ * earlier build seeded the reference block it found first, so it is re-seeded too. A learner who
+ * changed even one character keeps their file.
+ *
  * `persist` is false when the seed has no skeleton: keeping the empty file in memory only lets a
  * later lesson version still seed it.
  *
- * `stalePaths` lists the blank stored rows the re-seed does not replace — an earlier build guessed
- * the entry extension from the course (`main.js`), while the skeleton fence resolves to another one
- * (`main.sh`). The caller soft-deletes them, so the learner does not get a stray empty file next to
- * the skeleton. It is always empty unless a re-seed actually happens.
+ * `stalePaths` lists the stored rows the re-seed does not replace — an earlier build guessed the
+ * entry extension from the course (`main.js`), while the skeleton fence resolves to another one
+ * (`main.sh`), or it wrote the reference fence and the exercise cannot be seeded at all. The caller
+ * soft-deletes them, so the learner does not get a stray file next to the skeleton.
  *
  * `unsupportedSkeleton` is set when the exercise skeleton is in a language no runner executes: no
  * file is seeded or persisted, and the caller shows the text read-only.
@@ -231,15 +299,17 @@ function isBlank(content) {
  */
 export function resolveWorkspaceSeed({ lesson = null, course = null, version = null, rows = [], runCount = 0 } = {}) {
   const stored = filesFromRows(rows);
+  const content_md = version?.content_md || lesson?.content_md || '';
   const untouched = stored.length > 0 && stored.every((f) => isBlank(f.content)) && runCount === 0;
-  if (stored.length && !untouched) {
+  const staleSeed = !untouched && isStaleReferenceSeed(stored, content_md, guessCourseLanguage(course || {}));
+  if (stored.length && !untouched && !staleSeed) {
     return { files: stored, persist: false, stalePaths: [], unsupportedSkeleton: null };
   }
 
-  const content_md = version?.content_md || lesson?.content_md || '';
   const { files, unsupportedSkeleton } = planSeed({ ...(lesson || {}), content_md }, course);
   const persist = !unsupportedSkeleton && files.some((f) => !isBlank(f.content));
   const kept = new Set(files.map((f) => f.path));
-  const stalePaths = persist ? stored.filter((f) => !kept.has(f.path)).map((f) => f.path) : [];
+  const stalePaths =
+    persist || staleSeed ? stored.filter((f) => !kept.has(f.path)).map((f) => f.path) : [];
   return { files, persist, stalePaths, unsupportedSkeleton };
 }

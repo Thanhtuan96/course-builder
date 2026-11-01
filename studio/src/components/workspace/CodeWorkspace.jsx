@@ -34,6 +34,7 @@ import {
 } from '../revision/history.js';
 import {
   planSeed,
+  planReset,
   resolveWorkspaceSeed,
 } from '../../lib/runner/skeleton.js';
 import { guessCourseLanguage, getLanguage, languageForPath, normalizeLanguage } from '../../lib/runner/languages.js';
@@ -187,15 +188,15 @@ export function CodeWorkspace({ lesson, course }) {
             /* keep the seed in memory even if storage is unavailable */
           }
         }
-        // RON-196: the empty seed an earlier build stored may use another entry name (main.js while
-        // the skeleton fence resolves to main.sh) — soft-delete it so no stray blank file survives.
-        for (const path of stalePaths) {
-          try {
-            await deleteWorkspaceFile({ lessonId: lesson.id, path });
-            idByPathRef.current.delete(path);
-          } catch {
-            /* the skeleton is already in place; a leftover blank row is harmless */
-          }
+      }
+      // The rows an earlier build seeded under another entry name, or the reference fence it picked
+      // instead of the exercise, are dropped even when the new plan seeds nothing.
+      for (const path of stalePaths) {
+        try {
+          await deleteWorkspaceFile({ lessonId: lesson.id, path });
+          idByPathRef.current.delete(path);
+        } catch {
+          /* the new seed is already in place; a leftover row is harmless */
         }
       }
       if (!alive) return;
@@ -460,16 +461,26 @@ export function CodeWorkspace({ lesson, course }) {
 
   const resetToSkeleton = useCallback(async () => {
     if (!window.confirm(t('workspace.resetConfirm'))) return;
-    const { files: seed, unsupportedSkeleton: unsupported } = planSeed(
-      { ...lesson, content_md: markdownRef.current || lesson?.content_md || '' },
-      course
-    );
-    setUnsupportedSkeleton(unsupported);
-    setFiles(seed);
-    setActivePath(seed[0]?.path || null);
+    const plan = planReset({
+      lesson: { ...lesson, content_md: markdownRef.current || lesson?.content_md || '' },
+      course,
+      storedPaths: [...idByPathRef.current.keys()],
+    });
+    for (const path of plan.deletePaths) {
+      dirtyRef.current.delete(path);
+      try {
+        await deleteWorkspaceFile({ lessonId: lesson.id, path });
+        idByPathRef.current.delete(path);
+      } catch {
+        /* keep going: the notice still tells the learner where to run the exercise */
+      }
+    }
+    setUnsupportedSkeleton(plan.unsupportedSkeleton);
+    setFiles(plan.files);
+    setActivePath(plan.files[0]?.path || null);
     // RON-196: an empty seed is never persisted, so a later lesson version can still fill it in.
-    if (!seed.some((file) => String(file.content ?? '').trim())) return;
-    for (const file of seed) {
+    if (!plan.persist) return;
+    for (const file of plan.files) {
       try {
         const row = await saveWorkspaceFile({ courseId, lessonId: lesson.id, path: file.path, language: file.language, content: file.content });
         idByPathRef.current.set(file.path, row.id);

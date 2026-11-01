@@ -411,3 +411,28 @@ function double(n: number): number {
     expect(skeleton.content).toContain('function double');
   });
 });
+
+describe('RON-265 TODO marker is uppercase', () => {
+  it('RON-265 does not take a lowercase todo in a reference file as the skeleton', () => {
+    const lesson = `# Todo app
+
+## Exercise
+
+Start from this reference renderer:
+
+\`\`\`python
+# render the todo list
+print("todo")
+\`\`\`
+
+Complete the skeleton:
+
+\`\`\`javascript
+function render(items) {}
+\`\`\`
+`;
+    const skeleton = extractSkeleton(lesson, { language: 'javascript' });
+    expect(skeleton.language).toBe('javascript');
+    expect(skeleton.content).toBe('function render(items) {}');
+  });
+});
