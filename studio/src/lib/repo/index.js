@@ -9,7 +9,6 @@ import { createIdbAdapter } from './idb-adapter.js';
 import { review as srsReview, newCardState } from '../srs.js';
 import { dayKey } from '../course.js';
 import { normalizeLanguage } from '../i18n/languages.js';
-import { normalizeExerciseSpec, validateExerciseSpec } from '../exercises/spec.js';
 import {
   buildEventRow,
   buildRevisionLink,
@@ -587,7 +586,9 @@ function parseJson(text, fallback) {
 function decodeExercise(row) {
   if (!row) return null;
   const { spec_json: specJson, ...rest } = row;
-  return { ...rest, spec: normalizeExerciseSpec(specJson) };
+  // Plain JSON only: this module is on the CLI's import graph, where the Studio-only zod dependency
+  // is absent. Widgets normalise the spec through `lib/exercises/spec.js` when they render it.
+  return { ...rest, spec: parseJson(specJson, null) };
 }
 
 function decodeExerciseAttempt(row) {
@@ -618,6 +619,9 @@ export async function createExercise({
   if (!courseId) throw new Error('createExercise: courseId is required');
   if (!lessonId) throw new Error('createExercise: lessonId is required');
   const raw = typeof spec === 'string' ? JSON.parse(spec) : spec;
+  // Loaded lazily: zod is a Studio-only dependency, and a static import here would break the
+  // published CLI (`course-professor import`) with ERR_MODULE_NOT_FOUND.
+  const { validateExerciseSpec } = await import('../exercises/spec.js');
   const clean = validateExerciseSpec({ ...raw, type });
   const row = stampCreate({
     course_id: courseId,
