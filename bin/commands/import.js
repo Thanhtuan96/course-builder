@@ -458,6 +458,31 @@ export function formatLogNote(log) {
 }
 
 /**
+ * Import one course from disk into Studio storage. Shared by `import` and `install` so both write
+ * identical rows and stay idempotent through the same stable external ids.
+ * @param {string} cwd
+ * @param {string} slug
+ * @param {{ store?: object }} [opts] reuse an open store instead of opening the Studio DB
+ * @returns {Promise<{ course: object, plan: object, stats: object }|null>} null when the course is absent
+ */
+export async function importCourse(cwd, slug, { store = null } = {}) {
+  const found = findCourses(cwd).find((c) => c.slug === slug);
+  if (!found) return null;
+
+  const ownStore = !store;
+  // `studio-store` (→ `web/studio-db.js`) imports `node:sqlite`; callers check the Node floor first.
+  const activeStore = store || (await (await import('../studio-store.js')).installStudioStore());
+  try {
+    const course = readCourse(found.dir, { slug: found.slug });
+    const plan = planCourseImport(course);
+    const stats = await applyCourseImport(plan, activeStore);
+    return { course, plan, stats };
+  } finally {
+    if (ownStore && activeStore.close) activeStore.close();
+  }
+}
+
+/**
  * @param {{ args?: string[], cwd?: string, chalk?: object, style?: Function, store?: object }} [ctx]
  */
 export async function run(ctx = {}) {

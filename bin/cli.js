@@ -192,6 +192,7 @@ switch (command) {
 
   case 'install': {
     const isSkill = args.includes('--skill');
+    const noImport = args.includes('--no-import');
     const itemName = args.slice(1).find((a) => !a.startsWith('--'));
     if (!itemName) {
       console.error(style('error', 'Usage: course-professor install <name>'));
@@ -206,7 +207,7 @@ switch (command) {
       const scope = await resolveScope(itemName, 'skill', { isGlobal, isLocal });
       await installSkill(itemName, scope, { force: isForce, index });
     } else {
-      await installCourse(itemName, { force: isForce, index });
+      await installCourse(itemName, { force: isForce, index, importToStudio: !noImport });
     }
     break;
   }
