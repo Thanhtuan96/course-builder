@@ -41,5 +41,11 @@
   "moveDown": "Move down",
   "addLesson": "Add lesson",
   "start": "Start course",
-  "starting": "Starting…"
+  "starting": "Starting…",
+  "bokiTemplate": {
+    "title": "Boki 3級 — 仕訳 cơ bản / Journal entry basics",
+    "description": "Three written lessons and 14 journal-entry exercises from the Japanese Bookkeeping 3rd grade (簿記3級) syllabus. Fill the debit and credit rows, press Check, and get instant feedback plus hints — no API key needed.",
+    "cta": "Start the Boki course",
+    "seeding": "Setting up your course…"
+  }
 }

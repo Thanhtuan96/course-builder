@@ -18,6 +18,9 @@ const NEW_INDEXES = ['external_id'];
 const NEW_INDEX_TABLES = ['courses', 'lessons', 'lesson_versions', 'cards', 'capstones', 'capstone_submissions'];
 // Phase 5 added three tables; a genuine pre-05 database must not contain them.
 const BETA_TABLES = ['learning_events', 'revision_links', 'beta_profile'];
+// RON-266 added two more; a pre-0006 database must not contain them either.
+const EXERCISE_TABLES = ['exercises', 'exercise_attempts'];
+const SKIP_TABLES = [...BETA_TABLES, ...EXERCISE_TABLES];
 
 let counter = 0;
 const uniqueDb = () => `upgrade-${Date.now()}-${++counter}`;
@@ -29,7 +32,7 @@ function openOldV2(dbName) {
     req.onupgradeneeded = () => {
       const db = req.result;
       for (const table of TABLE_NAMES) {
-        if (BETA_TABLES.includes(table)) continue;
+        if (SKIP_TABLES.includes(table)) continue;
         const spec = tableSpec(table);
         const os = db.createObjectStore(table, { keyPath: spec.id });
         for (const field of spec.indexes) {
@@ -50,7 +53,7 @@ function openOldV4(dbName) {
     req.onupgradeneeded = () => {
       const db = req.result;
       for (const table of TABLE_NAMES) {
-        if (BETA_TABLES.includes(table)) continue;
+        if (SKIP_TABLES.includes(table)) continue;
         const spec = tableSpec(table);
         const os = db.createObjectStore(table, { keyPath: spec.id });
         for (const field of spec.indexes) os.createIndex(field, field, { unique: false });
@@ -93,11 +96,11 @@ function seedRows(db, rows) {
 }
 
 describe('IndexedDB schema upgrades', () => {
-  it('is version 5 (Phase 5 beta-loop tables)', () => {
-    expect(DB_VERSION).toBe(5);
+  it('is version 6 (RON-266 interactive-exercise tables)', () => {
+    expect(DB_VERSION).toBe(6);
   });
 
-  it('upgrades a v2 database to v5: backfills indexes, preserves rows, creates beta stores', async () => {
+  it('upgrades a v2 database to v6: backfills indexes, preserves rows, creates beta and exercise stores', async () => {
     const dbName = uniqueDb();
 
     const old = await openOldV2(dbName);
@@ -105,6 +108,7 @@ describe('IndexedDB schema upgrades', () => {
     const oldTx = old.transaction('courses', 'readonly');
     expect([...oldTx.objectStore('courses').indexNames]).not.toContain('external_id');
     expect(old.objectStoreNames.contains('learning_events')).toBe(false);
+    for (const table of EXERCISE_TABLES) expect(old.objectStoreNames.contains(table)).toBe(false);
     await seedRows(old, {
       courses: [{ id: 'c1', title: 'Legacy course', owner_id: 'local' }],
       lessons: [{ id: 'l1', course_id: 'c1', title: 'Legacy lesson' }],
@@ -126,11 +130,13 @@ describe('IndexedDB schema upgrades', () => {
     expect(found).toHaveLength(1);
     expect(found[0].id).toBe('c2');
 
-    // v2 upgrades straight through v5, so the beta stores exist and export no longer throws.
+    // v2 upgrades straight through v6, so the beta and exercise stores exist and export no longer throws.
     expect((await adapter.exportAll()).tables.learning_events).toEqual([]);
+    expect((await adapter.exportAll()).tables.exercises).toEqual([]);
+    for (const table of EXERCISE_TABLES) expect(await indexNames(dbName, table)).not.toEqual([]);
   });
 
-  it('upgrades a real v4 database to v5 and creates the three beta stores', async () => {
+  it('upgrades a real v4 database to v6 and creates the beta and exercise stores', async () => {
     const dbName = uniqueDb();
 
     const old = await openOldV4(dbName);
@@ -139,6 +145,7 @@ describe('IndexedDB schema upgrades', () => {
     expect(old.objectStoreNames.contains('learning_events')).toBe(false);
     expect(old.objectStoreNames.contains('revision_links')).toBe(false);
     expect(old.objectStoreNames.contains('beta_profile')).toBe(false);
+    for (const table of EXERCISE_TABLES) expect(old.objectStoreNames.contains(table)).toBe(false);
     await seedRows(old, {
       courses: [{ id: 'c1', title: 'V4 course', owner_id: 'local', external_id: 'cli:old' }],
       capstone_submissions: [
@@ -181,6 +188,31 @@ describe('IndexedDB schema upgrades', () => {
     expect(events[0].kind).toBe('quiz_completed');
     expect((await adapter.get('beta_profile', 'local')).participant_id).toBe('participant-1');
     expect(await adapter.list('revision_links', { where: { link_kind: 'explicit' } })).toHaveLength(1);
+
+    await adapter.put('exercises', {
+      id: 'ex-1',
+      course_id: 'c1',
+      lesson_id: 'l1',
+      position: 1,
+      type: 'journal-entry',
+      spec_json: '{}',
+    });
+    await adapter.put('exercise_attempts', {
+      id: 'ea-1',
+      course_id: 'c1',
+      lesson_id: 'l1',
+      exercise_id: 'ex-1',
+      rows_json: '[]',
+      result_json: '{}',
+      correct: 1,
+    });
+    expect(await adapter.list('exercises', { where: { lesson_id: 'l1' } })).toHaveLength(1);
+    expect(await indexNames(dbName, 'exercises')).toEqual(
+      expect.arrayContaining(['course_id', 'lesson_id', 'external_id'])
+    );
+    expect(await indexNames(dbName, 'exercise_attempts')).toEqual(
+      expect.arrayContaining(['exercise_id', 'lesson_id'])
+    );
 
     const dump = await adapter.exportAll();
     expect(Array.isArray(dump.tables.learning_events)).toBe(true);

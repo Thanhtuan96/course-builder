@@ -1,0 +1,55 @@
+{
+  "surface": {
+    "title": "Exercises",
+    "count": "{n} exercise|{n} exercises",
+    "description": "Fill in each entry below, then press Check. Grading is instant and deterministic — no model is called, and nothing here completes the exercise for you.",
+    "empty": "This lesson has no interactive exercises yet."
+  },
+  "journal": {
+    "badge": "Journal entry (仕訳)",
+    "debit": "Debit (借方)",
+    "credit": "Credit (貸方)",
+    "account": "Account",
+    "accountPlaceholder": "Choose an account",
+    "amount": "Amount (yen)",
+    "amountPlaceholder": "0",
+    "addRow": "Add row",
+    "removeRow": "Remove row {n}",
+    "check": "Check",
+    "checking": "Checking…",
+    "reset": "Clear entry",
+    "hint": "Hint",
+    "hintNext": "Show hint {n} of {total}",
+    "hintExhausted": "No more hints",
+    "hintsTitle": "Hints",
+    "correct": "Correct — the entry balances and every account and amount is right.",
+    "incorrect": "Not quite. Nothing here tells you the answer — read the notes and try again.",
+    "invalid": "Fix the highlighted rows before checking.",
+    "saveFailed": "The attempt could not be saved. Your entry is still here — try Check again.",
+    "totals": "Your totals: debit {debit} / credit {credit}",
+    "issue": {
+      "unbalanced": "The debit total and the credit total do not match.",
+      "invalid_amount": "Row {n} on the {side} side needs a positive whole-yen amount.",
+      "missing_account": "Row {n} has an amount but no account.",
+      "unknown_account": "Row {n} uses an account that is not offered here.",
+      "account_not_right": "One account on the {side} side is not right for this transaction.",
+      "amount_wrong": "The amount on row {n} of the {side} side is off.",
+      "wrong_side": "One account is on the wrong side of the entry.",
+      "extra_row": "The {side} side has one row more than this transaction needs.",
+      "needs_more_rows": "The {side} side still needs another row.",
+      "nothing_entered": "The {side} side is still empty."
+    },
+    "side": {
+      "debit": "debit",
+      "credit": "credit"
+    },
+    "history": {
+      "title": "Past attempts",
+      "empty": "No attempts yet.",
+      "entry": "Attempt {n} · {status} · {time}",
+      "correct": "correct",
+      "incorrect": "incorrect"
+    },
+    "row": "Row {n}"
+  }
+}

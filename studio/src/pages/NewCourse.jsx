@@ -17,6 +17,7 @@ import { uiLanguageOptions } from '../lib/i18n/languages.js';
 import { buildSyllabusMessages, syllabusValidator } from '../lib/prompts/course.js';
 import { generateCapstoneForCourse, capstoneCopy } from '../lib/capstone.js';
 import { playwrightTemplateFor, seedPlaywrightTemplate } from '../data/templates/playwright-e2e.js';
+import { seedBokiTemplate } from '../data/templates/boki-journal-3.js';
 import { Card } from '../components/ui/Card.jsx';
 import { Button } from '../components/ui/Button.jsx';
 import { Input, Textarea, Select } from '../components/ui/Input.jsx';
@@ -50,6 +51,8 @@ export function NewCourse() {
   const [templateChecked, setTemplateChecked] = useState({});
   const [templateSeeding, setTemplateSeeding] = useState(false);
   const [templateError, setTemplateError] = useState(null);
+  const [bokiSeeding, setBokiSeeding] = useState(false);
+  const [bokiError, setBokiError] = useState(null);
 
   const effectiveLanguage = useDifferentLanguage ? language : settings.language;
   const template = playwrightTemplateFor(settings.language);
@@ -160,6 +163,21 @@ export function NewCourse() {
     }
   };
 
+  // RON-266: the Boki template is also provider-free — one click, no checklist, no API key.
+  const startBoki = async () => {
+    if (bokiSeeding) return;
+    setBokiSeeding(true);
+    setBokiError(null);
+    try {
+      const result = await seedBokiTemplate({ language: effectiveLanguage });
+      navigate(`/course/${result.course.id}`);
+    } catch (err) {
+      setBokiError(err);
+    } finally {
+      setBokiSeeding(false);
+    }
+  };
+
   const errorObj = error || gen.error;
   const busy = gen.status === 'streaming';
   return (
@@ -206,6 +224,20 @@ export function NewCourse() {
                 : templateReady
                   ? t('playwrightTemplate.card.cta')
                   : t('playwrightTemplate.card.notReady')}
+            </Button>
+          </Card>
+
+          <Card className="space-y-3">
+            <div>
+              <h2 className="text-sm font-semibold">{t('newCourse.bokiTemplate.title')}</h2>
+              <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
+                {t('newCourse.bokiTemplate.description')}
+              </p>
+            </div>
+            <ErrorNotice error={bokiError} onDismiss={() => setBokiError(null)} />
+            <Button onClick={startBoki} disabled={bokiSeeding}>
+              {bokiSeeding && <Spinner />}
+              {bokiSeeding ? t('newCourse.bokiTemplate.seeding') : t('newCourse.bokiTemplate.cta')}
             </Button>
           </Card>
 

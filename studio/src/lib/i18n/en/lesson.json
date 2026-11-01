@@ -6,7 +6,8 @@
   "tabs": {
     "practice": "Practice",
     "tutor": "Tutor",
-    "workspace": "Workspace"
+    "workspace": "Workspace",
+    "exercise": "Exercises"
   },
   "status": {
     "todo": "Not started",

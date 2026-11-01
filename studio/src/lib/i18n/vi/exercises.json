@@ -1,0 +1,55 @@
+{
+  "surface": {
+    "title": "Bài tập",
+    "count": "{n} bài tập",
+    "description": "Điền từng bút toán bên dưới rồi bấm Kiểm tra. Việc chấm là tức thời và cố định — không gọi mô hình nào, và không có gì làm bài thay bạn.",
+    "empty": "Bài học này chưa có bài tập tương tác."
+  },
+  "journal": {
+    "badge": "Bút toán (仕訳)",
+    "debit": "Nợ (借方)",
+    "credit": "Có (貸方)",
+    "account": "Tài khoản",
+    "accountPlaceholder": "Chọn tài khoản",
+    "amount": "Số tiền (yên)",
+    "amountPlaceholder": "0",
+    "addRow": "Thêm dòng",
+    "removeRow": "Xoá dòng {n}",
+    "check": "Kiểm tra",
+    "checking": "Đang kiểm tra…",
+    "reset": "Xoá bài làm",
+    "hint": "Gợi ý",
+    "hintNext": "Xem gợi ý {n}/{total}",
+    "hintExhausted": "Hết gợi ý",
+    "hintsTitle": "Gợi ý",
+    "correct": "Đúng — bút toán cân và mọi tài khoản, số tiền đều chính xác.",
+    "incorrect": "Chưa đúng. Không có chỗ nào cho bạn đáp án — hãy đọc ghi chú và thử lại.",
+    "invalid": "Sửa các dòng được đánh dấu trước khi kiểm tra.",
+    "saveFailed": "Không lưu được lần làm này. Bài làm vẫn còn đó — hãy bấm Kiểm tra lại.",
+    "totals": "Tổng của bạn: Nợ {debit} / Có {credit}",
+    "issue": {
+      "unbalanced": "Tổng bên Nợ và tổng bên Có không khớp.",
+      "invalid_amount": "Dòng {n} bên {side} cần số tiền là số nguyên dương (yên).",
+      "missing_account": "Dòng {n} có số tiền nhưng chưa chọn tài khoản.",
+      "unknown_account": "Dòng {n} dùng tài khoản không có trong danh sách này.",
+      "account_not_right": "Một tài khoản ở bên {side} chưa đúng với giao dịch này.",
+      "amount_wrong": "Số tiền ở dòng {n} bên {side} chưa đúng.",
+      "wrong_side": "Một tài khoản đang nằm sai bên của bút toán.",
+      "extra_row": "Bên {side} đang thừa một dòng so với giao dịch này.",
+      "needs_more_rows": "Bên {side} vẫn cần thêm một dòng.",
+      "nothing_entered": "Bên {side} vẫn đang trống."
+    },
+    "side": {
+      "debit": "Nợ",
+      "credit": "Có"
+    },
+    "history": {
+      "title": "Các lần làm trước",
+      "empty": "Chưa có lần làm nào.",
+      "entry": "Lần {n} · {status} · {time}",
+      "correct": "đúng",
+      "incorrect": "chưa đúng"
+    },
+    "row": "Dòng {n}"
+  }
+}

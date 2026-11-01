@@ -358,6 +358,7 @@ export async function getCourse(id) {
 /**
  * @param {object} input
  * @param {string} input.title
+ * @param {string|null} [input.externalId] stable id for a bundled template course
  * @param {Array<object|string>} [input.lessons]
  * @returns {Promise<object & { lessons: object[] }>}
  */
@@ -375,6 +376,7 @@ export async function createCourse(input = {}) {
       topics_json: JSON.stringify(input.topics || []),
       source: input.source || 'ai',
       status: input.status || 'active',
+      external_id: input.externalId || null,
     },
     now
   );
@@ -434,7 +436,7 @@ export async function deleteCourse(id) {
   const course = await adapter.get('courses', id);
   if (!course) return null;
   await adapter.softDelete('courses', id);
-  for (const table of ['lessons', 'cards', 'notes']) {
+  for (const table of ['lessons', 'cards', 'notes', 'exercises', 'exercise_attempts']) {
     const rows = await adapter.list(table, { where: { course_id: id } });
     for (const row of rows) await adapter.softDelete(table, row.id);
   }
@@ -568,6 +570,134 @@ export async function listQuizAttempts(lessonId) {
     where: { lesson_id: lessonId },
     orderBy: { field: 'created_at', dir: 'asc' },
   });
+}
+
+/* ------------------------------------------------------------------ exercises */
+
+function parseJson(text, fallback) {
+  try {
+    const value = JSON.parse(text);
+    return value === null || value === undefined ? fallback : value;
+  } catch {
+    return fallback;
+  }
+}
+
+function decodeExercise(row) {
+  if (!row) return null;
+  const { spec_json: specJson, ...rest } = row;
+  // Plain JSON only: this module is on the CLI's import graph, where the Studio-only zod dependency
+  // is absent. Widgets normalise the spec through `lib/exercises/spec.js` when they render it.
+  return { ...rest, spec: parseJson(specJson, null) };
+}
+
+function decodeExerciseAttempt(row) {
+  if (!row) return null;
+  const { rows_json: rowsJson, result_json: resultJson, ...rest } = row;
+  return {
+    ...rest,
+    rows: parseJson(rowsJson, []),
+    result: parseJson(resultJson, null),
+    correct: Boolean(row.correct),
+  };
+}
+
+/**
+ * Persist one authored exercise. The spec is validated first, so a broken or answer-leaking spec
+ * never reaches storage.
+ * @param {{ courseId: string, lessonId: string, position?: number, type?: string, spec: object|string, externalId?: string|null }} input
+ * @returns {Promise<object>} the decoded row (with `spec`)
+ */
+export async function createExercise({
+  courseId,
+  lessonId,
+  position = 1,
+  type = 'journal-entry',
+  spec,
+  externalId = null,
+} = {}) {
+  if (!courseId) throw new Error('createExercise: courseId is required');
+  if (!lessonId) throw new Error('createExercise: lessonId is required');
+  const raw = typeof spec === 'string' ? JSON.parse(spec) : spec;
+  // Loaded lazily: zod is a Studio-only dependency, and a static import here would break the
+  // published CLI (`course-professor import`) with ERR_MODULE_NOT_FOUND.
+  const { validateExerciseSpec } = await import('../exercises/spec.js');
+  const clean = validateExerciseSpec({ ...raw, type });
+  const row = stampCreate({
+    course_id: courseId,
+    lesson_id: lessonId,
+    position,
+    type: clean.type,
+    spec_json: JSON.stringify(clean),
+    external_id: externalId,
+  });
+  await adapter.put('exercises', row);
+  emit('exercises', row.id, 'create');
+  return decodeExercise(row);
+}
+
+/**
+ * @param {string} lessonId
+ * @returns {Promise<object[]>} decoded exercises in `position` order
+ */
+export async function listLessonExercises(lessonId) {
+  const rows = await adapter.list('exercises', { where: { lesson_id: lessonId } });
+  return rows.map(decodeExercise).sort((a, b) => a.position - b.position);
+}
+
+/**
+ * @param {string} courseId
+ * @returns {Promise<Record<string, object[]>>} decoded exercises grouped by `lesson_id`, ordered
+ */
+export async function listCourseExercises(courseId) {
+  const rows = await adapter.list('exercises', { where: { course_id: courseId } });
+  const grouped = {};
+  for (const row of rows.map(decodeExercise)) {
+    (grouped[row.lesson_id] ||= []).push(row);
+  }
+  for (const list of Object.values(grouped)) list.sort((a, b) => a.position - b.position);
+  return grouped;
+}
+
+/**
+ * Append one attempt. Rows and the grading result are stored verbatim so the learner can review
+ * past attempts after a reload; `correct` is stored as 0/1 and decoded to a boolean on read.
+ * @param {string} exerciseId
+ * @param {{ courseId?: string|null, lessonId?: string|null, rows?: any, result?: object|null }} data
+ * @returns {Promise<object>}
+ */
+export async function saveExerciseAttempt(
+  exerciseId,
+  { courseId = null, lessonId = null, rows = [], result = null } = {}
+) {
+  const exercise = await adapter.get('exercises', exerciseId);
+  if (!exercise || exercise.deleted_at) throw new Error(`Exercise not found: ${exerciseId}`);
+  const course = courseId ?? exercise.course_id ?? null;
+  const lesson = lessonId ?? exercise.lesson_id ?? null;
+  const row = stampCreate({
+    course_id: course,
+    lesson_id: lesson,
+    exercise_id: exerciseId,
+    rows_json: JSON.stringify(rows || []),
+    result_json: JSON.stringify(result || null),
+    correct: result?.correct ? 1 : 0,
+  });
+  await adapter.put('exercise_attempts', row);
+  await logActivity('exercise', lesson);
+  emit('exercise_attempts', row.id, 'create');
+  return decodeExerciseAttempt(row);
+}
+
+/**
+ * @param {string} exerciseId
+ * @returns {Promise<object[]>} decoded attempts, oldest first
+ */
+export async function listExerciseAttempts(exerciseId) {
+  const rows = await adapter.list('exercise_attempts', {
+    where: { exercise_id: exerciseId },
+    orderBy: { field: 'created_at', dir: 'asc' },
+  });
+  return rows.map(decodeExerciseAttempt);
 }
 
 /**
