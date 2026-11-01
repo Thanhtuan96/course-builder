@@ -41,5 +41,11 @@
   "moveDown": "Di chuyển xuống",
   "addLesson": "Thêm bài học",
   "start": "Bắt đầu khoá học",
-  "starting": "Đang bắt đầu…"
+  "starting": "Đang bắt đầu…",
+  "bokiTemplate": {
+    "title": "Boki 3級 — 仕訳 cơ bản / Nhập môn bút toán",
+    "description": "Ba bài học và 14 bài tập bút toán theo chương trình Kế toán Nhật Bản cấp 3 (簿記3級). Điền bên Nợ và bên Có, bấm Kiểm tra để nhận phản hồi tức thì và gợi ý — không cần API key.",
+    "cta": "Bắt đầu khoá Boki",
+    "seeding": "Đang tạo khoá học…"
+  }
 }

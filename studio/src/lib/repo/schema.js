@@ -75,6 +75,16 @@ export const TABLES = {
     fields: ['id', 'owner_id', 'lesson_id', 'file_id', 'runner', 'language', 'stdout', 'stderr', 'exit_code', 'checks_json', 'duration_ms', 'created_at', 'updated_at', 'deleted_at'],
     indexes: ['lesson_id'],
   },
+  exercises: {
+    id: 'id',
+    fields: ['id', 'owner_id', 'course_id', 'lesson_id', 'position', 'type', 'spec_json', 'external_id', 'created_at', 'updated_at', 'deleted_at'],
+    indexes: ['course_id', 'lesson_id', 'external_id'],
+  },
+  exercise_attempts: {
+    id: 'id',
+    fields: ['id', 'owner_id', 'course_id', 'lesson_id', 'exercise_id', 'rows_json', 'result_json', 'correct', 'created_at', 'updated_at', 'deleted_at'],
+    indexes: ['exercise_id', 'lesson_id', 'course_id'],
+  },
   capstones: {
     id: 'id',
     fields: ['id', 'owner_id', 'course_id', 'kind', 'brief_md', 'rubric_json', 'tests_json', 'hidden_answers_json', 'artifact_json', 'external_id', 'created_at', 'updated_at', 'deleted_at'],
@@ -105,7 +115,7 @@ export const TABLES = {
 export const TABLE_NAMES = Object.keys(TABLES);
 
 /** Highest migration file shipped in `studio/migrations/` (D-12 single constant source). */
-export const LATEST_MIGRATION_VERSION = 5;
+export const LATEST_MIGRATION_VERSION = 6;
 
 export const SCHEMA_VERSION = LATEST_MIGRATION_VERSION;
 

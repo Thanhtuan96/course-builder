@@ -11,10 +11,12 @@ import {
   updateLesson,
   saveReflection,
   logActivity,
+  listLessonExercises,
   onChange,
 } from '../lib/repo/index.js';
 import { capstoneUnlocked } from '../lib/capstone.js';
 import { useT } from '../lib/i18n/index.js';
+import { workspaceModeFor } from '../lib/exercises/placement.js';
 import { Badge } from '../components/ui/Badge.jsx';
 import { Button } from '../components/ui/Button.jsx';
 import { Card } from '../components/ui/Card.jsx';
@@ -23,6 +25,7 @@ import { EmptyState } from '../components/ui/EmptyState.jsx';
 import { LessonContent } from '../components/course/LessonContent.jsx';
 import { LessonPractice } from '../components/practice/LessonPractice.jsx';
 import { TutorPanel } from '../components/tutor/TutorPanel.jsx';
+import { ExerciseSurface } from '../components/exercises/ExerciseSurface.jsx';
 
 // CodeMirror, the language grammars and sql.js are heavy — only load the workspace for a
 // programming course, and only when its tab is opened (brief §10, keeps the main chunk small).
@@ -86,6 +89,7 @@ export function Lesson({ id, lessonId }) {
   const [tab, setTab] = useState('practice');
   const [reflecting, setReflecting] = useState(false);
   const [capstoneActive, setCapstoneActive] = useState(false);
+  const [exercises, setExercises] = useState([]);
 
   useEffect(() => {
     let alive = true;
@@ -104,6 +108,28 @@ export function Lesson({ id, lessonId }) {
   }, [id]);
 
   const lesson = course?.lessons.find((l) => l.id === lessonId) || null;
+
+  useEffect(() => {
+    let alive = true;
+    if (!lesson?.id) {
+      setExercises([]);
+      return () => {
+        alive = false;
+      };
+    }
+    const refresh = () =>
+      listLessonExercises(lesson.id)
+        .then((rows) => alive && setExercises(rows))
+        .catch(() => alive && setExercises([]));
+    refresh();
+    const off = onChange((detail) => {
+      if (detail.table === 'exercises' || detail.table === '*') refresh();
+    });
+    return () => {
+      alive = false;
+      off();
+    };
+  }, [lesson?.id]);
 
   useEffect(() => {
     if (lesson && lesson.status === 'todo') updateLesson(lesson.id, { status: 'active' });
@@ -133,6 +159,8 @@ export function Lesson({ id, lessonId }) {
   if (!course || !lesson) {
     return <EmptyState title={t('lesson.notFound')} action={<Link to={`/course/${id}`}><Button variant="secondary">{t('lesson.backToCourse')}</Button></Link>} />;
   }
+
+  const workspaceMode = workspaceModeFor({ kind: course.kind, exercises });
 
   return (
     <div className="space-y-5">
@@ -168,7 +196,18 @@ export function Lesson({ id, lessonId }) {
           {[
             { id: 'practice', label: t('lesson.tabs.practice') },
             { id: 'tutor', label: t('lesson.tabs.tutor') },
-            ...(course.kind === 'programming' ? [{ id: 'workspace', label: t('lesson.tabs.workspace') }] : []),
+            ...(workspaceMode
+              ? [
+                  {
+                    id: 'workspace',
+                    label: t(
+                      workspaceMode === 'exercise'
+                        ? 'lesson.tabs.exercise'
+                        : 'lesson.tabs.workspace'
+                    ),
+                  },
+                ]
+              : []),
           ].map((item) => (
             <button
               key={item.id}
@@ -188,7 +227,10 @@ export function Lesson({ id, lessonId }) {
 
       {tab === 'practice' && <LessonPractice lesson={lesson} course={course} />}
       {tab === 'tutor' && <TutorPanel lesson={lesson} course={course} capstone={capstoneActive} />}
-      {tab === 'workspace' && course.kind === 'programming' && (
+      {tab === 'workspace' && workspaceMode === 'exercise' && (
+        <ExerciseSurface lesson={lesson} course={course} exercises={exercises} />
+      )}
+      {tab === 'workspace' && workspaceMode === 'code' && (
         <Suspense fallback={<p className="text-sm text-neutral-500">{t('lesson.loadingWorkspace')}</p>}>
           <CodeWorkspace lesson={lesson} course={course} />
         </Suspense>

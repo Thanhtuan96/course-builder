@@ -215,7 +215,7 @@ export function runAdapterContract(makeAdapter) {
       await expect(adapter.list('learning_events', { where: { meta_json: 'x' } })).rejects.toThrow(/not indexed/);
     });
 
-    it('exports the beta tables at schemaVersion 5 and restores every row', async () => {
+    it('exports the beta tables at schemaVersion 6 and restores every row', async () => {
       const before = await adapter.exportAll();
       await adapter.putMany('learning_events', [
         eventRow({ id: 'exp-ev-1' }),
@@ -225,8 +225,8 @@ export function runAdapterContract(makeAdapter) {
       await adapter.put('beta_profile', profileRow({ participant_id: 'participant-export' }));
 
       const dump = await adapter.exportAll();
-      expect(dump.schemaVersion).toBe(5);
-      expect(SCHEMA_VERSION).toBe(5);
+      expect(dump.schemaVersion).toBe(6);
+      expect(SCHEMA_VERSION).toBe(6);
       for (const table of BETA_TABLES) expect(dump.tables).toHaveProperty(table);
       expect(count(dump, 'learning_events')).toBe(count(before, 'learning_events') + 2);
       expect(count(dump, 'revision_links')).toBe(count(before, 'revision_links') + 1);

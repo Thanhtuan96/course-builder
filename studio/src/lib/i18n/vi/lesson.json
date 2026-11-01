@@ -6,7 +6,8 @@
   "tabs": {
     "practice": "Luyện tập",
     "tutor": "Gia sư",
-    "workspace": "Không gian làm việc"
+    "workspace": "Không gian làm việc",
+    "exercise": "Bài tập"
   },
   "status": {
     "todo": "Chưa bắt đầu",

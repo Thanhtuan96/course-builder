@@ -17,10 +17,11 @@ const DB_NAME = 'professor-studio';
 export const IDB_DB_NAME = DB_NAME;
 // v1 = the seed db.js (courses/cards/meta); v2 = the normalized schema; v3 adds the CLI-import
 // `external_id` indexes; v4 adds the capstone tables (Phase 33); v5 adds the beta-loop tables
-// `learning_events`, `revision_links` and `beta_profile` (Phase 5). Bumping the version is what
-// makes `onupgradeneeded` run for browsers that already have an older database — otherwise the new
-// stores/indexes would never be created and `exportAll`/`list` would throw `NotFoundError`.
-export const DB_VERSION = 5;
+// `learning_events`, `revision_links` and `beta_profile` (Phase 5); v6 adds the interactive-exercise
+// tables `exercises` and `exercise_attempts`. Bumping the version is what makes `onupgradeneeded`
+// run for browsers that already have an older database — otherwise the new stores/indexes would
+// never be created and `exportAll`/`list` would throw `NotFoundError`.
+export const DB_VERSION = 6;
 
 /**
  * Bring an open (upgrading) database in line with schema.js: create missing stores AND add any
