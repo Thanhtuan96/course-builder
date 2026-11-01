@@ -18,6 +18,29 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '..', '..');
 const DEFAULT_PORT = '3000';
 
+/** Usage text for `web --help`. */
+export const WEB_USAGE = `
+Usage: course-professor web [port] [options]
+
+Start the Studio bridge server; --production also serves the built Studio app
+from the same port.
+
+Options:
+  [port]            Port to listen on (default ${DEFAULT_PORT})
+  --production      Serve the built Studio app (requires an existing Studio build)
+  --rotate-token    Generate a new pairing token and exit
+  --legacy          Deprecated: mount the legacy web UI (PROFESSOR_LEGACY=1)
+  --cloud           Deprecated: legacy only — no effect without --legacy
+  -h, --help        Show this help and exit
+`.trim();
+
+/** True when `-h` or `--help` is present. */
+export function wantsHelp(args = []) {
+  const list = Array.isArray(args) ? args : [];
+  return list.includes('--help') || list.includes('-h');
+}
+
+
 /** True when `pkg` resolves from `dir` (or an ancestor `node_modules`, e.g. the package root). */
 function canResolveFrom(dir, pkg) {
   try {
@@ -69,6 +92,11 @@ export function resolveWebUiPort({ legacy = false, production = false, port = nu
  *           startServerImpl?: Function }} ctx
  */
 export async function run({ args = [], style, startServerImpl } = {}) {
+  if (wantsHelp(args)) {
+    console.log(WEB_USAGE);
+    return null;
+  }
+
   const { execSync } = await import('child_process');
   const webDir = join(REPO_ROOT, 'web');
   const options = parseWebArgs(args);

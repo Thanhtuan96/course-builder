@@ -29,6 +29,29 @@ export const DEFAULT_API_PORT = 3000;
 export const HEALTH_PATH = '/api/studio/health';
 
 /**
+ * Usage text for `studio --help`. Kept as a plain string so the CLI can print it without starting
+ * or binding anything.
+ */
+export const STUDIO_USAGE = `
+Usage: course-professor studio [options]
+
+Start the local bridge server and Professor Studio, then open the browser (Node 22.5+).
+
+Options:
+  --port <n>        Studio port (default ${DEFAULT_PORT})
+  --api-port <n>    Local bridge server port (default ${DEFAULT_API_PORT})
+  --no-open         Do not open the browser
+  --rotate-token    Generate a new pairing token and exit
+  -h, --help        Show this help and exit
+`.trim();
+
+/** True when `-h` or `--help` is present. */
+export function wantsHelp(args = []) {
+  return args.includes('--help') || args.includes('-h');
+}
+
+
+/**
  * Parse `--port`, `--api-port`, `--no-open` (both `--flag value` and `--flag=value` forms).
  * @param {string[]} [args]
  * @returns {{ port: number, apiPort: number, open: boolean, rotateToken: boolean }}
@@ -329,6 +352,11 @@ export async function run(ctx = {}) {
     fetchImpl = globalThis.fetch,
     openImpl = openBrowser,
   } = ctx;
+
+  if (wantsHelp(args)) {
+    console.log(STUDIO_USAGE);
+    return 0;
+  }
 
   requireStudioNode(ctx.nodeVersion);
 

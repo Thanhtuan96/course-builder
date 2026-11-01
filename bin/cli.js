@@ -10,6 +10,7 @@ import {
   confirmOverwrite,
   installSkill,
   installCourse,
+  scanSkillDirs,
 } from './registry-helpers.js';
 
 import { existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync, statSync, mkdtempSync } from 'fs';
@@ -111,6 +112,17 @@ const isGlobal = args.includes('--global');
 const isLocal  = args.includes('--local');
 const isForce  = args.includes('--force');
 const command  = args[0] || 'help';
+
+// Registry commands are beta until they work end to end. One notice, one place: printed to stderr
+// so `--json` output stays machine-clean.
+const BETA_COMMANDS = new Set(['courses', 'search', 'install', 'update', 'installed', 'remove', 'publish']);
+if (BETA_COMMANDS.has(command)) {
+  console.error(chalk.dim('[beta] Registry commands are in beta and may not work as expected.'));
+}
+
+function warnBrokenLink(name) {
+  console.error(chalk.dim(`skipped ${name}: broken link`));
+}
 
 switch (command) {
 
@@ -238,13 +250,8 @@ switch (command) {
 
       const results = { updated: 0, skipped: 0, failed: 0 };
       for (const [scope, dir] of scopes) {
-        if (!existsSync(dir)) continue;
-        let entries;
-        try { entries = readdirSync(dir); } catch { continue; }
-        for (const name of entries) {
-          const skillDir = join(dir, name);
-          if (!statSync(skillDir).isDirectory()) continue;
-          if (!existsSync(join(skillDir, 'SKILL.md'))) continue;
+        for (const skillDir of scanSkillDirs(dir, { onSkip: warnBrokenLink })) {
+          const name = basename(skillDir);
           try {
             const skill = (index.skills || []).find((s) => s.name === name);
             if (!skill) {
@@ -306,13 +313,8 @@ switch (command) {
     const rows = [];
 
     for (const [scope, dir] of [['local', localDir], ['global', globalDir]]) {
-      if (!existsSync(dir)) continue;
-      let entries;
-      try { entries = readdirSync(dir); } catch { continue; }
-      for (const name of entries) {
-        const skillDir = join(dir, name);
-        if (!statSync(skillDir).isDirectory()) continue;
-        if (!existsSync(join(skillDir, 'SKILL.md'))) continue;
+      for (const skillDir of scanSkillDirs(dir, { onSkip: warnBrokenLink })) {
+        const name = basename(skillDir);
         let title = name, version = '—';
         const metaPath = join(skillDir, 'meta.json');
         if (existsSync(metaPath)) {
@@ -711,6 +713,12 @@ function printBanner() {
   );
 }
 
+/** One REGISTRY (BETA) row, padded to a fixed description column. */
+function registryRow(command, description) {
+  const pad = ' '.repeat(Math.max(1, 23 - command.length));
+  return `  ${chalk.bold(command)}${pad}${description}`;
+}
+
 function printUsage() {
   console.log(`
 Usage: course-professor [command] [options]
@@ -731,18 +739,21 @@ COMMANDS
   ${chalk.bold('setup')} [agent]        Set up Professor for a specific agent
   ${chalk.bold('init')}                 Auto-detect and set up
   ${chalk.bold('list')}                 List supported agents
-  ${chalk.bold('courses')}              List all courses in the registry
-  ${chalk.bold('search')} <keyword>     Search registry courses by keyword
-  ${chalk.bold('install')} <name>          Install a course locally (→ learning/{name}/)
-  ${chalk.bold('install')} --skill <name>  Install a skill locally (→ .claude/skills/{name}/)
-  ${chalk.bold('update')} <skill-name>     Update an installed skill to the latest version
-  ${chalk.bold('update')} --all             Update all installed skills
-  ${chalk.bold('installed')}                List all installed skills
-  ${chalk.bold('remove')} <skill-name>     Remove an installed skill
   ${chalk.bold('web')} [port] [--production]   Studio bridge + built Studio app (default port 3000);
                               --production requires an existing Studio build
-  ${chalk.bold('publish')} [options]     Publish a course or skill to the community registry
   ${chalk.bold('help')}                 Show this help message
+
+REGISTRY (BETA)
+  Community registry commands — not reliable yet, expect rough edges.
+${registryRow('courses', 'List all courses in the registry')}
+${registryRow('search <keyword>', 'Search registry courses by keyword')}
+${registryRow('install <name>', 'Install a course locally (→ learning/{name}/)')}
+${registryRow('install --skill <name>', 'Install a skill locally (→ .claude/skills/{name}/)')}
+${registryRow('update <skill-name>', 'Update an installed skill to the latest version')}
+${registryRow('update --all', 'Update all installed skills')}
+${registryRow('installed', 'List all installed skills')}
+${registryRow('remove <skill-name>', 'Remove an installed skill')}
+${registryRow('publish [options]', 'Publish a course or skill to the community registry')}
 
 FLAGS
   --global          Target global scope (user-wide, e.g. ~/.claude/skills/)
