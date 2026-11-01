@@ -2,10 +2,10 @@
  * Derive the initial workspace files from a lesson's Markdown (CODE-01).
  *
  * A programming lesson ships its exercise skeleton as a fenced code block under the
- * "Exercise" section (Phase 23/28 convention). We pick the first block whose info string
- * matches the course language; if there is none we fall back to an empty `main.<ext>`.
- * Concept-section code samples are only used when there is no Exercise section at all —
- * the learner should land on the thing they are asked to do.
+ * "Exercise" section (Phase 23/28 convention). We pick the fence with `TODO` markers; otherwise the
+ * first block whose info string matches the course language; if there is none we fall back to an
+ * empty `main.<ext>`. Concept-section code samples are only used when there is no Exercise section
+ * at all — the learner should land on the thing they are asked to do.
  */
 import { defaultEntry, guessCourseLanguage, languageForPath, normalizeLanguage } from './languages.js';
 import { isExerciseHeading } from '../prompts/lesson.js';
@@ -84,11 +84,23 @@ function blockMatches(info, language) {
   return normalised === language;
 }
 
+const TODO_MARKER = /\btodo\b/i;
+
+/**
+ * A TODO fence is the exercise skeleton; a reference file or a self-check block next to it is not.
+ * Unsupported-language fences still qualify: generated lessons sometimes ship the real skeleton in
+ * `dockerfile`/`yaml`, and a reference file in the course language must not shadow it.
+ * @param {{ code: string }} block
+ */
+function isTodoSkeleton(block) {
+  return TODO_MARKER.test(block.code);
+}
+
 /**
  * Pick the exercise skeleton from a lesson body.
  * @param {string} markdown
  * @param {{ language?: string|null, course?: object }} [opts]
- * @returns {{ content: string, language: string|null } | null}
+ * @returns {{ content: string, language: string|null, unsupported?: string } | null}
  */
 export function extractSkeleton(markdown, { language = null, course = null } = {}) {
   const lang = normalizeLanguage(language) || guessCourseLanguage(course || {});
@@ -101,27 +113,61 @@ export function extractSkeleton(markdown, { language = null, course = null } = {
     : blocks;
 
   const candidates = pool.length ? pool : blocks;
-  const chosen = candidates.find((b) => blockMatches(b.info, lang)) || (!lang ? candidates[0] : null);
+  const todos = candidates.filter(isTodoSkeleton);
+  const chosen =
+    todos.find((b) => blockMatches(b.info, lang)) ||
+    todos[0] ||
+    candidates.find((b) => blockMatches(b.info, lang)) ||
+    (!lang ? candidates[0] : null);
   if (!chosen) return null;
-  return { content: chosen.code, language: normalizeLanguage(chosen.info) || lang || null };
+  const normalised = normalizeLanguage(chosen.info);
+  if (!normalised && chosen.info) return { content: chosen.code, language: null, unsupported: chosen.info };
+  return { content: chosen.code, language: normalised || lang || null };
 }
 
 /**
- * Build the initial files for a lesson workspace.
+ * Build the initial files for a lesson workspace, plus the skeleton the Workspace cannot run.
+ *
+ * An unsupported skeleton seeds nothing: an unrelated entry file full of another language's code is
+ * worse than an empty workspace. The caller shows the text read-only instead.
+ *
+ * @param {{ content_md?: string }|null} lesson
+ * @param {object|null} course
+ * @param {{ language?: string|null }} [opts]
+ * @returns {{ files: SeedFile[], unsupportedSkeleton: { info: string, content: string }|null }}
+ */
+export function planSeed(lesson, course = null, { language = null } = {}) {
+  const lang = normalizeLanguage(language) || guessCourseLanguage(course || {});
+  const skeleton = lesson?.content_md ? extractSkeleton(lesson.content_md, { language: lang, course }) : null;
+  if (skeleton?.unsupported) {
+    return {
+      files: [],
+      unsupportedSkeleton: { info: skeleton.unsupported, content: skeleton.content },
+    };
+  }
+  if (skeleton) {
+    const resolved = skeleton.language || lang || 'javascript';
+    return {
+      files: [{ path: defaultEntry(resolved), content: skeleton.content, language: resolved }],
+      unsupportedSkeleton: null,
+    };
+  }
+  const fallback = lang || 'javascript';
+  return {
+    files: [{ path: defaultEntry(fallback), content: '', language: fallback }],
+    unsupportedSkeleton: null,
+  };
+}
+
+/**
+ * The files only. Kept for callers that do not need to report an unsupported skeleton.
  * @param {{ content_md?: string }|null} lesson
  * @param {object|null} course
  * @param {{ language?: string|null }} [opts]
  * @returns {SeedFile[]}
  */
-export function seedFiles(lesson, course = null, { language = null } = {}) {
-  const lang = normalizeLanguage(language) || guessCourseLanguage(course || {});
-  const skeleton = lesson?.content_md ? extractSkeleton(lesson.content_md, { language: lang, course }) : null;
-  if (skeleton) {
-    const resolved = skeleton.language || lang || 'javascript';
-    return [{ path: defaultEntry(resolved), content: skeleton.content, language: resolved }];
-  }
-  const fallback = lang || 'javascript';
-  return [{ path: defaultEntry(fallback), content: '', language: fallback }];
+export function seedFiles(lesson, course = null, opts = {}) {
+  return planSeed(lesson, course, opts).files;
 }
 
 /**
@@ -166,6 +212,9 @@ function isBlank(content) {
  * (`main.sh`). The caller soft-deletes them, so the learner does not get a stray empty file next to
  * the skeleton. It is always empty unless a re-seed actually happens.
  *
+ * `unsupportedSkeleton` is set when the exercise skeleton is in a language no runner executes: no
+ * file is seeded or persisted, and the caller shows the text read-only.
+ *
  * @param {{
  *   lesson?: object|null,
  *   course?: object|null,
@@ -173,17 +222,24 @@ function isBlank(content) {
  *   rows?: Array<object>,
  *   runCount?: number,
  * }} [input]
- * @returns {{ files: SeedFile[], persist: boolean, stalePaths: string[] }}
+ * @returns {{
+ *   files: SeedFile[],
+ *   persist: boolean,
+ *   stalePaths: string[],
+ *   unsupportedSkeleton: { info: string, content: string }|null,
+ * }}
  */
 export function resolveWorkspaceSeed({ lesson = null, course = null, version = null, rows = [], runCount = 0 } = {}) {
   const stored = filesFromRows(rows);
   const untouched = stored.length > 0 && stored.every((f) => isBlank(f.content)) && runCount === 0;
-  if (stored.length && !untouched) return { files: stored, persist: false, stalePaths: [] };
+  if (stored.length && !untouched) {
+    return { files: stored, persist: false, stalePaths: [], unsupportedSkeleton: null };
+  }
 
   const content_md = version?.content_md || lesson?.content_md || '';
-  const files = seedFiles({ ...(lesson || {}), content_md }, course);
-  const persist = files.some((f) => !isBlank(f.content));
+  const { files, unsupportedSkeleton } = planSeed({ ...(lesson || {}), content_md }, course);
+  const persist = !unsupportedSkeleton && files.some((f) => !isBlank(f.content));
   const kept = new Set(files.map((f) => f.path));
   const stalePaths = persist ? stored.filter((f) => !kept.has(f.path)).map((f) => f.path) : [];
-  return { files, persist, stalePaths };
+  return { files, persist, stalePaths, unsupportedSkeleton };
 }

@@ -161,3 +161,76 @@ describe('RON-196 workspace seed resolution', () => {
     expect(persist).toBe(true);
   });
 });
+
+// RON-265 — the exercise skeleton is a Dockerfile, which no runner can execute. Seeding the JS
+// reference file next to it (or writing an empty `main.js`) is worse than seeding nothing.
+const DOCKER_LESSON_MD = `# Bài 1: Dockerfile đầu tiên
+
+## Bài tập
+
+\`\`\`dockerfile
+# TODO 1: chọn base image
+FROM node:20-alpine
+
+# TODO 2: chạy ứng dụng
+CMD ["node", "health.js"]
+\`\`\`
+
+\`\`\`js
+// health.js — có sẵn, không cần sửa
+console.log("ok");
+\`\`\`
+
+\`\`\`bash
+docker build -t my-app:1 .
+\`\`\`
+`;
+
+const DOCKER_COURSE = { id: 'c2', title: 'Docker cơ bản', kind: 'programming', language: 'javascript' };
+
+describe('RON-265 unsupported exercise skeleton', () => {
+  it('RON-265 reports the dockerfile skeleton and seeds nothing', () => {
+    const { files, persist, stalePaths, unsupportedSkeleton } = resolveWorkspaceSeed({
+      lesson: LESSON,
+      course: DOCKER_COURSE,
+      version: { content_md: DOCKER_LESSON_MD },
+      rows: [],
+      runCount: 0,
+    });
+
+    expect(files).toEqual([]);
+    expect(persist).toBe(false);
+    expect(stalePaths).toEqual([]);
+    expect(unsupportedSkeleton.info).toBe('dockerfile');
+    expect(unsupportedSkeleton.content).toContain('# TODO 1');
+  });
+
+  it('RON-265 never writes a bogus entry file over a blank stored row', () => {
+    const { files, persist, stalePaths, unsupportedSkeleton } = resolveWorkspaceSeed({
+      lesson: LESSON,
+      course: DOCKER_COURSE,
+      version: { content_md: DOCKER_LESSON_MD },
+      rows: [{ id: 'f1', path: 'main.js', language: 'javascript', content: '  \n' }],
+      runCount: 0,
+    });
+
+    expect(files).toEqual([]);
+    expect(persist).toBe(false);
+    expect(stalePaths).toEqual([]);
+    expect(unsupportedSkeleton.info).toBe('dockerfile');
+  });
+
+  it('RON-265 keeps a stored file the learner already has and reports no unsupported skeleton', () => {
+    const { files, persist, unsupportedSkeleton } = resolveWorkspaceSeed({
+      lesson: LESSON,
+      course: DOCKER_COURSE,
+      version: { content_md: DOCKER_LESSON_MD },
+      rows: [{ id: 'f1', path: 'Dockerfile', language: null, content: 'FROM node:20-alpine\n' }],
+      runCount: 0,
+    });
+
+    expect(files.map((f) => f.path)).toEqual(['Dockerfile']);
+    expect(persist).toBe(false);
+    expect(unsupportedSkeleton).toBeNull();
+  });
+});
