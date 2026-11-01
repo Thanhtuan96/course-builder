@@ -10,6 +10,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -22,6 +23,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { scanSkillDirs } from '../bin/registry-helpers.js';
+import { STUDIO_USAGE, parseStudioArgs } from '../bin/commands/studio.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(HERE, '..');
@@ -44,9 +46,15 @@ function mkTemp(prefix = 'professor-ron278-') {
 }
 
 /** Spawn the real CLI with an absolute entry point and de-coloured output. */
-function runCli(args, { cwd = REPO_ROOT, home, timeout = 30_000 } = {}) {
-  const env = home ? { ...process.env, HOME: home } : { ...process.env };
-  const result = spawnSync(process.execPath, [CLI, ...args], { cwd, env, encoding: 'utf8', timeout });
+function runCli(args, { cwd = REPO_ROOT, home, env, timeout = 30_000 } = {}) {
+  const childEnv = { ...process.env, ...env };
+  if (home) childEnv.HOME = home;
+  const result = spawnSync(process.execPath, [CLI, ...args], {
+    cwd,
+    env: childEnv,
+    encoding: 'utf8',
+    timeout,
+  });
   return {
     status: result.status,
     timedOut: Boolean(result.error && result.error.code === 'ETIMEDOUT'),
@@ -198,6 +206,48 @@ describe('RON-278 studio --help and web --help print usage and start nothing', (
     const { status, stdout } = runCli(['web', '-h']);
     expect(status).toBe(0);
     expect(stdout).toMatch(/Usage: course-professor web/);
+  });
+});
+
+describe('RON-278 studio usage documents only flags studio handles', () => {
+  it('keeps --rotate-token because studio really rotates a token and exits', () => {
+    const professorHome = mkTemp();
+
+    const { status, stdout, timedOut } = runCli(['studio', '--rotate-token'], {
+      env: { PROFESSOR_HOME: professorHome, STUDIO_BRIDGE_TOKEN: '' },
+    });
+
+    expect(timedOut).toBe(false);
+    expect(status).toBe(0);
+    expect(stdout).toContain('Pairing URL:');
+    expect(stdout).not.toMatch(/Preparing local platform|Starting local server/);
+    expect(existsSync(join(professorHome, 'studio-token'))).toBe(true);
+    expect(parseStudioArgs(['--rotate-token']).rotateToken).toBe(true);
+    expect(STUDIO_USAGE).toContain('--rotate-token');
+  });
+
+  it('lists no flag that parseStudioArgs would ignore', () => {
+    const flags = [...new Set(STUDIO_USAGE.match(/--[a-z][a-z-]*/g) ?? [])].sort();
+    expect(flags).toEqual(['--api-port', '--help', '--no-open', '--port', '--rotate-token']);
+  });
+});
+
+describe('RON-278 main help documents install flags', () => {
+  it('lists --no-import with its install wording under FLAGS', () => {
+    const { status, text } = runCli(['help']);
+
+    expect(status).toBe(0);
+    const line = text.split('\n').find((entry) => /^\s+--no-import\s/.test(entry));
+    expect(line, 'help documents --no-import').toBeDefined();
+    expect(line).toContain('install <course>');
+    expect(line).toMatch(/skip the automatic import into Studio/i);
+  });
+
+  it('says --rotate-token covers web and studio, since studio handles it', () => {
+    const { text } = runCli(['help']);
+    const line = text.split('\n').find((entry) => /^\s+--rotate-token\s/.test(entry));
+    expect(line).toBeDefined();
+    expect(line).toContain('web/studio');
   });
 });
 

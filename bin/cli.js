@@ -760,9 +760,10 @@ FLAGS
   --local           Target local scope (current project, .claude/skills/)
   --force           Bypass overwrite/removal confirmation prompts
   --all             Apply to all items (update --all)
+  --no-import       For \`install <course>\`, skip the automatic import into Studio
   --cloud           Deprecated: legacy only — no effect without web --legacy
   --legacy          Deprecated: mount the legacy web UI in web (or set PROFESSOR_LEGACY=1)
-  --rotate-token    For web, generate a new Studio pairing token and exit
+  --rotate-token    For web/studio, generate a new Studio pairing token and exit
   --port <n>        For \`studio\`, the Studio port (default 5180)
   --api-port <n>    For \`studio\`, the local server port (default 3000)
   --no-open         For \`studio\`, do not open the browser
