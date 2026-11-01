@@ -8,6 +8,7 @@ import os from 'os';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 import ora from 'ora';
+import { nodeSupportsSqlite, studioNodeMessage } from './node-version.js';
 
 // ─── Registry constants ────────────────────────────────────────────────────────
 export const REGISTRY_INDEX_URL =
@@ -361,11 +362,67 @@ export function generateBrowserFallbackUrl(type, slug) {
 }
 
 /**
- * Install a course from the registry (always local).
- * @param {string} itemName
- * @param {{ force?: boolean, index?: object }} opts
+ * Bring a just-installed course into Studio, reusing the `import` command implementation.
+ * @param {string} slug
+ * @param {{ cwd: string, nodeVersion?: string }} opts
+ * @returns {Promise<{ status: 'imported'|'skipped'|'failed', reason?: string, lessons?: number, message?: string }>}
  */
-export async function installCourse(itemName, { force = false, index = null } = {}) {
+export async function importInstalledCourse(slug, { cwd, nodeVersion = process.version }) {
+  if (!nodeSupportsSqlite(nodeVersion)) {
+    return { status: 'skipped', reason: 'node', message: studioNodeMessage(nodeVersion) };
+  }
+  try {
+    const { importCourse } = await import('./commands/import.js');
+    const result = await importCourse(cwd, slug);
+    if (!result) {
+      return { status: 'failed', message: `no COURSE.md found for ${slug} under ${join(cwd, 'learning')}` };
+    }
+    return { status: 'imported', lessons: result.plan.lessons.length };
+  } catch (err) {
+    return { status: 'failed', message: err.message };
+  }
+}
+
+/**
+ * Print where the course landed and the single most useful next step.
+ * @param {{ slug: string, destDir: string, importResult: object }} opts
+ */
+function printCourseInstallSummary({ slug, destDir, importResult }) {
+  console.log(style('info', `Course files: ${join(destDir, 'COURSE.md')}`));
+
+  if (importResult.status === 'imported') {
+    console.log(style('success', `Imported into Studio (${importResult.lessons} lessons)`));
+    console.log(style('info', 'Open it with: course-professor studio'));
+  } else if (importResult.status === 'skipped' && importResult.reason === 'node') {
+    console.log(style('warning', `Not imported into Studio — ${importResult.message}`));
+    console.log(style('info', `Import it once you are on Node 22.5+: course-professor import ${slug}`));
+  } else if (importResult.status === 'skipped') {
+    console.log(style('info', 'Skipped the Studio import (--no-import).'));
+    console.log(style('info', `Import it later with: course-professor import ${slug}`));
+  } else {
+    console.log(style('warning', `Studio import failed: ${importResult.message}`));
+    console.log(style('info', `Retry with: course-professor import ${slug}`));
+  }
+
+  console.log(style('info', 'In Claude Code, continue with:'), `professor:switch ${slug}`);
+}
+
+/**
+ * Install a course from the registry (always local) and import it into Studio.
+ * @param {string} itemName
+ * @param {{
+ *   force?: boolean, index?: object, cwd?: string, importToStudio?: boolean,
+ *   fetchText?: typeof fetchRegistryText, nodeVersion?: string,
+ * }} opts
+ */
+export async function installCourse(itemName, {
+  force = false,
+  index = null,
+  cwd = process.cwd(),
+  importToStudio = true,
+  fetchText = fetchRegistryText,
+  nodeVersion = process.version,
+} = {}) {
   let registryIndex = index;
   if (!registryIndex) {
     const spinner = ora('Fetching registry…').start();
@@ -386,7 +443,7 @@ export async function installCourse(itemName, { force = false, index = null } = 
     process.exit(1);
   }
 
-  const destDir = join(process.cwd(), 'learning', itemName);
+  const destDir = join(cwd, 'learning', itemName);
   await confirmOverwrite(destDir, 'COURSE.md', force);
   mkdirSync(destDir, { recursive: true });
 
@@ -394,15 +451,18 @@ export async function installCourse(itemName, { force = false, index = null } = 
   for (const file of ['COURSE.md', 'meta.json']) {
     spinner.text = `Downloading ${file}…`;
     const opts = file === 'meta.json' ? { optional: true } : {};
-    const text = await fetchRegistryText(`${RAW_COURSES_BASE}/${itemName}/${file}`, opts);
+    const text = await fetchText(`${RAW_COURSES_BASE}/${itemName}/${file}`, opts);
     if (text !== null) {
       writeFileSync(join(destDir, file), text, 'utf8');
     }
   }
   spinner.succeed(`Installed ${chalk.bold(course.title)} (${course.sections} sections, ${course.level})`);
   console.log('');
-  console.log(style('info', 'Course downloaded to:'), chalk.dim(`learning/${itemName}/COURSE.md`));
-  console.log(style('info', 'To start learning, run in Claude Code:'));
-  console.log('   professor:new-topic');
+
+  const importResult = importToStudio
+    ? await importInstalledCourse(itemName, { cwd, nodeVersion })
+    : { status: 'skipped' };
+  printCourseInstallSummary({ slug: itemName, destDir, importResult });
   console.log('');
+  return { destDir, importResult };
 }
