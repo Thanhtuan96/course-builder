@@ -83,6 +83,42 @@ export function style(type, text) {
   return STYLE[type](text);
 }
 
+// ─── Skills directory scan ───────────────────────────────────────────────────
+
+/**
+ * List usable skill directories under `dir`. An entry that cannot be stat-ed (dangling symlink,
+ * permission error) is skipped and reported through `onSkip` instead of throwing, so one broken
+ * entry never takes down a whole listing.
+ *
+ * @param {string} dir
+ * @param {{ onSkip?: (name: string, err: Error) => void }} [opts]
+ * @returns {string[]} absolute paths of directories that contain a SKILL.md
+ */
+export function scanSkillDirs(dir, { onSkip } = {}) {
+  if (!existsSync(dir)) return [];
+  let entries;
+  try {
+    entries = readdirSync(dir);
+  } catch {
+    return [];
+  }
+  const found = [];
+  for (const name of entries) {
+    const skillDir = join(dir, name);
+    let stats;
+    try {
+      stats = statSync(skillDir);
+    } catch (err) {
+      if (onSkip) onSkip(name, err);
+      continue;
+    }
+    if (!stats.isDirectory()) continue;
+    if (!existsSync(join(skillDir, 'SKILL.md'))) continue;
+    found.push(skillDir);
+  }
+  return found;
+}
+
 // ─── Input validation ────────────────────────────────────────────────────────
 
 const ITEM_NAME = /^[a-z0-9][a-z0-9-]*$/;
