@@ -16,7 +16,7 @@ import {
 } from '../lib/repo/index.js';
 import { capstoneUnlocked } from '../lib/capstone.js';
 import { useT } from '../lib/i18n/index.js';
-import { workspaceModeFor } from '../lib/exercises/placement.js';
+import { resolveLessonTab, workspaceModeFor } from '../lib/exercises/placement.js';
 import { Badge } from '../components/ui/Badge.jsx';
 import { Button } from '../components/ui/Button.jsx';
 import { Card } from '../components/ui/Card.jsx';
@@ -117,6 +117,9 @@ export function Lesson({ id, lessonId }) {
         alive = false;
       };
     }
+    // Drop the previous lesson's widgets immediately: a stale list would flash under the new title
+    // and could keep the exercise tab alive for a lesson that has no exercises.
+    setExercises([]);
     const refresh = () =>
       listLessonExercises(lesson.id)
         .then((rows) => alive && setExercises(rows))
@@ -161,6 +164,7 @@ export function Lesson({ id, lessonId }) {
   }
 
   const workspaceMode = workspaceModeFor({ kind: course.kind, exercises });
+  const activeTab = resolveLessonTab(tab, workspaceMode);
 
   return (
     <div className="space-y-5">
@@ -214,7 +218,7 @@ export function Lesson({ id, lessonId }) {
               type="button"
               onClick={() => setTab(item.id)}
               className={`border-b-2 px-3 py-2 text-sm font-medium ${
-                tab === item.id
+                activeTab === item.id
                   ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
                   : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
               }`}
@@ -225,12 +229,12 @@ export function Lesson({ id, lessonId }) {
         </div>
       </div>
 
-      {tab === 'practice' && <LessonPractice lesson={lesson} course={course} />}
-      {tab === 'tutor' && <TutorPanel lesson={lesson} course={course} capstone={capstoneActive} />}
-      {tab === 'workspace' && workspaceMode === 'exercise' && (
+      {activeTab === 'practice' && <LessonPractice lesson={lesson} course={course} />}
+      {activeTab === 'tutor' && <TutorPanel lesson={lesson} course={course} capstone={capstoneActive} />}
+      {activeTab === 'workspace' && workspaceMode === 'exercise' && (
         <ExerciseSurface lesson={lesson} course={course} exercises={exercises} />
       )}
-      {tab === 'workspace' && workspaceMode === 'code' && (
+      {activeTab === 'workspace' && workspaceMode === 'code' && (
         <Suspense fallback={<p className="text-sm text-neutral-500">{t('lesson.loadingWorkspace')}</p>}>
           <CodeWorkspace lesson={lesson} course={course} />
         </Suspense>

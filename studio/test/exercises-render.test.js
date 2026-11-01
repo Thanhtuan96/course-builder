@@ -7,7 +7,7 @@
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, it, expect } from 'vitest';
-import { ExerciseSurface } from '../src/components/exercises/ExerciseSurface.jsx';
+import { ExerciseSurface, surfaceExercises } from '../src/components/exercises/ExerciseSurface.jsx';
 import { JournalEntryWidget } from '../src/components/exercises/JournalEntryWidget.jsx';
 import { AttemptHistory } from '../src/components/exercises/AttemptHistory.jsx';
 
@@ -103,6 +103,28 @@ describe('RON-266 exercises: rendered surface', () => {
       expect(history).not.toContain(leaked);
     }
     expect(history).toContain('Attempt 1');
+  });
+
+  it('RON-266 exercises: a new exercises prop replaces the mounted list', () => {
+    const first = exercise({ id: 'ex-1', spec: { ...SPEC, prompt: 'FIRST-PROMPT' } });
+    const second = exercise({ id: 'ex-2', spec: { ...SPEC, id: 'l1-e2', prompt: 'SECOND-PROMPT' } });
+
+    // The surface derives its list from the prop, so a refreshed array wins over anything captured
+    // at mount — the regression this pins.
+    expect(surfaceExercises({ provided: [second], fetched: [first] }).map((row) => row.id)).toEqual([
+      'ex-2',
+    ]);
+    expect(surfaceExercises({ fetched: [first] }).map((row) => row.id)).toEqual(['ex-1']);
+
+    const html = renderToString(
+      createElement(ExerciseSurface, {
+        lesson: LESSON,
+        course: { kind: 'skill' },
+        exercises: [second],
+      })
+    );
+    expect(html).toContain('SECOND-PROMPT');
+    expect(html).not.toContain('FIRST-PROMPT');
   });
 
   it('offers no control that reveals the answer', () => {

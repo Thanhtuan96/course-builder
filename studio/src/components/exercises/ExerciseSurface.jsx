@@ -1,6 +1,9 @@
 /**
  * The lesson's hands-on exercise area: one widget per exercise, resolved through the registry.
  * Exercises with an unknown type or an unusable spec are skipped, never thrown.
+ *
+ * The list is derived from the `exercises` prop when the parent supplies one, so a repository
+ * refresh that hands down a new array reaches an already-mounted surface instead of being ignored.
  */
 import { useEffect, useState } from 'react';
 import { listLessonExercises } from '../../lib/repo/index.js';
@@ -8,10 +11,21 @@ import { useT } from '../../lib/i18n/index.js';
 import { isRenderableExercise } from '../../lib/exercises/spec.js';
 import { resolveWidget } from '../../lib/exercises/registry.js';
 
+/**
+ * Which exercises a surface renders. A supplied `provided` list always wins over fetched data —
+ * the regression this helper exists for is a surface that captured its list at mount.
+ * @param {{ provided?: object[], fetched?: object[] }} input
+ * @returns {object[]}
+ */
+export function surfaceExercises({ provided, fetched } = {}) {
+  const list = Array.isArray(provided) ? provided : Array.isArray(fetched) ? fetched : [];
+  return list.filter(isRenderableExercise);
+}
+
 export function ExerciseSurface({ lesson, course, exercises: provided }) {
   const t = useT();
   const controlled = Array.isArray(provided);
-  const [exercises, setExercises] = useState(controlled ? provided : []);
+  const [fetched, setFetched] = useState([]);
   const [loaded, setLoaded] = useState(controlled);
 
   useEffect(() => {
@@ -20,12 +34,12 @@ export function ExerciseSurface({ lesson, course, exercises: provided }) {
     listLessonExercises(lesson.id)
       .then((rows) => {
         if (!alive) return;
-        setExercises(rows);
+        setFetched(rows);
         setLoaded(true);
       })
       .catch(() => {
         if (!alive) return;
-        setExercises([]);
+        setFetched([]);
         setLoaded(true);
       });
     return () => {
@@ -33,7 +47,7 @@ export function ExerciseSurface({ lesson, course, exercises: provided }) {
     };
   }, [controlled, lesson?.id]);
 
-  const renderable = exercises.filter(isRenderableExercise);
+  const renderable = surfaceExercises({ provided: controlled ? provided : undefined, fetched });
 
   if (!loaded) return <p className="text-sm text-neutral-500">{t('common.loading')}</p>;
   if (renderable.length === 0) {

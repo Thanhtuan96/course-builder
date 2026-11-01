@@ -5,7 +5,7 @@
  * previous behaviour.
  */
 import { describe, it, expect } from 'vitest';
-import { workspaceModeFor } from '../src/lib/exercises/placement.js';
+import { resolveLessonTab, workspaceModeFor } from '../src/lib/exercises/placement.js';
 
 const SPEC = {
   version: 1,
@@ -41,6 +41,14 @@ describe('RON-266 exercises: workspace placement', () => {
     expect(workspaceModeFor({ kind: 'skill', exercises: [] })).toBeNull();
     expect(workspaceModeFor({ kind: 'conceptual' })).toBeNull();
     expect(workspaceModeFor()).toBeNull();
+  });
+
+  it('RON-266 exercises: the workspace tab falls back to practice when a lesson has no workspace', () => {
+    expect(resolveLessonTab('workspace', 'exercise')).toBe('workspace');
+    expect(resolveLessonTab('workspace', 'code')).toBe('workspace');
+    expect(resolveLessonTab('workspace', null)).toBe('practice');
+    expect(resolveLessonTab('practice', null)).toBe('practice');
+    expect(resolveLessonTab('tutor', null)).toBe('tutor');
   });
 
   it('ignores exercises that cannot be rendered', () => {

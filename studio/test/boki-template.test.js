@@ -241,6 +241,19 @@ describe('RON-266 boki: seeding', () => {
     expect(Object.values(exercises).flat()).toHaveLength(14);
   });
 
+  it('RON-266 boki: a later start in another language keeps the first variant', async () => {
+    const first = await seedBokiTemplate({ language: 'vi' });
+    expect(first.created).toBe(true);
+
+    const second = await seedBokiTemplate({ language: 'en' });
+
+    expect(second.created).toBe(false);
+    expect(second.course.id).toBe(first.course.id);
+    expect(second.course.language).toBe('vi');
+    expect(second.course.title).toBe(BOKI_TEMPLATE_VI.title);
+    expect(await repo.listCourses()).toHaveLength(1);
+  });
+
   it('RON-266 boki: the seeded variant follows the client language', async () => {
     const result = await seedBokiTemplate({ language: 'vi' });
     expect(result.course.language).toBe('vi');
