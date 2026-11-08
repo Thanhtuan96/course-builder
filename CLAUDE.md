@@ -31,6 +31,8 @@ node bin/cli.js status --json         # Machine-readable status
 node bin/cli.js next [slug]           # Current lecture summary + agent command to continue
 node bin/cli.js check [slug]          # Run the active exercise's self-checks
 node bin/cli.js doctor                # Environment checklist with fix hints
+node bin/cli.js create <slug> --kind K  # Create course folder (programming = verified worktree, rollback on failure)
+node bin/cli.js save <slug> [-m msg]  # Commit a programming course worktree on its learning/<slug> branch
 
 # Tests (Vitest: registry helpers, course reader and CLI commands)
 npm test                              # Run all tests

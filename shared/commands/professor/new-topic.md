@@ -40,22 +40,14 @@ Wait for the user to confirm or request adjustments (including a different kind)
    - Remove special characters
    - Example: "React Fundamentals" → "react-fundamentals"
 
-2. **Create the course folder** — how depends on the kind:
-
-   **If kind is `programming`** (keep current behaviour):
-   - Ensure the current directory is a git repository. If not, show: "Programming courses require a git repository. Please initialize git first."
-   - Create a git worktree at `learning/{slug}/`:
-     ```bash
-     git worktree add learning/{slug}/ -b learning/{slug}
-     ```
-   - Create the `exercises/` directory with scaffolding:
-     - **Framework courses** (React, Vue, Django, …): scaffold a basic project structure (`package.json` or equivalent, `src/`, README with setup instructions) and mark each section's code slot with TODO comments
-     - **Standalone courses**: create an empty `exercises/` directory
-
-   **For every other kind (`quantitative`, `conceptual`, `skill`)** (PLUG-05):
-   - Create a **plain folder** `learning/{slug}/` — no git requirement, no worktree, no framework scaffolding
-   - Do **not** create `exercises/` yet — it is created lazily by `professor:next` on first use
-   - If the directory already exists, reuse it
+2. **Create the course folder** with the CLI — never with hand-written `git`/`mkdir` commands:
+   ```bash
+   npx course-professor create {slug} --kind {kind}
+   ```
+   - `programming`: creates and **verifies** a registered git worktree at `learning/{slug}/` on branch `learning/{slug}` (reattaches the branch if it already exists), keeps `learning/` out of the host repo's `git status`, and rolls everything back if any step fails.
+   - `quantitative` / `conceptual` / `skill` (PLUG-05): creates a plain folder `learning/{slug}/` — no git, no scaffolding. `exercises/` is created lazily by `professor:next`.
+   - **If the command exits non-zero, stop.** Show its error message to the user and do **not** write any course file anywhere (no fallback folder, no `courses/`).
+   - **Programming only — scaffolding:** framework courses (React, Vue, Django, …) get a basic project structure (`package.json` or equivalent, `src/`, README with setup instructions); standalone courses get an empty `exercises/` directory. Do **not** create per-section exercise files — `professor:next` creates each one when its section starts.
 
 3. **Write course files** to `learning/{slug}/`:
    - `COURSE.md` — syllabus with all sections starting ⬜ Not started, and `**Kind**: {kind}` in the metadata **right under `**Level**`**
@@ -70,7 +62,11 @@ Wait for the user to confirm or request adjustments (including a different kind)
 
 4. **Initial "Active exercise" field**: leave empty — `professor:next` creates the first exercise file.
 
-5. **Update paths**: all course files now live in `learning/{slug}/`; reference `learning/{slug}/`.
+5. **Save** (programming only): commit the new course on its own branch so it survives restarts and pruned worktrees:
+   ```bash
+   npx course-professor save {slug} -m "course({slug}): create"
+   ```
+   All course files live in `learning/{slug}/`; reference that path from now on.
 
 6. **Tell the user**: *"Course created as a **{kind}** course! Your capstone brief is saved in CAPSTONE.md — you'll build it solo after all sections. Run `professor:next` to load your first section."*
 

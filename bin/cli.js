@@ -659,9 +659,12 @@ switch (command) {
   case 'doctor':
   case 'studio':
   case 'review':
-  case 'import': {
-    const { run } = await import(`./commands/${command}.js`);
-    await run({ args: args.slice(1), cwd: process.cwd(), chalk, style });
+  case 'import':
+  case 'create':
+  case 'save': {
+    const file = command === 'save' ? 'create' : command;
+    const { run } = await import(`./commands/${file}.js`);
+    await run({ args: args.slice(1), cwd: process.cwd(), chalk, style, command });
     break;
   }
 
@@ -732,6 +735,8 @@ COMMANDS
   ${chalk.bold('status')} [--json]      Show every course: progress, current section, due cards, streak
   ${chalk.bold('next')} [slug]          Show the active lecture summary and how to continue
   ${chalk.bold('check')} [slug]         Run the active exercise's self-checks
+  ${chalk.bold('create')} <slug> --kind K  Create a course folder (programming = verified git worktree)
+  ${chalk.bold('save')} <slug> [-m msg]   Commit a programming course's worktree
   ${chalk.bold('doctor')}               Check the local environment (Node, git, agents, Ollama, port, DB)
   ${chalk.bold('studio')}               Start local server + Studio, pair and open the browser (Node 22.5+)
   ${chalk.bold('review')} [--limit N]   Review due flashcards in the terminal (SM-2) (Node 22.5+)
