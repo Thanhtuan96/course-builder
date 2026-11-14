@@ -5,7 +5,12 @@
  * previous behaviour.
  */
 import { describe, it, expect } from 'vitest';
-import { resolveLessonTab, workspaceModeFor } from '../src/lib/exercises/placement.js';
+import {
+  lessonTabIds,
+  resolveLessonTab,
+  workspaceModeFor,
+  workspaceTabLabelKey,
+} from '../src/lib/exercises/placement.js';
 
 const SPEC = {
   version: 1,
@@ -57,5 +62,36 @@ describe('RON-266 exercises: workspace placement', () => {
     expect(
       workspaceModeFor({ kind: 'programming', exercises: [{ type: 'journal-entry', spec: null }] })
     ).toBe('code');
+  });
+});
+
+describe('RON-372 imported workspace files get a surface', () => {
+  const file = { id: 'wf-1', path: '01-balance-the-ledger.md', language: null, content: '# Balance' };
+
+  it('RON-372 a conceptual lesson with a markdown exercise offers the exercise tab', () => {
+    expect(workspaceModeFor({ kind: 'conceptual', exercises: [], workspaceFiles: [file] })).toBe('files');
+    expect(lessonTabIds('files')).toContain('workspace');
+    expect(workspaceTabLabelKey('files')).toBe('lesson.tabs.exercise');
+  });
+
+  it('RON-372 a lesson without exercises or files keeps no surface', () => {
+    expect(workspaceModeFor({ kind: 'conceptual', exercises: [], workspaceFiles: [] })).toBeNull();
+    expect(lessonTabIds(null)).toEqual(['practice', 'tutor']);
+  });
+
+  it('RON-372 interactive exercises still win over imported files', () => {
+    expect(workspaceModeFor({ kind: 'conceptual', exercises: [exercise], workspaceFiles: [file] })).toBe(
+      'exercise'
+    );
+  });
+
+  it('RON-372 a programming lesson keeps the code editor and its label', () => {
+    expect(workspaceModeFor({ kind: 'programming', workspaceFiles: [file] })).toBe('code');
+    expect(workspaceTabLabelKey('code')).toBe('lesson.tabs.workspace');
+  });
+
+  it('RON-372 the workspace tab still falls back for a lesson with no surface', () => {
+    expect(resolveLessonTab('workspace', 'files')).toBe('workspace');
+    expect(resolveLessonTab('workspace', null)).toBe('practice');
   });
 });

@@ -12,11 +12,17 @@ import {
   saveReflection,
   logActivity,
   listLessonExercises,
+  listWorkspaceFiles,
   onChange,
 } from '../lib/repo/index.js';
 import { capstoneUnlocked } from '../lib/capstone.js';
 import { useT } from '../lib/i18n/index.js';
-import { resolveLessonTab, workspaceModeFor } from '../lib/exercises/placement.js';
+import {
+  lessonTabIds,
+  resolveLessonTab,
+  workspaceModeFor,
+  workspaceTabLabelKey,
+} from '../lib/exercises/placement.js';
 import { Badge } from '../components/ui/Badge.jsx';
 import { Button } from '../components/ui/Button.jsx';
 import { Card } from '../components/ui/Card.jsx';
@@ -90,6 +96,7 @@ export function Lesson({ id, lessonId }) {
   const [reflecting, setReflecting] = useState(false);
   const [capstoneActive, setCapstoneActive] = useState(false);
   const [exercises, setExercises] = useState([]);
+  const [workspaceFiles, setWorkspaceFiles] = useState([]);
 
   useEffect(() => {
     let alive = true;
@@ -113,6 +120,7 @@ export function Lesson({ id, lessonId }) {
     let alive = true;
     if (!lesson?.id) {
       setExercises([]);
+      setWorkspaceFiles([]);
       return () => {
         alive = false;
       };
@@ -120,13 +128,21 @@ export function Lesson({ id, lessonId }) {
     // Drop the previous lesson's widgets immediately: a stale list would flash under the new title
     // and could keep the exercise tab alive for a lesson that has no exercises.
     setExercises([]);
+    setWorkspaceFiles([]);
     const refresh = () =>
-      listLessonExercises(lesson.id)
-        .then((rows) => alive && setExercises(rows))
-        .catch(() => alive && setExercises([]));
+      Promise.all([
+        listLessonExercises(lesson.id).catch(() => []),
+        listWorkspaceFiles(lesson.id).catch(() => []),
+      ]).then(([exerciseRows, fileRows]) => {
+        if (!alive) return;
+        setExercises(exerciseRows);
+        setWorkspaceFiles(fileRows);
+      });
     refresh();
     const off = onChange((detail) => {
-      if (detail.table === 'exercises' || detail.table === '*') refresh();
+      if (detail.table === 'exercises' || detail.table === 'workspace_files' || detail.table === '*') {
+        refresh();
+      }
     });
     return () => {
       alive = false;
@@ -163,7 +179,7 @@ export function Lesson({ id, lessonId }) {
     return <EmptyState title={t('lesson.notFound')} action={<Link to={`/course/${id}`}><Button variant="secondary">{t('lesson.backToCourse')}</Button></Link>} />;
   }
 
-  const workspaceMode = workspaceModeFor({ kind: course.kind, exercises });
+  const workspaceMode = workspaceModeFor({ kind: course.kind, exercises, workspaceFiles });
   const activeTab = resolveLessonTab(tab, workspaceMode);
 
   return (
@@ -197,33 +213,18 @@ export function Lesson({ id, lessonId }) {
 
       <div className="border-b border-neutral-200 dark:border-neutral-800">
         <div className="flex gap-1">
-          {[
-            { id: 'practice', label: t('lesson.tabs.practice') },
-            { id: 'tutor', label: t('lesson.tabs.tutor') },
-            ...(workspaceMode
-              ? [
-                  {
-                    id: 'workspace',
-                    label: t(
-                      workspaceMode === 'exercise'
-                        ? 'lesson.tabs.exercise'
-                        : 'lesson.tabs.workspace'
-                    ),
-                  },
-                ]
-              : []),
-          ].map((item) => (
+          {lessonTabIds(workspaceMode).map((id) => (
             <button
-              key={item.id}
+              key={id}
               type="button"
-              onClick={() => setTab(item.id)}
+              onClick={() => setTab(id)}
               className={`border-b-2 px-3 py-2 text-sm font-medium ${
-                activeTab === item.id
+                activeTab === id
                   ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
                   : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
               }`}
             >
-              {item.label}
+              {id === 'workspace' ? t(workspaceTabLabelKey(workspaceMode)) : t(`lesson.tabs.${id}`)}
             </button>
           ))}
         </div>
@@ -234,7 +235,7 @@ export function Lesson({ id, lessonId }) {
       {activeTab === 'workspace' && workspaceMode === 'exercise' && (
         <ExerciseSurface lesson={lesson} course={course} exercises={exercises} />
       )}
-      {activeTab === 'workspace' && workspaceMode === 'code' && (
+      {activeTab === 'workspace' && (workspaceMode === 'code' || workspaceMode === 'files') && (
         <Suspense fallback={<p className="text-sm text-neutral-500">{t('lesson.loadingWorkspace')}</p>}>
           <CodeWorkspace lesson={lesson} course={course} />
         </Suspense>

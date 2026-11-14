@@ -72,7 +72,7 @@ describe('0005_beta_loop migration', () => {
     const db = createStudioDb({ dbPath: join(tmp(), 'fresh-beta.db'), log: () => {} });
     try {
       for (const table of BETA_TABLES) expect(db.list(table)).toEqual([]);
-      expect(db.schemaVersion).toBe(6);
+      expect(db.schemaVersion).toBe(7);
     } finally {
       db.close();
     }
@@ -125,7 +125,8 @@ describe('0005_beta_loop migration', () => {
     try {
       expect(upgraded.migrationsRun).toContain('0005_beta_loop.sql');
       expect(upgraded.migrationsRun).toContain('0006_interactive_exercises.sql');
-      expect(upgraded.schemaVersion).toBe(6);
+      expect(upgraded.migrationsRun).toContain('0007_workspace_files_imported_hash.sql');
+      expect(upgraded.schemaVersion).toBe(7);
       expect(upgraded.get('courses', 'beta-course').title).toBe('Beta course');
       for (const table of BETA_TABLES) expect(upgraded.tables).toContain(table);
       expect(upgraded.list('learning_events')).toEqual([]);
@@ -193,6 +194,7 @@ describe('0005_beta_loop migration', () => {
         '0004_capstone.sql',
         '0005_beta_loop.sql',
         '0006_interactive_exercises.sql',
+        '0007_workspace_files_imported_hash.sql',
       ]);
     } finally {
       ledger.close();

@@ -123,7 +123,7 @@ npx ronin-skillforce <command>         # or `skillforce <command>` after a globa
 | `doctor` | Check Node, git, agents, Ollama, ports and the database, with fix hints |
 | `studio [--no-open] [--port N --api-port N] [--status \| --stop \| --autostart on\|off]` | Start the local server and Studio, print a pairing URL, or check/stop the background copy |
 | `review [--limit N]` | Review due flashcards in the terminal (shared with Studio) |
-| `import [slug \| --all] [--dry-run]` | Import Markdown courses into Studio's database |
+| `import [slug \| --all] [--dry-run]` | Import Markdown courses into Studio's database: lectures, cards, capstone and the `exercises/NN-*` files each lesson opens with (learner edits are kept) |
 | `create`, `save`, `context`, `trail` | Course steps the agent commands run for you |
 | `courses`, `search`, `install`, `update`, `installed`, `remove` | Community courses and skills (beta) |
 | `web` | Start only the bridge server (see below) |

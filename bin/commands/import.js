@@ -10,10 +10,12 @@
  *   LECTURE.md         → lesson_versions of the active lesson (appended, never overwritten)
  *   SCHEDULE.md        → cards (due dates preserved)
  *   LEARNING-LOG.md    → quiz_attempts / reflections where they map, else notes
+ *   exercises/NN-*     → workspace_files of lesson NN (never overwriting learner edits)
  *
  * Idempotent: `source: 'cli'` plus a stable `external_id` (`cli:<slug>`, `cli:<slug>:<n>`, …) means
  * re-running updates instead of duplicating. `--dry-run` prints the plan and writes nothing.
  */
+import { createHash } from 'crypto';
 import { existsSync, readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { findCourses, readCourse } from '../course-reader.js';
@@ -32,8 +34,11 @@ import {
   getCapstone,
   createCapstone,
   createCapstoneSubmission,
+  saveWorkspaceFile,
+  deleteWorkspaceFile,
 } from '../../studio/src/lib/repo/index.js';
 import { parseRubricFromMarkdown } from '../../studio/src/lib/prompts/capstone.js';
+import { languageForPath } from '../../studio/src/lib/runner/languages.js';
 
 const nowIso = () => new Date().toISOString();
 const dateIso = (date) => (date ? `${date}T00:00:00.000Z` : nowIso());
@@ -97,6 +102,47 @@ function stripFrontmatter(text) {
   return String(text || '').replace(/^---\s*\n[\s\S]*?\n---\s*\n?/, '').trim();
 }
 
+/** Exercise files are ordered by their leading number, then by name. */
+function exerciseNumber(name) {
+  const match = /^(\d+)/.exec(String(name || ''));
+  return match ? Number.parseInt(match[1], 10) : Number.POSITIVE_INFINITY;
+}
+
+function compareExerciseNames(a, b) {
+  const byNumber = exerciseNumber(a) - exerciseNumber(b);
+  if (byNumber) return byNumber;
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
+/**
+ * `learning/<slug>/exercises/NN-*` files the plugin wrote, ordered by number then name.
+ * Files without a leading number stay listed so import can report them.
+ * @param {string} dir course directory
+ * @returns {Array<{ path: string, content: string, language: string|null }>}
+ */
+export function readExerciseFiles(dir) {
+  const exercisesDir = join(dir, 'exercises');
+  if (!existsSync(exercisesDir)) return [];
+  let names = [];
+  try {
+    names = readdirSync(exercisesDir, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && !entry.name.startsWith('.'))
+      .map((entry) => entry.name);
+  } catch {
+    return [];
+  }
+  return names.sort(compareExerciseNames).map((name) => ({
+    path: name,
+    content: readFileSync(join(exercisesDir, name), 'utf-8'),
+    language: languageForPath(name),
+  }));
+}
+
+/** SHA-256 of a workspace file's content — the value import records in the ledger. */
+export function contentHash(content) {
+  return createHash('sha256').update(String(content ?? ''), 'utf-8').digest('hex');
+}
+
 /** Archived lectures (sorted) + the current LECTURE.md, each with a stable external id. */
 export function readLectureContents(course) {
   const slug = course.slug;
@@ -153,7 +199,19 @@ export function planCourseImport(course, { now = Date.now() } = {}) {
     status: s.status === 'active' ? 'active' : s.status === 'done' ? 'done' : 'todo',
     completed_at: s.completedAt || null,
     lectures: [],
+    exercises: [],
   }));
+
+  /** Lesson whose section number (or position) is the file's leading number, else null. */
+  const lessonForNumber = (filename) => {
+    if (!lessons.length) return null;
+    const m = String(filename || '').match(/^(\d+)/);
+    if (!m) return null;
+    const padded = m[1].padStart(2, '0');
+    const byNumber = lessons.find((l) => String(l.n).padStart(2, '0') === padded);
+    if (byNumber) return byNumber;
+    return lessons[Number.parseInt(m[1], 10) - 1] || null;
+  };
 
   const assignLesson = (item) => {
     if (!lessons.length) return null;
@@ -161,20 +219,21 @@ export function planCourseImport(course, { now = Date.now() } = {}) {
       const n = course.currentSection?.n;
       return lessons.find((l) => String(l.n) === String(n)) || lessons[lessons.length - 1];
     }
-    const m = item.filename.match(/^(\d+)/);
-    if (m) {
-      const padded = m[1].padStart(2, '0');
-      const byNumber = lessons.find((l) => String(l.n).padStart(2, '0') === padded);
-      if (byNumber) return byNumber;
-      const byPosition = lessons[Number.parseInt(m[1], 10) - 1];
-      if (byPosition) return byPosition;
-    }
-    return lessons[0];
+    return lessonForNumber(item.filename) || lessons[0];
   };
 
   for (const lecture of lectures) {
     const lesson = assignLesson(lecture);
     if (lesson) lesson.lectures.push(lecture);
+  }
+
+  // An exercise belongs to its own lesson only: a file numbered past the last lesson is reported,
+  // never folded into lesson 1 (its lecture may be, but its code must not be).
+  const unattachedExercises = [];
+  for (const exercise of readExerciseFiles(course.dir)) {
+    const lesson = lessonForNumber(exercise.path);
+    if (lesson) lesson.exercises.push(exercise);
+    else unattachedExercises.push(exercise.path);
   }
 
   const cards = (course.cards || []).map((c, i) => ({
@@ -232,13 +291,96 @@ export function planCourseImport(course, { now = Date.now() } = {}) {
     logs,
     capstone,
     completion,
+    unattachedExercises,
     versionCount: lessons.reduce((n, l) => n + l.lectures.length, 0),
+    exerciseCount: lessons.reduce((n, l) => n + l.exercises.length, 0),
   };
 }
 
 /** Aggregate counters for one course (also used by --dry-run). */
 function emptyStats() {
-  return { lessons: 0, versions: 0, cards: 0, quiz: 0, reflections: 0, notes: 0, capstones: 0, completions: 0 };
+  return {
+    lessons: 0,
+    versions: 0,
+    cards: 0,
+    quiz: 0,
+    reflections: 0,
+    notes: 0,
+    capstones: 0,
+    completions: 0,
+    exerciseCount: 0,
+    exerciseFiles: [],
+  };
+}
+
+/**
+ * Decide what import does with every planned exercise file, before anything is written.
+ *
+ * A stored file is only touched while its content still equals the hash import recorded for it.
+ * The empty seed Studio writes when a lesson is opened before the first import is cleared, so the
+ * exercise — not an empty `main.<ext>` — is what the learner opens on.
+ *
+ * @param {object} plan
+ * @param {object} store
+ * @returns {Promise<Array<object>>} decisions; `content`, `language` and `importedHash` are for writing
+ */
+async function planWorkspaceWrites(plan, store) {
+  const decisions = [];
+  for (const lesson of plan.lessons) {
+    const exercises = lesson.exercises || [];
+    if (!exercises.length) continue;
+
+    const stored = await store.list('workspace_files', { where: { lesson_id: lesson.id } });
+    const runs = await store.list('run_results', { where: { lesson_id: lesson.id } });
+    const runFileIds = new Set(runs.map((run) => run.file_id).filter(Boolean));
+    const planned = new Set(exercises.map((exercise) => exercise.path));
+    const base = {
+      lessonId: lesson.id,
+      lessonPosition: lesson.position,
+      lessonTitle: lesson.title,
+    };
+
+    for (const exercise of exercises) {
+      const row = stored.find((candidate) => candidate.path === exercise.path);
+      const hash = contentHash(exercise.content);
+      const write = { content: exercise.content, language: exercise.language ?? null, importedHash: hash };
+
+      if (!row) {
+        decisions.push({ ...base, kind: 'exercise', path: exercise.path, action: 'new', ...write });
+      } else if (!row.imported_hash) {
+        // Not ours yet: only an empty, never-run seed may be replaced by the exercise.
+        if (String(row.content ?? '').trim()) {
+          decisions.push({ ...base, kind: 'exercise', path: exercise.path, action: 'kept', reason: 'not-empty' });
+        } else if (runFileIds.has(row.id)) {
+          decisions.push({ ...base, kind: 'exercise', path: exercise.path, action: 'kept', reason: 'has-runs' });
+        } else {
+          decisions.push({ ...base, kind: 'exercise', path: exercise.path, action: 'new', ...write });
+        }
+      } else if (contentHash(row.content ?? '') !== row.imported_hash) {
+        decisions.push({ ...base, kind: 'exercise', path: exercise.path, action: 'kept', reason: 'edited' });
+      } else if (row.content === exercise.content) {
+        decisions.push({ ...base, kind: 'exercise', path: exercise.path, action: 'kept', reason: 'current' });
+      } else {
+        decisions.push({ ...base, kind: 'exercise', path: exercise.path, action: 'updated', ...write });
+      }
+    }
+
+    for (const row of stored) {
+      if (planned.has(row.path)) continue;
+      const empty = !String(row.content ?? '').trim();
+      const baseRow = { ...base, kind: 'seed', path: row.path };
+      if (row.imported_hash) decisions.push({ ...baseRow, action: 'kept', reason: 'imported' });
+      else if (!empty) decisions.push({ ...baseRow, action: 'kept', reason: 'not-empty' });
+      else if (runFileIds.has(row.id)) decisions.push({ ...baseRow, action: 'kept', reason: 'has-runs' });
+      else decisions.push({ ...baseRow, action: 'removed', reason: 'empty-seed' });
+    }
+  }
+  return decisions;
+}
+
+/** The decision without the payload kept for writing. */
+function publicDecision({ content, language, importedHash, ...rest }) {
+  return rest;
 }
 
 async function existingExternalIds(store, table, where) {
@@ -264,6 +406,12 @@ export async function applyCourseImport(plan, store, { dryRun = false } = {}) {
     else if (log.kind === 'reflection') stats.reflections += 1;
     else stats.notes += 1;
   }
+
+  const workspace = await planWorkspaceWrites(plan, store);
+  stats.exerciseFiles = workspace.map(publicDecision);
+  stats.exerciseCount = stats.exerciseFiles.filter(
+    (decision) => decision.kind === 'exercise' && decision.action !== 'removed'
+  ).length;
   if (dryRun) return stats;
 
   // Repository calls (createCourse, addLessonVersion, saveNote, …) must target this store.
@@ -336,6 +484,23 @@ export async function applyCourseImport(plan, store, { dryRun = false } = {}) {
         provider: 'cli',
       });
       await store.put('lesson_versions', { ...version, external_id: lecture.externalId });
+    }
+  }
+
+  // The decisions were taken before the loop above; applying them here keeps lesson rows, lecture
+  // versions and their workspace files in one pass over the same plan.
+  for (const decision of workspace) {
+    if (decision.action === 'new' || decision.action === 'updated') {
+      await saveWorkspaceFile({
+        courseId: course.id,
+        lessonId: decision.lessonId,
+        path: decision.path,
+        language: decision.language,
+        content: decision.content,
+        importedHash: decision.importedHash,
+      });
+    } else if (decision.action === 'removed') {
+      await deleteWorkspaceFile({ lessonId: decision.lessonId, path: decision.path });
     }
   }
 
@@ -482,6 +647,35 @@ export async function importCourse(cwd, slug, { store = null } = {}) {
   }
 }
 
+/** `2 exercise files (1 new, 1 kept) · 1 empty seed cleared` */
+export function describeExerciseFiles(decisions, count) {
+  const exercise = (action) =>
+    decisions.filter((decision) => decision.kind === 'exercise' && decision.action === action).length;
+  const parts = [];
+  if (exercise('new')) parts.push(`${exercise('new')} new`);
+  if (exercise('updated')) parts.push(`${exercise('updated')} updated`);
+  if (exercise('kept')) parts.push(`${exercise('kept')} kept`);
+  const cleared = decisions.filter((decision) => decision.action === 'removed').length;
+  const noun = `exercise file${count === 1 ? '' : 's'}`;
+  return `${count} ${noun}: ${parts.join(', ') || 'no change'}${cleared ? ` · ${cleared} empty seed cleared` : ''}`;
+}
+
+/**
+ * One-line label for a workspace decision, used by `--dry-run` and the summary.
+ * @param {object} decision
+ * @param {boolean} dryRun
+ */
+export function exerciseLabel(decision, dryRun = false) {
+  if (decision.action === 'new') return dryRun ? 'new' : 'attached';
+  if (decision.action === 'updated') return dryRun ? 'update' : 'updated';
+  if (decision.action === 'removed') return dryRun ? 'would remove' : 'removed';
+  if (decision.reason === 'edited') return 'kept your version';
+  if (decision.reason === 'not-empty') return 'kept, has content';
+  if (decision.reason === 'has-runs') return 'kept, has run results';
+  if (decision.reason === 'imported') return 'kept, imported';
+  return 'already current';
+}
+
 /**
  * @param {{ args?: string[], cwd?: string, chalk?: object, style?: Function, store?: object }} [ctx]
  */
@@ -521,7 +715,11 @@ export async function run(ctx = {}) {
       const plan = planCourseImport(course);
       const stats = await applyCourseImport(plan, store, { dryRun });
 
-      for (const key of Object.keys(totals)) totals[key] += stats[key];
+      for (const key of Object.keys(totals)) {
+        if (Array.isArray(totals[key])) continue;
+        totals[key] += stats[key];
+      }
+      totals.exerciseFiles.push(...stats.exerciseFiles);
 
       const verb = dryRun ? 'would import' : 'imported';
       console.log('');
@@ -532,10 +730,34 @@ export async function run(ctx = {}) {
       if (stats.capstones || stats.completions) {
         console.log(`             ${stats.capstones} capstone · ${stats.completions} completion(s)`);
       }
+      if (stats.exerciseCount) console.log(`             ${describeExerciseFiles(stats.exerciseFiles, stats.exerciseCount)}`);
+
+      // A real run reports only what it did not create: what it kept and what it cleared.
+      if (!dryRun) {
+        for (const decision of stats.exerciseFiles) {
+          if (decision.action === 'removed') console.log(`             removed empty ${decision.path}`);
+          else if (decision.action === 'kept' && decision.reason === 'edited') {
+            console.log(`             kept your version of ${decision.path}`);
+          } else if (decision.action === 'kept' && decision.reason === 'not-empty') {
+            console.log(`             kept ${decision.path} (not empty)`);
+          } else if (decision.action === 'kept' && decision.reason === 'has-runs') {
+            console.log(`             kept ${decision.path} (has run results)`);
+          } else if (decision.action === 'kept' && decision.reason === 'imported') {
+            console.log(`             kept ${decision.path} (imported)`);
+          }
+        }
+      }
 
       if (dryRun) {
         for (const lesson of plan.lessons) {
           console.log(`    lesson ${lesson.position}. ${lesson.title} [${lesson.status}]${lesson.lectures.length ? ` ← ${lesson.lectures.length} version(s)` : ''}`);
+          const files = stats.exerciseFiles.filter((decision) => decision.lessonId === lesson.id);
+          if (files.length) {
+            console.log(`      exercises: ${files.map((decision) => `${decision.path} (${exerciseLabel(decision, true)})`).join(' · ')}`);
+          }
+        }
+        for (const path of plan.unattachedExercises || []) {
+          console.log(`    exercise ${path} has no matching lesson (skipped)`);
         }
       }
     }
@@ -546,6 +768,7 @@ export async function run(ctx = {}) {
       style('success',
         `${verb} ${selected.length} course${selected.length === 1 ? '' : 's'}: ` +
         `${totals.lessons} lessons, ${totals.versions} versions, ${totals.cards} cards, ` +
+        `${totals.exerciseCount} exercise files, ` +
         `${totals.quiz + totals.reflections + totals.notes} log entries, ` +
         `${totals.capstones} capstones, ${totals.completions} completions.`)
     );

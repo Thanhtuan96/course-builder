@@ -192,7 +192,10 @@ export function seedFiles(lesson, course = null, opts = {}) {
  * When the exercise cannot be seeded at all, a reset drops every stored file: otherwise the row an
  * earlier build wrote (the reference fence in `main.js`) comes straight back on the next load.
  *
- * @param {{ lesson?: object|null, course?: object|null, storedPaths?: string[] }} [input]
+ * Imported exercise files are what a reset restores: they are the lesson's skeleton, and replacing
+ * them with the Markdown seed would destroy the file import wrote.
+ *
+ * @param {{ lesson?: object|null, course?: object|null, storedPaths?: string[], rows?: Array<object> }} [input]
  * @returns {{
  *   files: SeedFile[],
  *   persist: boolean,
@@ -200,7 +203,11 @@ export function seedFiles(lesson, course = null, opts = {}) {
  *   deletePaths: string[],
  * }}
  */
-export function planReset({ lesson = null, course = null, storedPaths = [] } = {}) {
+export function planReset({ lesson = null, course = null, storedPaths = [], rows = [] } = {}) {
+  const imported = importedFirst(rows);
+  if (imported.length) {
+    return { files: filesFromRows(imported), persist: false, unsupportedSkeleton: null, deletePaths: [] };
+  }
   const { files, unsupportedSkeleton } = planSeed(lesson, course);
   const persist = !unsupportedSkeleton && files.some((f) => !isBlank(f.content));
   return {
@@ -259,6 +266,21 @@ function isBlank(content) {
 }
 
 /**
+ * Rows in the order the workspace should show them: files an import wrote first (by path, so the
+ * lesson opens on the exercise), then everything else in the order the repository returned it.
+ * @param {Array<object>|null|undefined} rows
+ * @returns {Array<object>}
+ */
+export function importedFirst(rows) {
+  const list = Array.isArray(rows) ? rows : [];
+  const imported = list.filter((row) => row?.imported_hash);
+  if (!imported.length) return list;
+  const sorted = [...imported].sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  const rest = list.filter((row) => !row?.imported_hash);
+  return [...sorted, ...rest];
+}
+
+/**
  * Decide what the Workspace opens with (RON-196).
  *
  * Lesson Markdown lives in `lesson_versions`, never on the `lessons` row the UI holds, so the seed
@@ -298,7 +320,18 @@ function isBlank(content) {
  * }}
  */
 export function resolveWorkspaceSeed({ lesson = null, course = null, version = null, rows = [], runCount = 0 } = {}) {
-  const stored = filesFromRows(rows);
+  const list = Array.isArray(rows) ? rows : [];
+  // Import wrote these: they are the exercise the learner was given, so no Markdown re-seed and no
+  // stale-reference pass applies. The imported file is ordered first: it is the active one.
+  if (list.some((row) => row?.imported_hash)) {
+    return {
+      files: filesFromRows(importedFirst(list)),
+      persist: false,
+      stalePaths: [],
+      unsupportedSkeleton: null,
+    };
+  }
+  const stored = filesFromRows(list);
   const content_md = version?.content_md || lesson?.content_md || '';
   const untouched = stored.length > 0 && stored.every((f) => isBlank(f.content)) && runCount === 0;
   const staleSeed = !untouched && isStaleReferenceSeed(stored, content_md, guessCourseLanguage(course || {}));
