@@ -3,7 +3,8 @@
  * way `professor:new-topic` promises, so the agent never improvises it (RON-249).
  *
  * - `programming`: a registered git worktree at `learning/<slug>/` on branch
- *   `learning/<slug>`, verified after creation; rolled back on any failure.
+ *   `learning/<slug>`, verified after creation; rolled back on any failure. A new
+ *   branch is an orphan branch, so the course starts with no host files or history.
  * - other kinds: a plain `learning/<slug>/` folder.
  *
  * `skillforce save <slug> [-m msg]` commits the course worktree so its
@@ -25,6 +26,23 @@ function tryGit(cwd, args) {
   try { return git(cwd, args); } catch { return null; }
 }
 
+function gitOutput(cwd, args) {
+  try {
+    return execFileSync('git', args, { cwd, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'] });
+  } catch (err) {
+    return `${err.stdout || ''}${err.stderr || ''}`;
+  }
+}
+
+/**
+ * Whether `git worktree add --orphan` exists, probed from the usage text (`-h` changes nothing).
+ * @param {string} cwd
+ * @returns {boolean}
+ */
+export function supportsOrphanWorktree(cwd) {
+  return /--orphan\b/.test(gitOutput(cwd, ['worktree', 'add', '-h']));
+}
+
 /** Registered worktrees as `{ path, branch }` (branch without `refs/heads/`). */
 export function listWorktrees(cwd) {
   const out = tryGit(cwd, ['worktree', 'list', '--porcelain']) || '';
@@ -44,6 +62,19 @@ function isCourseWorktree(cwd, dir, branch) {
   return listWorktrees(cwd).some((t) => t.path === real && t.branch === branch);
 }
 
+/** An existing ref that would stop git from writing `refs/heads/<branch>` (D/F conflict). */
+function refBlocked(root, branch) {
+  const parts = branch.split('/');
+  for (let i = 1; i < parts.length; i++) {
+    const ancestor = `refs/heads/${parts.slice(0, i).join('/')}`;
+    if (tryGit(root, ['rev-parse', '--verify', '-q', ancestor]) !== null) return true;
+  }
+  const descendants = tryGit(
+    root, ['for-each-ref', '--count=1', '--format=%(refname)', `refs/heads/${branch}/`],
+  );
+  return (descendants || '') !== '';
+}
+
 /** Keep `learning/` out of the host repo's `git status` without touching tracked files. */
 function excludeLearningDir(root, cwd) {
   const probe = join(cwd, 'learning');
@@ -60,9 +91,11 @@ function excludeLearningDir(root, cwd) {
 
 /**
  * Create (or reattach) the course directory. Throws with a user-facing message.
+ * @param {{ cwd: string, slug: string, kind: string, orphanStrategy?: 'auto'|'fallback' }} options
+ *   `orphanStrategy: 'fallback'` forces the multi-step orphan procedure (tests only).
  * @returns {{ slug: string, kind: string, dir: string, branch: string|null, created: boolean }}
  */
-export function createCourse({ cwd, slug, kind }) {
+export function createCourse({ cwd, slug, kind, orphanStrategy = 'auto' }) {
   if (!SLUG_RE.test(slug || '')) {
     throw new Error(`Invalid slug ${JSON.stringify(slug)} — use lowercase a-z, 0-9 and single hyphens.`);
   }
@@ -96,10 +129,25 @@ export function createCourse({ cwd, slug, kind }) {
   }
 
   const branchExists = tryGit(root, ['rev-parse', '--verify', '-q', `refs/heads/${branch}`]) !== null;
+  if (!branchExists && refBlocked(root, branch)) {
+    throw new Error(`Cannot create the ${branch} branch — an existing branch name blocks it. ` +
+      'Rename or delete it — nothing was kept.');
+  }
+  const useFallback = orphanStrategy === 'fallback' || !supportsOrphanWorktree(root);
   try {
-    // Reattach an existing branch (course restored after its worktree was pruned).
-    git(root, ['worktree', 'add', dir, ...(branchExists ? [branch] : ['-b', branch])]);
+    if (branchExists) {
+      // Reattach an existing branch (course restored after its worktree was pruned).
+      git(root, ['worktree', 'add', dir, branch]);
+    } else if (useFallback) {
+      git(root, ['worktree', 'add', '--detach', dir]);
+      git(dir, ['switch', '--orphan', branch]);
+    } else {
+      git(root, ['worktree', 'add', '--orphan', '-b', branch, dir]);
+    }
     if (!isCourseWorktree(root, dir, branch)) throw new Error('worktree is not registered after creation');
+    if (!branchExists && tryGit(dir, ['rev-parse', '--verify', '-q', 'HEAD']) !== null) {
+      throw new Error(`branch ${branch} is not orphan`);
+    }
   } catch (err) {
     tryGit(root, ['worktree', 'remove', '--force', dir]);
     if (!branchExists) tryGit(root, ['branch', '-D', branch]);

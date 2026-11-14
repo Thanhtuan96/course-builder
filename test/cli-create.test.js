@@ -8,7 +8,7 @@ import { execFileSync } from 'child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { createCourse, listWorktrees, saveCourse } from '../bin/commands/create.js';
+import { createCourse, supportsOrphanWorktree, listWorktrees, saveCourse } from '../bin/commands/create.js';
 
 const temps = [];
 afterEach(() => {
@@ -29,6 +29,8 @@ function mkRepo() {
   git(d, 'config', 'user.email', 't@example.com');
   git(d, 'config', 'user.name', 'T');
   writeFileSync(join(d, 'README.md'), 'host\n');
+  mkdirSync(join(d, 'src'));
+  writeFileSync(join(d, 'src', 'app.js'), 'host code\n');
   git(d, 'add', '.');
   git(d, 'commit', '-q', '-m', 'init');
   return d;
@@ -71,7 +73,7 @@ describe('createCourse — programming', () => {
 
   it('rolls back completely when git cannot create the branch', () => {
     const repo = mkRepo();
-    git(repo, 'branch', 'learning'); // ref D/F conflict: refs/heads/learning blocks learning/<slug>
+    git(repo, 'branch', 'learning'); // existing ref blocks refs/heads/learning/sql
     expect(() => createCourse({ cwd: repo, slug: 'sql', kind: 'programming' })).toThrow(/nothing was kept/);
     expect(existsSync(join(repo, 'learning', 'sql'))).toBe(false);
     expect(listWorktrees(repo)).toHaveLength(1);
@@ -82,6 +84,131 @@ describe('createCourse — programming', () => {
     const empty = mkTemp();
     git(empty, 'init', '-q');
     expect(() => createCourse({ cwd: empty, slug: 'sql', kind: 'programming' })).toThrow(/no commits/);
+  });
+});
+
+describe('RON-355 — orphan course branches', () => {
+  it('RON-355: creates an orphan worktree that contains no host files', () => {
+    const repo = mkRepo();
+    expect(supportsOrphanWorktree(repo)).toBe(true);
+
+    const { dir } = createCourse({ cwd: repo, slug: 'sql', kind: 'programming' });
+
+    expect(listWorktrees(repo)).toContainEqual({ path: dir, branch: 'learning/sql' });
+    expect(existsSync(join(dir, 'README.md'))).toBe(false);
+    expect(existsSync(join(dir, 'src'))).toBe(false);
+    expect(() => git(dir, 'rev-parse', '--verify', 'HEAD')).toThrow();
+    expect(git(repo, 'status', '--porcelain')).toBe('');
+  });
+
+  it('RON-355: a new course branch shares no commit with the host branch', () => {
+    const repo = mkRepo();
+    const { dir } = createCourse({ cwd: repo, slug: 'sql', kind: 'programming' });
+    expect(() => git(repo, 'rev-parse', '--verify', 'refs/heads/learning/sql')).toThrow();
+
+    writeFileSync(join(dir, 'COURSE.md'), '# SQL\n');
+    expect(saveCourse({ cwd: repo, slug: 'sql', message: 'course(sql): create' }).committed).toBe(true);
+
+    const hostHead = git(repo, 'rev-parse', 'HEAD');
+    const courseHead = git(repo, 'rev-parse', 'refs/heads/learning/sql');
+    expect(git(repo, 'log', '--format=%H', 'refs/heads/learning/sql').split('\n')).toEqual([courseHead]);
+    expect(git(repo, 'log', '--format=%H').split('\n')).not.toContain(courseHead);
+    expect(hostHead).not.toBe(courseHead);
+    expect(git(repo, 'ls-tree', '--name-only', 'refs/heads/learning/sql')).toBe('COURSE.md');
+    expect(git(repo, 'log', '-1', '--format=%s')).toBe('init');
+    expect(git(repo, 'status', '--porcelain')).toBe('');
+    expect(saveCourse({ cwd: repo, slug: 'sql' })).toEqual({ committed: false, reason: 'nothing to save' });
+  });
+
+  it('RON-355: the forced fallback produces the same orphan worktree', () => {
+    const repo = mkRepo();
+    const { dir } = createCourse({
+      cwd: repo, slug: 'sql', kind: 'programming', orphanStrategy: 'fallback',
+    });
+
+    expect(listWorktrees(repo)).toContainEqual({ path: dir, branch: 'learning/sql' });
+    expect(existsSync(join(dir, 'README.md'))).toBe(false);
+    expect(() => git(dir, 'rev-parse', '--verify', 'HEAD')).toThrow();
+    expect(git(repo, 'status', '--porcelain')).toBe('');
+
+    writeFileSync(join(dir, 'COURSE.md'), '# SQL\n');
+    expect(saveCourse({ cwd: repo, slug: 'sql' }).committed).toBe(true);
+    expect(git(dir, 'log', '--format=%s')).toBe('course(sql): save progress');
+  });
+
+  it('RON-355: the forced fallback rolls back when the worktree cannot be created', () => {
+    const repo = mkRepo();
+    writeFileSync(join(repo, 'learning'), 'not a directory');
+
+    expect(() => createCourse({
+      cwd: repo, slug: 'sql', kind: 'programming', orphanStrategy: 'fallback',
+    })).toThrow(/nothing was kept/);
+    expect(existsSync(join(repo, 'learning', 'sql'))).toBe(false);
+    expect(listWorktrees(repo)).toHaveLength(1);
+    expect(() => git(repo, 'rev-parse', '--verify', 'refs/heads/learning/sql')).toThrow();
+  });
+
+  it('RON-355: supportsOrphanWorktree tolerates a probe that cannot run', () => {
+    expect(supportsOrphanWorktree(join(mkTemp(), 'missing'))).toBe(false);
+  });
+
+  it('RON-355: a re-run on an existing course worktree changes nothing', () => {
+    const repo = mkRepo();
+    const { dir } = createCourse({ cwd: repo, slug: 'sql', kind: 'programming' });
+    writeFileSync(join(dir, 'COURSE.md'), '# SQL\n');
+    saveCourse({ cwd: repo, slug: 'sql' });
+    const head = git(repo, 'rev-parse', 'refs/heads/learning/sql');
+
+    expect(createCourse({ cwd: repo, slug: 'sql', kind: 'programming' }).created).toBe(false);
+    expect(git(repo, 'rev-parse', 'refs/heads/learning/sql')).toBe(head);
+    expect(git(repo, 'status', '--porcelain')).toBe('');
+  });
+
+  it('RON-355: reattach restores the orphan branch history after worktree removal', () => {
+    const repo = mkRepo();
+    const { dir } = createCourse({ cwd: repo, slug: 'sql', kind: 'programming' });
+    writeFileSync(join(dir, 'COURSE.md'), '# SQL\n');
+    saveCourse({ cwd: repo, slug: 'sql' });
+    const head = git(repo, 'rev-parse', 'refs/heads/learning/sql');
+    git(repo, 'worktree', 'remove', dir);
+
+    createCourse({ cwd: repo, slug: 'sql', kind: 'programming' });
+    expect(git(dir, 'rev-parse', 'HEAD')).toBe(head);
+    expect(readFileSync(join(dir, 'COURSE.md'), 'utf-8')).toBe('# SQL\n');
+    expect(existsSync(join(dir, 'README.md'))).toBe(false);
+  });
+
+  it('RON-355: refuses a foreign directory and creates no branch', () => {
+    const repo = mkRepo();
+    mkdirSync(join(repo, 'learning', 'sql'), { recursive: true });
+    writeFileSync(join(repo, 'learning', 'sql', 'keep.txt'), 'mine');
+
+    expect(() => createCourse({ cwd: repo, slug: 'sql', kind: 'programming' }))
+      .toThrow(/not the learning\/sql worktree/);
+    expect(readFileSync(join(repo, 'learning', 'sql', 'keep.txt'), 'utf-8')).toBe('mine');
+    expect(() => git(repo, 'rev-parse', '--verify', 'refs/heads/learning/sql')).toThrow();
+  });
+
+  it('RON-355: requires a git repository with a commit and creates no worktree', () => {
+    const outside = mkTemp();
+    expect(() => createCourse({ cwd: outside, slug: 'sql', kind: 'programming' }))
+      .toThrow(/require a git repository/);
+    expect(existsSync(join(outside, 'learning', 'sql'))).toBe(false);
+
+    const empty = mkTemp();
+    git(empty, 'init', '-q');
+    expect(() => createCourse({ cwd: empty, slug: 'sql', kind: 'programming' }))
+      .toThrow(/no commits/);
+    expect(existsSync(join(empty, 'learning', 'sql'))).toBe(false);
+  });
+
+  it('RON-355: a non-programming course stays a plain folder', () => {
+    const repo = mkRepo();
+    const r = createCourse({ cwd: repo, slug: 'lich-su-viet-nam', kind: 'conceptual' });
+
+    expect(r).toMatchObject({ branch: null, created: true });
+    expect(existsSync(join(repo, 'learning', 'lich-su-viet-nam'))).toBe(true);
+    expect(listWorktrees(repo)).toHaveLength(1);
   });
 });
 

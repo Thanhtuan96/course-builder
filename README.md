@@ -25,7 +25,8 @@ you try, you get feedback as questions, and you keep what you learn.
 - **Grounded lectures.** Before each lecture it researches 3–6 sources and cites key claims. It
   never invents links, and marks claims it could not source as unverified.
 - **Your progress stays on your machine.** Courses are plain Markdown files. Programming courses
-  are git worktrees on their own `learning/<slug>` branch, so they never mix with your project.
+  are git worktrees on their own `learning/<slug>` branch, which starts with no history and none of
+  your project's files, so they never mix with your project.
 - **Remembers how you learn.** Coach keeps a trail of every review round, flags weak concepts and
   builds spaced-repetition flashcards.
 
