@@ -18,7 +18,7 @@ Every course lives in `learning/{slug}/`. Read `learning/{slug}/COURSE.md` for t
 
 **Step 2: Check for incomplete sections**
 
-Parse COURSE.md for ⬜ status. If incomplete sections exist, use AskUserQuestion:
+Parse COURSE.md for ⬜ status. If incomplete sections exist, ask one question (`AskUserQuestion`):
 
 > "You have X incomplete sections. Archive anyway?"
 > Options: "Yes, archive" / "No, go back"
@@ -53,7 +53,7 @@ Write `learning/{slug}/SUMMARY.md` before anything else, so the archive contains
 
 **Step 4: Confirm**
 
-Nothing is removed before the learner says yes. Use AskUserQuestion:
+Nothing is removed before the learner says yes. Ask for confirmation (`AskUserQuestion`):
 
 > "Archive {Topic Name} now? Every file (lectures, learning log, exercises, notes, summary) is
 > copied to `.course_archive/{slug}/`. A programming course keeps its commits on branch

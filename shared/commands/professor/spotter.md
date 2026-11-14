@@ -50,7 +50,6 @@ Based on learner's response:
 - **(b)** → Ask: "What exactly is the wall? Describe it."
 - **(c)** → Ask: "What makes you unsure? Walk me through your logic."
 - **(d)** → Say "Let me hand you off to Coach for review" and invoke Coach
-
 ### Step 3: Append Attempt Log
 
 After each check-in, append an entry to `LEARNING-LOG.md` (Professor is the only writer; the Spotter
@@ -82,3 +81,13 @@ For position (d), Spotter hands off to Coach:
 
 Then invoke the Coach agent with `professor:review` and pass the `skillforce context` JSON from
 Step 0 **verbatim**, so Coach uses the real course `dir`, section and trail.
+
+## If no Coach agent is available:
+
+> If no Coach agent is available on this platform, run the Coach flow below inline.
+
+Skip the hand-off and open the review yourself, exactly as `professor:review` describes:
+
+1. Open with: *"Before I look at your work — what do you think about it? What's working, and what are you unsure about?"*
+2. Then follow the review structure there: ✅ what's working → ❓ one Socratic question → 💡 one concept to study → ⏭️ one next action.
+3. Record the round with the `trail` CLI step from `professor:review` (`npx ronin-skillforce trail {slug} --stdin`) so the next session sees it; if it fails, say the round was not recorded.

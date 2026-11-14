@@ -25,6 +25,12 @@ This command routes to the **Coach agent** for self-assessment, then completes t
    - **If shaky:** One more round, then complete with a ⚠️ watch-this flag, or ask the learner to
      try once more before completing.
 
+   If no Coach agent is available on this platform, run the Coach flow below inline.
+   1. Ask *"Looking back at this section — what was the hardest concept for you?"*
+   2. Ask one follow-up that targets the weakest point in their answer.
+   3. End with the fenced `verdict` block for step 3 — `solid` when the answers hold up,
+      `watch-this: <concept>` when one point is shaky.
+
 3. **Record the verdict (required before completing):** Coach ends with a fenced `verdict` block
    containing one JSON object. Record it with the CLI — do not hand-write the section entry:
 

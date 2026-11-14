@@ -1,8 +1,138 @@
-import { readFileSync, writeFileSync, mkdirSync, readdirSync, statSync, existsSync } from 'fs';
+import {
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  readdirSync,
+  statSync,
+  existsSync,
+  copyFileSync,
+} from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+/** Markers that delimit a plugin-managed region inside a learner-editable file. */
+export const BLOCK_START = '<!-- professor:start -->';
+export const BLOCK_END = '<!-- professor:end -->';
+
+/**
+ * Counter for one setup run: what was created or updated, what was already current, and how
+ * many files were backed up.
+ * @returns {{ updated: number, unchanged: number, backedUp: number, backedUpPaths: Set<string> }}
+ */
+export function createInstallRun() {
+  return { updated: 0, unchanged: 0, backedUp: 0, backedUpPaths: new Set() };
+}
+
+/**
+ * Save the content a write is about to replace, at most once per run per file.
+ * @param {string} dest
+ * @param {{ backedUp: number, backedUpPaths: Set<string> }} run
+ */
+function _backupOnce(dest, run) {
+  if (run.backedUpPaths.has(dest)) return;
+  copyFileSync(dest, `${dest}.bak`);
+  run.backedUpPaths.add(dest);
+  run.backedUp++;
+}
+
+/**
+ * Write a file the plugin owns: create it, leave it alone when it matches, otherwise back it up and
+ * replace it. This is what makes re-running setup refresh an upgrade.
+ * @param {string} dest
+ * @param {string} content
+ * @param {ReturnType<typeof createInstallRun>} run
+ * @param {string} [label] path shown in the log
+ * @returns {'created'|'updated'|'unchanged'}
+ */
+export function writeManagedFile(dest, content, run, label = dest) {
+  mkdirSync(dirname(dest), { recursive: true });
+
+  if (!existsSync(dest)) {
+    writeFileSync(dest, content);
+    run.updated++;
+    console.log(`  + ${label}`);
+    return 'created';
+  }
+
+  if (readFileSync(dest, 'utf-8') === content) {
+    run.unchanged++;
+    console.log(`  = ${label} (unchanged)`);
+    return 'unchanged';
+  }
+
+  _backupOnce(dest, run);
+  writeFileSync(dest, content);
+  run.updated++;
+  console.log(`  ~ ${label} (updated, backup saved)`);
+  return 'updated';
+}
+
+/**
+ * Refresh the marker-delimited Professor block inside a file the learner may also edit.
+ * Text outside the markers is preserved; a file without markers gets the block appended.
+ * @param {string} dest
+ * @param {string} blockContent
+ * @param {ReturnType<typeof createInstallRun>} run
+ * @param {string} [label]
+ * @returns {'created'|'updated'|'unchanged'}
+ */
+export function writeManagedBlock(dest, blockContent, run, label = dest) {
+  const block = `${BLOCK_START}\n${blockContent}\n${BLOCK_END}`;
+  mkdirSync(dirname(dest), { recursive: true });
+
+  if (!existsSync(dest)) {
+    writeFileSync(dest, `${block}\n`);
+    run.updated++;
+    console.log(`  + ${label}`);
+    return 'created';
+  }
+
+  const current = readFileSync(dest, 'utf-8');
+  const start = current.indexOf(BLOCK_START);
+  const end = start === -1 ? -1 : current.indexOf(BLOCK_END, start);
+  let next;
+  if (start !== -1 && end !== -1) {
+    next = current.slice(0, start) + block + current.slice(end + BLOCK_END.length);
+  } else {
+    next = `${current}${current.endsWith('\n') ? '\n' : '\n\n'}${block}\n`;
+  }
+
+  if (next === current) {
+    run.unchanged++;
+    console.log(`  = ${label} (unchanged)`);
+    return 'unchanged';
+  }
+
+  _backupOnce(dest, run);
+  writeFileSync(dest, next);
+  run.updated++;
+  console.log(`  ~ ${label} (updated, backup saved)`);
+  return 'updated';
+}
+
+/**
+ * True when the content is the skill document an older release wrote wholesale into a file.
+ * @param {string} content
+ * @returns {boolean}
+ */
+export function isLegacySkillDocument(content) {
+  const frontmatter = content.match(/^---\n([\s\S]*?)\n---/);
+  return !!frontmatter && /^name:\s*professor\s*$/m.test(frontmatter[1]);
+}
+
+/**
+ * One summary line per platform run.
+ * @param {string} platform
+ * @param {ReturnType<typeof createInstallRun>} run
+ */
+export function printInstallSummary(platform, run) {
+  console.log(
+    `✎ Setup summary (${platform}): ${run.updated} updated, ` +
+      `${run.unchanged} unchanged, ${run.backedUp} backed up.`
+  );
+}
 
 // Maps platform name → tool substitutions.
 // null means: strip the AskUserQuestion call and replace with plain inline text.
@@ -46,7 +176,9 @@ export function substituteTokens(content, platform) {
  */
 export function copySharedFiles(targetDir, platform) {
   const sharedDir = join(__dirname, '..', '..', 'shared');
-  _copyRecursive(sharedDir, targetDir, platform, true);
+  const run = createInstallRun();
+  _copyRecursive(sharedDir, targetDir, platform, true, run);
+  return run;
 }
 
 /**
@@ -54,23 +186,24 @@ export function copySharedFiles(targetDir, platform) {
  * By default, applies token substitution to .md/.js files.
  */
 export function copyDirectoryFiles(sourceDir, targetDir, platform, { substitute = true } = {}) {
-  _copyRecursive(sourceDir, targetDir, platform, substitute);
+  const run = createInstallRun();
+  _copyRecursive(sourceDir, targetDir, platform, substitute, run);
+  return run;
 }
 
-function _copyRecursive(src, dest, platform, substitute) {
+function _copyRecursive(src, dest, platform, substitute, run) {
   if (!existsSync(src)) return;
   const stat = statSync(src);
   if (stat.isDirectory()) {
-    if (!existsSync(dest)) mkdirSync(dest, { recursive: true });
     for (const file of readdirSync(src)) {
-      _copyRecursive(join(src, file), join(dest, file), platform, substitute);
+      _copyRecursive(join(src, file), join(dest, file), platform, substitute, run);
     }
-  } else if (!existsSync(dest)) {
+  } else {
     let content = readFileSync(src, 'utf-8');
     if (substitute && (src.endsWith('.md') || src.endsWith('.js'))) {
       content = substituteTokens(content, platform);
     }
-    writeFileSync(dest, content);
+    writeManagedFile(dest, content, run);
   }
 }
 
@@ -167,16 +300,18 @@ function _parseFrontmatter(content) {
 
 /**
  * Read every .md file from shared/commands/professor/, apply substituteTokens(),
- * then write per-platform command files into targetDir. Does NOT overwrite existing files.
+ * then write per-platform command files into targetDir.
  *
- * platform = 'gemini'   → writes targetDir/<slug>.toml
+ * platform = 'gemini'   → writes targetDir/<slug>.toml (arguments become {{args}})
  * platform = 'opencode' → writes targetDir/professor-<slug>.md
+ *
+ * @param {string} targetDir
+ * @param {'gemini'|'opencode'} platform
+ * @param {ReturnType<typeof createInstallRun>} [run]
  */
-export function generateCommandFiles(targetDir, platform) {
+export function generateCommandFiles(targetDir, platform, run = createInstallRun()) {
   const sharedDir = join(__dirname, '..', '..', 'shared', 'commands', 'professor');
-  if (!existsSync(sharedDir)) return;
-
-  mkdirSync(targetDir, { recursive: true });
+  if (!existsSync(sharedDir)) return run;
 
   for (const file of readdirSync(sharedDir)) {
     if (!file.endsWith('.md')) continue;
@@ -184,28 +319,19 @@ export function generateCommandFiles(targetDir, platform) {
 
     let raw = readFileSync(join(sharedDir, file), 'utf-8');
     raw = substituteTokens(raw, platform);
+    if (platform === 'gemini') raw = raw.replaceAll('$ARGUMENTS', '{{args}}');
     const { description, body } = _parseFrontmatter(raw);
 
     if (platform === 'gemini') {
       const filename = `${stem}.toml`;
-      const destPath = join(targetDir, filename);
-      if (existsSync(destPath)) {
-        console.log(`  ↔ ${filename} (already exists)`);
-        continue;
-      }
       const output = `description = "${description}"\n\nprompt = """\n${body}"""\n`;
-      writeFileSync(destPath, output);
-      console.log(`  + ${filename}`);
+      writeManagedFile(join(targetDir, filename), output, run, filename);
     } else if (platform === 'opencode') {
       const filename = `professor-${stem}.md`;
-      const destPath = join(targetDir, filename);
-      if (existsSync(destPath)) {
-        console.log(`  ↔ ${filename} (already exists)`);
-        continue;
-      }
       const output = `---\ndescription: ${description}\nsubtask: true\n---\n\n${body}`;
-      writeFileSync(destPath, output);
-      console.log(`  + ${filename}`);
+      writeManagedFile(join(targetDir, filename), output, run, filename);
     }
   }
+
+  return run;
 }

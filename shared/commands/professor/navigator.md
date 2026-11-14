@@ -7,6 +7,8 @@ description: View section bridges and concept thread, or generate new bridges be
 
 This command provides manual access to the Navigator agent for viewing and generating section bridges.
 
+> If no Navigator agent is available on this platform, run the Navigator flow below inline.
+
 ## Behavior
 
 ### Invoking Navigator Directly

@@ -17,7 +17,8 @@ Check the course structure:
 
 ## Step 2: Multi-Course Disambiguation
 
-If multiple course directories exist in `learning/` (e.g., `learning/react-hooks/` and `learning/sql-auditor/`), ask the user which one to publish using AskUserQuestion:
+If multiple course directories exist in `learning/` (e.g., `learning/react-hooks/` and
+`learning/sql-auditor/`), ask which one to publish (`AskUserQuestion`):
 > "You have multiple courses. Which would you like to publish?"
 List all `learning/` directories that contain `COURSE.md`.
 
@@ -47,7 +48,7 @@ Extract:
 - **description**: from SKILL.md frontmatter `description` (skills) or COURSE.md
 - **level**: from COURSE.md frontmatter (Beginner / Intermediate / Advanced / Expert)
 
-Ask the user for any missing required fields using AskUserQuestion:
+Ask for any missing required fields in one turn (`AskUserQuestion`):
 - **GitHub username**: "What is your GitHub username?"
 - **description**: "Give a 1-2 sentence description of this [course/skill]."
 - **topics**: "What topics does this cover?" (comma-separated list)

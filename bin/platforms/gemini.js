@@ -1,7 +1,13 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { substituteTokens, generateCommandFiles } from './_shared.js';
+import {
+  substituteTokens,
+  generateCommandFiles,
+  createInstallRun,
+  writeManagedBlock,
+  printInstallSummary,
+} from './_shared.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PLUGIN_DIR = join(__dirname, '..', '..');
@@ -18,6 +24,8 @@ export function detect() {
 /** Install professor for Gemini CLI. scope = 'global' → ~/, 'local' → cwd/ */
 export async function install(scope = 'local') {
   const base = scope === 'global' ? (process.env.HOME || '') : process.cwd();
+  const run = createInstallRun();
+
   // 1. Create .gemini/ directory
   const geminiDir = join(base, '.gemini');
   if (!existsSync(geminiDir)) {
@@ -25,35 +33,26 @@ export async function install(scope = 'local') {
     console.log('✓ Created .gemini/ directory');
   }
 
-  // 2. Compile GEMINI.md from preamble + shared/SKILL.md, with ask_user substitution
+  // 2. Refresh the Professor block in GEMINI.md (preamble + shared/SKILL.md), ask_user substituted
   const preamblePath = join(PLUGIN_DIR, 'templates', 'gemini', 'GEMINI.md');
   const skillPath = join(PLUGIN_DIR, 'shared', 'SKILL.md');
   const preamble = existsSync(preamblePath) ? readFileSync(preamblePath, 'utf-8') : '';
   const skill = readFileSync(skillPath, 'utf-8');
-  const professorBlock =
-    `<!-- professor:start -->\n${preamble}\n${skill}\n<!-- professor:end -->`;
-  const adapted = substituteTokens(professorBlock, 'gemini');
+  const adapted = substituteTokens(`${preamble}\n${skill}`, 'gemini');
 
   // Global: GEMINI.md lives inside ~/.gemini/; local: GEMINI.md lives at cwd/ (Gemini CLI walks upward)
   const geminiMdPath = scope === 'global' ? join(geminiDir, 'GEMINI.md') : join(base, 'GEMINI.md');
-  if (existsSync(geminiMdPath)) {
-    const existing = readFileSync(geminiMdPath, 'utf-8');
-    if (existing.includes('<!-- professor:start -->')) {
-      console.log('  ↔ GEMINI.md (professor block already present, skipping)');
-    } else {
-      writeFileSync(geminiMdPath, existing + '\n\n' + adapted);
-      console.log('  + GEMINI.md (professor block appended to existing file)');
-    }
-  } else {
-    writeFileSync(geminiMdPath, adapted);
-    console.log('  + GEMINI.md');
-  }
+  const geminiLabel = scope === 'global' ? '~/.gemini/GEMINI.md' : 'GEMINI.md';
+  writeManagedBlock(geminiMdPath, adapted, run, geminiLabel);
 
   // 3. Generate .toml command files for Gemini CLI
+  console.log('✓ Generating command files...');
   const commandsDir = scope === 'global'
     ? join(geminiDir, 'commands', 'professor')
     : join(base, '.gemini', 'commands', 'professor');
-  generateCommandFiles(commandsDir, 'gemini');
+  generateCommandFiles(commandsDir, 'gemini', run);
+
+  printInstallSummary('Gemini CLI', run);
 
   console.log(`
 ✅ Setup complete for Gemini CLI!
