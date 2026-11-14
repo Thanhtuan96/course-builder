@@ -7,8 +7,8 @@ Use `AskUserQuestion` to collect note details, then append to NOTES.md.
 
 ## Step 1: Detect Active Course
 
-1. Check if any `courses/*/COURSE.md` exists to find the active course
-2. If active course found → use `courses/{slug}/NOTES.md`
+1. Find the active course: check `learning/*/COURSE.md` first, then legacy `courses/*/COURSE.md`
+2. If active course found → use `NOTES.md` in that same course directory (`learning/{slug}/NOTES.md`, or `courses/{slug}/NOTES.md` for a legacy course)
 3. If no active course → use `courses/notes.md` (global fallback)
 
 ## Step 2: AskUserQuestion Flow
@@ -54,7 +54,7 @@ I should explore async/await patterns...
 
 Display:
 - The saved note with timestamp and type
-- File path: "Saved to: courses/{slug}/NOTES.md" or "Saved to: courses/notes.md"
+- File path: "Saved to: learning/{slug}/NOTES.md" (or the legacy `courses/{slug}/NOTES.md`) or "Saved to: courses/notes.md"
 - "Add another note? Run `/professor:note` anytime."
 
 ## Error Handling

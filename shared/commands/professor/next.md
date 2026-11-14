@@ -161,6 +161,8 @@ Then write the lecture so that every key factual claim carries a `[n]` citation.
      ```
    - This field is read by review/hint/stuck commands
 
+6. **Save** (programming courses): `npx course-professor save {slug} -m "course({slug}): start section {N}"` — commits the course worktree so progress survives restarts. Plain-folder courses need no save.
+
 Present the section content in chat, then prompt the user to attempt the exercise on their own.
 
 **Spotter Reminder:**
