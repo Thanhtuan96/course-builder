@@ -193,6 +193,7 @@ function ensureEntriesHeading(lines) {
 
 function verdictEntryLines(entry) {
   const out = [`### Section ${entry.section}`, '', `- Date: ${entry.date}`];
+  if (entry.hardest) out.push(`- Hardest: ${oneLine(entry.hardest)}`);
   if (entry.duration) out.push(`- Duration: ${oneLine(entry.duration)}`);
   for (const { q, a } of entry.answers) out.push(`- Q: "${oneLine(q)}" → A: "${oneLine(a)}"`);
   out.push(`- Verdict: ${entry.verdict}`);

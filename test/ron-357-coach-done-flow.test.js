@@ -9,7 +9,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { execFileSync } from 'child_process';
 import {
-  existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync,
+  existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync,
 } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -66,6 +66,31 @@ const verdictEntry = (overrides = {}) => ({
 });
 
 describe('Professor is the only writer of LEARNING-LOG.md', () => {
+  /** Positive write instructions aimed at the log, ignoring negations and Professor-as-actor lines. */
+  function writeInstructions(text) {
+    const bad = [];
+    let inWrite = false;
+    for (const line of text.split('\n')) {
+      if (/^###\s+Write\b/i.test(line)) { inWrite = true; continue; }
+      if (/^#{2,3}\s+/.test(line)) inWrite = false;
+      if (!/LEARNING-LOG\.md/.test(line)) continue;
+      const allowed = /never|do not|don't|no write|Professor (appends|records|writes|stores|is the only)/i;
+      if (inWrite || (/(append|write|edit|update|store|save|record)/i.test(line) && !allowed.test(line))) {
+        bad.push(line.trim());
+      }
+    }
+    return bad;
+  }
+
+  it('RON-357 no agent except professor instructs writing LEARNING-LOG.md', () => {
+    const dir = new URL('../agents/', import.meta.url);
+    const agents = readdirSync(dir).filter((f) => f.endsWith('.md') && f !== 'professor.md');
+    expect(agents.length).toBeGreaterThan(3);
+    const offenders = agents.flatMap((f) =>
+      writeInstructions(readFileSync(new URL(f, dir), 'utf-8')).map((line) => `${f}: ${line}`));
+    expect(offenders).toEqual([]);
+  });
+
   it('RON-357 coach.md hands the role to Professor and never tells the learner to re-run done', () => {
     const coach = read('agents/coach.md');
     expect(coach).not.toContain('Run `professor:done`');
@@ -85,6 +110,17 @@ describe('Professor is the only writer of LEARNING-LOG.md', () => {
   it('RON-357 the Spotter agent passes the context JSON to Coach', () => {
     expect(read('agents/spotter.md')).toMatch(/context[\s\S]{0,80}verbatim/i);
   });
+
+  it('RON-357 Navigator returns a thread block and Professor records it', () => {
+    const nav = read('agents/navigator.md');
+    expect(nav).toMatch(/```thread/);
+    expect(nav).toContain('preferred_format');
+    expect(nav).toMatch(/never write `LEARNING-LOG\.md`/i);
+    const cmd = read('commands/professor/navigator.md');
+    expect(cmd).toContain('## 🧭 Concept Thread');
+    expect(cmd).toContain('**Preferred format:**');
+    expect(cmd).toMatch(/Professor is the only writer/i);
+  });
 });
 
 describe('Section entries use the parser-compatible template', () => {
@@ -92,6 +128,7 @@ describe('Section entries use the parser-compatible template', () => {
     const { text } = appendVerdict('', verdictEntry());
     expect(text).toContain('## 📝 Section Entries');
     expect(text).toContain('- Date: 2026-11-15');
+    expect(text).toContain('- Hardest: closures');
     expect(text).toContain('- Duration: 48 min');
     expect(text).toContain('- Q: "What was the hardest concept?" → A: "closures capturing loop variables"');
     expect(text).toContain('- Verdict: solid');
@@ -198,6 +235,23 @@ describe('The capstone status header and table row move together', () => {
 
   it('RON-357 refuses a COURSE.md without a capstone status line', () => {
     expect(() => setCapstoneStatus('# Course\n', 'active')).toThrow(/Capstone status/);
+  });
+
+  it('RON-357 tolerates a course without a capstone row', () => {
+    const listCourse = `# 📚 Course: T
+
+**Capstone status**: 🔒 Locked (complete all sections to unlock)
+
+## Sections
+- 🔄 1. Intro
+`;
+    const active = setCapstoneStatus(listCourse, 'active');
+    expect(active).toContain('**Capstone status**: 🔄 In progress');
+    expect(active).not.toMatch(/Capstone Project/);
+    const { root, dir } = mkCourse('list-course');
+    writeFileSync(join(dir, 'COURSE.md'), listCourse);
+    expect(recordCapstoneStatus({ cwd: root, slug: 'list-course', status: 'done' }).status).toBe('done');
+    expect(readCourse(dir).capstoneStatus).toBe('done');
   });
 
   it('RON-357 recordCapstoneStatus updates the file and readCourse reads it back', () => {

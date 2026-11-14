@@ -184,6 +184,7 @@ Appended by Professor with `npx ronin-skillforce verdict {slug} --stdin` after t
 ### Section 2.1 — Closures
 
 - Date: 2026-03-14
+- Hardest: closures capturing loop variables
 - Duration: 48 min
 - Q: "What was the hardest concept?" → A: "closures capturing loop variables"
 - Q: "What happens when the input is empty?" → A: "I don't handle that yet"
