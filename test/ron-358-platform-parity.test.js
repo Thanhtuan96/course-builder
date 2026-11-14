@@ -246,6 +246,21 @@ describe('Managed writes refresh, back up and count', () => {
     expect(run).toMatchObject({ updated: 2, unchanged: 1, backedUp: 1 });
   });
 
+  it('RON-358 a later run backs up the version it replaces', () => {
+    const dir = mkHome();
+    const dest = join(dir, 'managed.md');
+    writeManagedFile(dest, 'v1', createInstallRun());
+    writeManagedFile(dest, 'v2', createInstallRun());
+    expect(readFileSync(`${dest}.bak`, 'utf-8')).toBe('v1');
+
+    const nextRun = createInstallRun();
+    writeManagedFile(dest, 'v3', nextRun);
+
+    expect(readFileSync(dest, 'utf-8')).toBe('v3');
+    expect(readFileSync(`${dest}.bak`, 'utf-8')).toBe('v2');
+    expect(nextRun).toMatchObject({ updated: 1, unchanged: 0, backedUp: 1 });
+  });
+
   it('RON-358 writeManagedBlock replaces only the marker block and keeps the rest', () => {
     const dir = mkHome();
     const dest = join(dir, 'AGENTS.md');
