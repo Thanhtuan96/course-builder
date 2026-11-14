@@ -406,6 +406,21 @@ describe('RON-372 imported exercise files are the workspace', () => {
     expect(unsupportedSkeleton).toBeNull();
   });
 
+  it('RON-372 opens a conceptual markdown exercise with its text', () => {
+    const content = '# Balance the ledger\n\n1. Which account is debited?\n';
+    const { files } = resolveWorkspaceSeed({
+      lesson: { id: 'l-md', title: 'Debits and credits', content_md: null },
+      course: { id: 'c-md', title: 'Ledger basics', kind: 'conceptual' },
+      version: { content_md: '# Debits and credits\n\n## Exercise\n\nOpen the exercise file.\n' },
+      rows: [
+        { id: 'f-md', path: '01-balance-the-ledger.md', language: null, content, imported_hash: 'b'.repeat(64) },
+      ],
+      runCount: 0,
+    });
+
+    expect(files).toEqual([{ path: '01-balance-the-ledger.md', content, language: null }]);
+  });
+
   it('RON-372 does not re-seed an imported file whose content is empty', () => {
     const { files, persist } = resolveWorkspaceSeed({
       lesson: LESSON,

@@ -8,7 +8,7 @@
  * @vitest-environment node
  */
 import { describe, it, expect, afterEach } from 'vitest';
-import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { tmpdir } from 'os';
@@ -222,6 +222,35 @@ describe('RON-372 import: re-import protects learner work', () => {
       action: 'kept',
       reason: 'not-empty',
     });
+    store.close();
+  });
+
+  it('RON-372 inserts a file added to the course later without touching the others', async () => {
+    const cwd = mkCourseCwd();
+    const store = mkStore();
+    await planAndApply(cwd, store);
+    const lessonOneBefore = await filesOf(store, lessonId('ron-372-exercises', 1));
+
+    const courseMd = join(cwd, 'learning', 'ron-372-exercises', 'COURSE.md');
+    const section = readFileSync(courseMd, 'utf-8').replace(
+      '| 2 | **Warm up** | ⬜ Not started |',
+      '| 2 | **Warm up** | ⬜ Not started |\n| 3 | **Loops** | ⬜ Not started |'
+    );
+    writeFileSync(courseMd, section);
+    writeFileSync(
+      join(cwd, 'learning', 'ron-372-exercises', 'exercises', '03-loop.py'),
+      'for n in range(3):\n    print(n)\n'
+    );
+
+    const { stats } = await planAndApply(cwd, store);
+    const added = stats.exerciseFiles.find((file) => file.path === '03-loop.py');
+    expect(added).toMatchObject({ action: 'new', lessonPosition: 3 });
+
+    const lessonThree = await filesOf(store, lessonId('ron-372-exercises', 3));
+    expect(lessonThree.map((row) => row.path)).toEqual(['03-loop.py']);
+
+    const lessonOneAfter = await filesOf(store, lessonId('ron-372-exercises', 1));
+    expect(lessonOneAfter[0].updated_at).toBe(lessonOneBefore[0].updated_at);
     store.close();
   });
 
