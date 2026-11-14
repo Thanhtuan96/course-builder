@@ -1,6 +1,6 @@
 {
   "name": "professor",
-  "version": "0.1.0",
+  "version": "0.2.0-beta.0",
   "description": "A Socratic learning plugin - teaches by asking questions instead of giving answers",
   "agents": [
     {

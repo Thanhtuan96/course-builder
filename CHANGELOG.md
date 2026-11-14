@@ -4,7 +4,7 @@ All notable changes to **ronin-skillforce** are documented here. The format is b
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.0-beta.0] — 2026-11-15
 
 ### Changed
 
@@ -32,6 +32,18 @@ All notable changes to **ronin-skillforce** are documented here. The format is b
 
 ### Fixed
 
+- New programming courses are created on an **orphan** branch: `learning/<slug>/` holds only course
+  files, never a copy of your project, and shares no history with it.
+- `professor:archive` keeps everything: the whole course is copied to `.course_archive/<slug>/`
+  (never overwritten), course commits stay on branch `archive/<slug>`, and nothing is removed before
+  the copy is verified (`skillforce archive`).
+- `professor:done` no longer loops: Coach asks you to say "confirm"; the section verdict is recorded
+  with `skillforce verdict` in the format the CLI reads, and the capstone status line now updates.
+- `professor:hint` and `professor:stuck` refuse during the capstone phase; `professor:next` resumes
+  an in-progress section instead of skipping it.
+- Re-running `setup` now refreshes the files the plugin installed (a changed file is kept once as
+  `.bak`); Gemini CLI, OpenCode and Cursor get current instructions, an inline Coach flow, and
+  Gemini commands receive their arguments.
 - `skillforce studio` polls and prints `http://127.0.0.1:<port>` instead of `http://localhost:<port>`,
   matching the loopback bind. On macOS `localhost` resolves to `::1` first, so a health poll could
   reach another dev server holding `[::1]:3000` and fail with "did not become healthy … (HTTP 404)".

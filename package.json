@@ -1,6 +1,6 @@
 {
   "name": "ronin-skillforce",
-  "version": "0.1.0",
+  "version": "0.2.0-beta.0",
   "description": "Ronin SkillForce — a Socratic learning coach for AI agents and a local Studio. It teaches by asking questions, grounds lectures in real sources and keeps your progress on disk.",
   "type": "module",
   "bin": {

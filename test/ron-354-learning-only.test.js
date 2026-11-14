@@ -204,9 +204,10 @@ describe('RON-354 canonical plugin files name only learning', () => {
 });
 
 describe('RON-354 docs and CHANGELOG state the migration', () => {
-  it('CHANGELOG [Unreleased] tells old users to move courses/<slug>/ by hand', () => {
+  it('the newest CHANGELOG release tells old users to move courses/<slug>/ by hand', () => {
     const changelog = readFileSync(join(__dirname, '..', 'CHANGELOG.md'), 'utf-8');
-    const unreleased = changelog.slice(changelog.indexOf('## [Unreleased]'));
+    const start = changelog.indexOf('\n## [');
+    const unreleased = changelog.slice(start, changelog.indexOf('\n## [', start + 1));
 
     expect(unreleased).toContain('`courses/<slug>/`');
     expect(unreleased).toContain('move it to `learning/<slug>/` by hand');
