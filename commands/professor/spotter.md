@@ -23,6 +23,12 @@ Run `professor:spotter` whenever:
 
 ## Behavior
 
+### Step 0: Get the course context
+
+Run `npx ronin-skillforce context {slug} --json` before the check-in. It returns the absolute
+`dir`, `section`, `activeExercise`, `watch` flags and recent `trail`. If it exits non-zero, show
+its error and ask the learner which course — never guess a slug or path.
+
 ### Step 1: Present Position Check-in
 
 When invoked, Spotter presents the position prompt:
@@ -47,7 +53,8 @@ Based on learner's response:
 
 ### Step 3: Append Attempt Log
 
-After each check-in, append an entry to `LEARNING-LOG.md`:
+After each check-in, append an entry to `LEARNING-LOG.md` (Professor is the only writer; the Spotter
+agent returns the line, it never edits the file):
 
 ```markdown
 ## 📋 Attempt Log
@@ -73,4 +80,5 @@ For position (d), Spotter hands off to Coach:
 
 > "Let me hand you off to Coach for review. Coach will ask you a self-assessment question first."
 
-Then invoke the Coach agent with `professor:review`.
+Then invoke the Coach agent with `professor:review` and pass the `skillforce context` JSON from
+Step 0 **verbatim**, so Coach uses the real course `dir`, section and trail.

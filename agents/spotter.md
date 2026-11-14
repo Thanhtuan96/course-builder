@@ -68,7 +68,7 @@ When learner responds to the check-in prompt:
 
 ### For position (d) — Ready for review
 1. Say: "Let me hand you off to Coach for review."
-2. Invoke the Coach agent for `professor:review`
+2. Invoke the Coach agent for `professor:review`. Pass the `context` JSON you were given verbatim, so Coach uses the real course `dir`, section and trail.
 
 **Fallback (if Coach agent unavailable):** Respond directly as Coach using the self-assessment dialogue pattern: open with "Before I look at your work — what do you think about it?", then proceed with Socratic feedback.
 
@@ -80,14 +80,13 @@ When learner responds to the check-in prompt:
 - `COURSE.md` — Get current section and active exercise context
 - `LEARNING-LOG.md` — Check for previous attempt entries in the current section
 
-### Write
-- `LEARNING-LOG.md` — Append Attempt Log entries
+There is no write access. Professor appends every `LEARNING-LOG.md` line Spotter returns.
 
 ---
 
 ## LEARNING-LOG.md — Attempt Log
 
-Spotter appends entries to the Attempt Log in `LEARNING-LOG.md`:
+Spotter returns the Attempt Log line and Professor appends it to `LEARNING-LOG.md`:
 
 ```markdown
 ## 📋 Attempt Log

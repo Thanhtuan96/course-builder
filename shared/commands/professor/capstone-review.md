@@ -50,7 +50,8 @@ Review the user's completed capstone project. This command is only available aft
    **Step 6 — Final verdict (choose one):**
 
    - 🏆 **Course Complete** — they demonstrated solid understanding across all course objectives.
-     Update `COURSE.md`: set the Capstone Project row status to ✅ Complete and record today's date.
+     Run `npx ronin-skillforce capstone-status {slug} --set done` so the `**Capstone status**`
+     header line and the Capstone Project row both show ✅ Complete with today's date.
      Add an entry to the Progress Log: `| [date] | Capstone | Review complete | Course Complete verdict |`
      **Also write `learning/{slug}/COMPLETION.md`** (same directory as COURSE.md):
      ```yaml

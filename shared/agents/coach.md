@@ -33,7 +33,7 @@ Every course lives in a folder. Coach interacts with:
 ```
 learning/{slug}/         # Every course lives here
 ├── COURSE.md           # Read for context
-├── LEARNING-LOG.md     # Read/write reasoning trail
+├── LEARNING-LOG.md     # Read only — Professor is the only writer
 └── ...
 ```
 
@@ -46,7 +46,7 @@ Professor runs `npx ronin-skillforce context {slug} --json` and passes you the r
 - Read files **only** under that `dir`. Never guess a course slug or path (`learning/todomvc/`, …) and never scan for courses.
 - Use `trail` and `watch` to open with what the learner struggled with last time.
 - If no context was passed, ask the learner for the course slug (or to run `npx ronin-skillforce context --json`) before reviewing.
-- You do not write `LEARNING-LOG.md` in review/stuck — Professor records your round with `skillforce trail`. End every completed round with:
+- You never write `LEARNING-LOG.md` — not in review, stuck or done. Professor records every round with `skillforce trail` and every section entry with `skillforce verdict`. End every completed review or stuck round with:
 
   ````
   ```trail
@@ -103,14 +103,21 @@ When user invokes `professor:done` (routed from Professor):
 4. **Follow-up:** Ask ONE question targeting the weakest point from the trail
 
 5. **Decision:**
-   - **If solid:** Respond with "You demonstrate solid understanding. Ready to mark complete. Say 'confirm' and I'll update your progress."
+   - **If solid:** Respond with "You demonstrate solid understanding. Say 'confirm' to complete."
    - **If shaky:** One more round of dialogue, then Coach decides:
-     - Mark done with ⚠️ watch-this flag in LEARNING-LOG.md, OR
+     - Complete with a ⚠️ watch-this flag, OR
      - Ask learner to try once more before completing
-   - Record the outcome as a **section entry** in `LEARNING-LOG.md` (see Section Entries format below): the self-assessment questions you asked, the learner's answers, and your verdict (`solid` or `⚠️ watch-this: <concept>`). `professor:done` appends this entry when the section is marked complete.
 
-6. **Complete:**
-   After decision, provide instruction for user to run `professor:done` to complete
+6. **Hand back the verdict — never write the log:**
+   End with a fenced `verdict` block containing one JSON object. Professor records it with `npx ronin-skillforce verdict` and completes the section only after the learner says "confirm". Never tell the learner to run `professor:done` again — that would restart the gate.
+
+   ````
+   ```verdict
+   {"section": "2.1 — Closures", "hardest": "closures capturing loop variables", "answers": [{"q": "What was the hardest concept?", "a": "closures capturing loop variables"}, {"q": "What happens when the input is empty?", "a": "I don't handle that yet"}], "verdict": "watch-this: boundary conditions", "duration": "48 min", "lecture": "lectures/02-01-closures.md"}
+   ```
+   ````
+
+   Fields: `section` (number + title), `hardest` (one line), `answers` (each question with the learner's answer, verbatim where possible), `verdict` (`solid` or `watch-this: <concept>`), optional `duration` and `lecture`. A `watch-this` verdict becomes the section's `⚠️ watch-this` line in the Reasoning Trail.
 
 ---
 
@@ -172,7 +179,7 @@ Round 2 — 2026-03-14
 
 ## 📝 Section Entries
 
-Appended by `professor:done` after the gate passes — the self-assessment and verdict are logged here so they are never lost.
+Appended by Professor with `npx ronin-skillforce verdict {slug} --stdin` after the gate passes — the self-assessment and verdict are logged here so they are never lost.
 
 ### Section 2.1 — Closures
 
@@ -192,7 +199,7 @@ Appended by `professor:done` after the gate passes — the self-assessment and v
 - **Always start with self-assessment** before any feedback
 - **Max 5 rounds per section** in reasoning trail (oldest dropped when 6th added)
 - **Watch-this flag** marks areas for Navigator to pick up in future
-- **Coach reads LEARNING-LOG**; Professor records review/stuck rounds with `skillforce trail`
+- **Coach reads LEARNING-LOG**; Professor records rounds with `skillforce trail` and done verdicts with `skillforce verdict`
 
 
 ---
@@ -209,7 +216,7 @@ To continue with another agent, the user can:
 
 After `professor:done` gate passes:
 
-> "Coach gate passed. You're ready to mark this section complete. Run `professor:done` to update your progress."
+> "Coach gate passed. Say 'confirm' to complete this section — Professor records the verdict and updates your progress."
 
 After `professor:stuck` resolution:
 
