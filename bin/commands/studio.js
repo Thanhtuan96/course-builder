@@ -14,16 +14,34 @@
  * Inherited `CLAUDECODE` / `CLAUDE_CODE_*` env vars are stripped from the child so a nested agent
  * CLI (spawned by the bridge) behaves like a normal terminal.
  */
-import { spawn, execSync } from 'child_process';
+import { spawn, execSync, execFileSync } from 'child_process';
 import { createServer } from 'http';
 import { createServer as createNetServer } from 'net';
 import { existsSync, statSync, readdirSync } from 'fs';
 import { dirname, join } from 'path';
+import { homedir } from 'os';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import { createStaticHandler } from '../static-server.js';
 import { requireStudioNode } from '../node-version.js';
 import * as security from '../../web/security.js';
+import {
+  isStudioHealthPayload,
+  removeState,
+  writeState,
+} from './studio-state.js';
+import {
+  LABEL,
+  UNSUPPORTED_PLATFORM,
+  collectStatus,
+  disableAutostart,
+  displayPath,
+  enableAutostart,
+  formatStatus,
+  stopStudio,
+} from './studio-autostart.js';
+
+export { isStudioHealthPayload };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = join(__dirname, '..', '..');
@@ -58,6 +76,11 @@ Options:
   --port <n>        Studio port (default ${DEFAULT_PORT})
   --api-port <n>    Local bridge server port (default ${DEFAULT_API_PORT})
   --no-open         Do not open the browser
+  --strict-port     Fail instead of picking another port when one is busy
+  --autostart on    Start Studio at login (macOS, global install only)
+  --autostart off   Remove the login item and stop starting Studio at login
+  --status          Show whether Studio is running, its URLs, autostart and log path
+  --stop            Stop the running Studio (never another app's process)
   --rotate-token    Generate a new pairing token and exit
   -h, --help        Show this help and exit
 `.trim();
@@ -69,12 +92,17 @@ export function wantsHelp(args = []) {
 
 
 /**
- * Parse `--port`, `--api-port`, `--no-open` (both `--flag value` and `--flag=value` forms).
+ * Parse `--port`, `--api-port`, `--no-open`, `--strict-port`, `--status`, `--stop` and
+ * `--autostart on|off` (both `--flag value` and `--flag=value` forms).
  * `portExplicit` / `apiPortExplicit` say whether the value came from a valid flag, which decides
  * whether a busy port is an error or an auto-pick.
+ * `autostart` is `'on'`, `'off'` or `'invalid'` when the flag was given without a usable value;
+ * `null` means the flag was not used.
+ *
  * @param {string[]} [args]
  * @returns {{ port: number, apiPort: number, portExplicit: boolean, apiPortExplicit: boolean,
- *             open: boolean, rotateToken: boolean }}
+ *             open: boolean, rotateToken: boolean, strictPort: boolean, status: boolean,
+ *             stop: boolean, autostart: 'on'|'off'|'invalid'|null }}
  */
 export function parseStudioArgs(args = []) {
   const valueOf = (name, fallback) => {
@@ -92,6 +120,13 @@ export function parseStudioArgs(args = []) {
   };
   const port = readPort('--port', DEFAULT_PORT);
   const apiPort = readPort('--api-port', DEFAULT_API_PORT);
+  const wantsAutostart = args.some((a) => a === '--autostart' || a.startsWith('--autostart='));
+  const autostartValue = valueOf('--autostart', null);
+  const autostart = wantsAutostart
+    ? autostartValue === 'on' || autostartValue === 'off'
+      ? autostartValue
+      : 'invalid'
+    : null;
   return {
     port: port.value,
     apiPort: apiPort.value,
@@ -99,6 +134,10 @@ export function parseStudioArgs(args = []) {
     apiPortExplicit: apiPort.explicit,
     open: !args.includes('--no-open'),
     rotateToken: args.includes('--rotate-token'),
+    strictPort: args.includes('--strict-port'),
+    status: args.includes('--status'),
+    stop: args.includes('--stop'),
+    autostart,
   };
 }
 
@@ -251,9 +290,11 @@ export async function findFreePort(
 
 /**
  * Keep both ports usable before anything binds: a busy default port moves to the next free one,
- * while a busy port the user pinned with a flag is a hard error.
+ * while a busy port the user pinned with a flag is a hard error. `strict` removes the auto-pick
+ * entirely, so a LaunchAgent start never changes the URL it was paired on.
  *
  * @param {{ port: number, apiPort: number, portExplicit?: boolean, apiPortExplicit?: boolean,
+ *           strict?: boolean,
  *           isBusy?: (port: number) => Promise<boolean>,
  *           findFree?: (from: number) => Promise<number> }} opts
  * @returns {Promise<{ port: number, apiPort: number, notices: string[] }>}
@@ -263,13 +304,14 @@ export async function resolveStudioPorts({
   apiPort,
   portExplicit = false,
   apiPortExplicit = false,
+  strict = false,
   isBusy = (value) => isPortBusy(value),
   findFree = (from) => findFreePort(from),
 } = {}) {
   const notices = [];
   const pick = async (value, explicit, flag, label) => {
     if (!(await isBusy(value))) return value;
-    if (explicit) {
+    if (explicit || strict) {
       throw new Error(
         `Port ${value} is already in use on loopback (127.0.0.1 or ::1). ` +
           `Choose another port: --${flag} <free port>.`
@@ -298,11 +340,6 @@ export function resolveStudioToken({ repoRoot = REPO_ROOT, env = process.env, ho
     home: home || env.PROFESSOR_HOME,
     legacyFile: security.legacyTokenPath(repoRoot),
   });
-}
-
-/** True for the payload Studio's `/api/studio/health` returns; anything else is a foreign app. */
-export function isStudioHealthPayload(body) {
-  return Boolean(body) && body.ok === true && typeof body.version === 'string';
 }
 
 /**
@@ -467,6 +504,125 @@ function ensureBuild({ studioDir, spinner }) {
 }
 
 /**
+ * `--autostart on|off`, `--status` and `--stop`. None of them starts the Studio server, so they run
+ * before the Node 22.5 gate and never import `ora`.
+ *
+ * @param {{ parsed: object, ctx?: object, style?: Function, repoRoot: string }} opts
+ * @returns {Promise<number>} process exit code
+ */
+async function runBackground({ parsed, ctx = {}, style, repoRoot }) {
+  const {
+    env = process.env,
+    userHome,
+    platform = process.platform,
+    exec = execFileSync,
+    kill = process.kill,
+    fetchImpl = globalThis.fetch,
+  } = ctx;
+  const log = (line) => console.log(line);
+  const fail = (line) => console.error(style('error', line));
+  const show = (file) => displayPath(file, { home: userHome || homedir() });
+
+  if (parsed.autostart === 'invalid') {
+    fail('--autostart needs a value: on or off.');
+    return 1;
+  }
+  if (parsed.autostart && (parsed.status || parsed.stop)) {
+    fail('Use --autostart, --status or --stop one at a time.');
+    return 1;
+  }
+  if (parsed.autostart && platform !== 'darwin') {
+    fail(UNSUPPORTED_PLATFORM);
+    return 1;
+  }
+
+  if (parsed.autostart === 'on') {
+    try {
+      const ports = await resolveStudioPorts({
+        port: parsed.port,
+        apiPort: parsed.apiPort,
+        portExplicit: parsed.portExplicit,
+        apiPortExplicit: parsed.apiPortExplicit,
+        strict: true,
+        isBusy: ctx.isPortBusy,
+        findFree: ctx.findFreePort,
+      });
+      const { logPath } = enableAutostart({
+        port: ports.port,
+        apiPort: ports.apiPort,
+        cliPath: join(repoRoot, 'bin', 'cli.js'),
+        execPath: ctx.execPath,
+        env,
+        userHome,
+        platform,
+        exec,
+        uid: ctx.uid,
+      });
+      log(style('success', `Studio will start at login (${LABEL}).`));
+      log(`  Studio URL:  ${loopbackUrl(ports.port)}`);
+      log(`  Log:         ${show(logPath)}`);
+      return 0;
+    } catch (err) {
+      fail(err.message);
+      return 1;
+    }
+  }
+
+  if (parsed.autostart === 'off') {
+    try {
+      const { plistPath, removed } = disableAutostart({ userHome, platform, exec, uid: ctx.uid });
+      log(
+        removed
+          ? `Studio will no longer start at login (removed ${show(plistPath)}).`
+          : 'Studio auto-start was already off.'
+      );
+      return 0;
+    } catch (err) {
+      fail(err.message);
+      return 1;
+    }
+  }
+
+  if (parsed.status) {
+    const report = await collectStatus({ env, userHome, kill, fetchImpl });
+    const pairingUrl =
+      report.token && report.state?.port && report.state?.apiPort
+        ? buildPairingUrl({
+            studioPort: report.state.port,
+            apiPort: report.state.apiPort,
+            token: report.token,
+          }).pairingUrl
+        : null;
+    log(formatStatus({ ...report, pairingUrl, userHome: userHome || homedir() }));
+    return report.status === 'running' ? 0 : 1;
+  }
+
+  if (parsed.stop) {
+    const result = await stopStudio({ env, userHome, platform, exec, uid: ctx.uid, kill });
+    if (result.refused) {
+      fail(`Refusing to stop pid ${result.pid}: it is not a Studio process.`);
+      return 1;
+    }
+    if (result.stopped) {
+      log(
+        result.via === 'launchctl'
+          ? 'Stopped Studio (launchd agent).'
+          : `Stopped Studio (pid ${result.pid}).`
+      );
+      return 0;
+    }
+    if (result.reason === 'stale') {
+      log(`Studio is not running (removed a stale studio.json for pid ${result.pid}).`);
+    } else {
+      log('Studio is not running.');
+    }
+    return 0;
+  }
+
+  return 1;
+}
+
+/**
  * @param {{ args?: string[], cwd?: string, chalk?: object, style?: Function, repoRoot?: string,
  *           ora?: Function, spawnImpl?: typeof spawn, fetchImpl?: typeof fetch,
  *           openImpl?: typeof openBrowser, nodeVersion?: string,
@@ -489,10 +645,14 @@ export async function run(ctx = {}) {
     return 0;
   }
 
+  const parsed = parseStudioArgs(args);
+  if (parsed.autostart || parsed.status || parsed.stop) {
+    return runBackground({ parsed, ctx, style, repoRoot });
+  }
+
   requireStudioNode(ctx.nodeVersion);
 
   const ora = ctx.ora || (await import('ora')).default;
-  const parsed = parseStudioArgs(args);
   const { open, rotateToken } = parsed;
   let { port, apiPort } = parsed;
 
@@ -527,14 +687,24 @@ export async function run(ctx = {}) {
     throw new Error(`Local server not found at ${serverEntry}. Is the package installed fully?`);
   }
 
-  const ports = await resolveStudioPorts({
+  const portOptions = {
     port,
     apiPort,
     portExplicit: parsed.portExplicit,
     apiPortExplicit: parsed.apiPortExplicit,
+    strict: parsed.strictPort,
     isBusy: ctx.isPortBusy,
     findFree: ctx.findFreePort,
-  });
+  };
+  let ports;
+  try {
+    ports = await resolveStudioPorts(portOptions);
+  } catch (err) {
+    // The LaunchAgent run has no terminal: one readable line in the log beats a stack trace.
+    if (!parsed.strictPort) throw err;
+    console.error(style('error', err.message));
+    return 1;
+  }
   port = ports.port;
   apiPort = ports.apiPort;
   for (const notice of ports.notices) {
@@ -584,6 +754,7 @@ export async function run(ctx = {}) {
   const shutdown = async (code = 0) => {
     if (shuttingDown) return;
     shuttingDown = true;
+    try { removeState(); } catch { /* best effort */ }
     try { apiChild.kill('SIGTERM'); } catch { /* already gone */ }
     if (staticServer) {
       try { await staticServer.close(); } catch { /* ignore */ }
@@ -630,6 +801,22 @@ export async function run(ctx = {}) {
     console.error(style('error', err.message));
     await shutdown(1);
     return done;
+  }
+
+  try {
+    writeState(
+      {
+        pid: process.pid,
+        port,
+        apiPort,
+        studioUrl,
+        apiUrl,
+        startedAt: new Date().toISOString(),
+      },
+      { env: process.env }
+    );
+  } catch (err) {
+    console.log(style('warning', `Could not record studio.json: ${err.message}`));
   }
 
   console.log('');

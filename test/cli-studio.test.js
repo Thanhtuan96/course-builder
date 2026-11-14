@@ -51,6 +51,10 @@ describe('parseStudioArgs', () => {
       apiPortExplicit: false,
       open: true,
       rotateToken: false,
+      strictPort: false,
+      status: false,
+      stop: false,
+      autostart: null,
     });
   });
 
@@ -62,6 +66,10 @@ describe('parseStudioArgs', () => {
       apiPortExplicit: true,
       open: false,
       rotateToken: false,
+      strictPort: false,
+      status: false,
+      stop: false,
+      autostart: null,
     });
     expect(parseStudioArgs(['--rotate-token']).rotateToken).toBe(true);
   });

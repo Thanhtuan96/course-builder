@@ -228,7 +228,17 @@ describe('RON-278 studio usage documents only flags studio handles', () => {
 
   it('lists no flag that parseStudioArgs would ignore', () => {
     const flags = [...new Set(STUDIO_USAGE.match(/--[a-z][a-z-]*/g) ?? [])].sort();
-    expect(flags).toEqual(['--api-port', '--help', '--no-open', '--port', '--rotate-token']);
+    expect(flags).toEqual([
+      '--api-port',
+      '--autostart',
+      '--help',
+      '--no-open',
+      '--port',
+      '--rotate-token',
+      '--status',
+      '--stop',
+      '--strict-port',
+    ]);
   });
 });
 
