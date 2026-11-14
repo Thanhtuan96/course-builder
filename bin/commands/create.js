@@ -16,7 +16,7 @@ import { isAbsolute, join, relative } from 'path';
 import { COURSE_KINDS } from '../course-reader.js';
 import { style } from '../registry-helpers.js';
 
-const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+export const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 function git(cwd, args) {
   return execFileSync('git', args, { cwd, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
@@ -75,18 +75,27 @@ function refBlocked(root, branch) {
   return (descendants || '') !== '';
 }
 
-/** Keep `learning/` out of the host repo's `git status` without touching tracked files. */
-function excludeLearningDir(root, cwd) {
-  const probe = join(cwd, 'learning');
-  if (tryGit(root, ['check-ignore', '-q', probe]) !== null) return;
+/**
+ * Keep a path inside the host repo out of `git status` without touching tracked files.
+ * @returns {string|null} the exclude line ensured, or null when git already ignores the path.
+ */
+export function excludeRepoPath(root, cwd, target) {
+  const abs = isAbsolute(target) ? target : join(cwd, target);
+  if (tryGit(root, ['check-ignore', '-q', abs]) !== null) return null;
   const commonDir = git(root, ['rev-parse', '--git-common-dir']);
   const infoDir = join(isAbsolute(commonDir) ? commonDir : join(root, commonDir), 'info');
   mkdirSync(infoDir, { recursive: true });
   const excludeFile = join(infoDir, 'exclude');
-  const line = `/${relative(root, probe).split('\\').join('/')}/`;
+  const line = `/${relative(root, abs).split('\\').join('/')}/`;
   const current = existsSync(excludeFile) ? readFileSync(excludeFile, 'utf-8') : '';
-  if (current.split('\n').includes(line)) return;
+  if (current.split('\n').includes(line)) return line;
   appendFileSync(excludeFile, `${current && !current.endsWith('\n') ? '\n' : ''}${line}\n`);
+  return line;
+}
+
+/** Keep `learning/` out of the host repo's `git status`. */
+function excludeLearningDir(root, cwd) {
+  return excludeRepoPath(root, cwd, join(cwd, 'learning'));
 }
 
 /**

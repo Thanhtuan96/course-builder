@@ -9,7 +9,9 @@ reader — commands, agents, the CLI, the PreCompact hook and the web UI — res
 ### Requirement: One course location
 
 The system SHALL treat `learning/<slug>/` as the only course location. No reader SHALL resolve a
-course from `courses/`, and no code path SHALL fall back to it.
+course from `courses/`, and no code path SHALL fall back to it. A course SHALL leave
+`learning/<slug>/` only through `skillforce archive`, which copies its contents to
+`.course_archive/` before removing anything.
 
 #### Scenario: Course only in learning is discovered
 - **WHEN** a course exists only at `learning/sql/COURSE.md`
@@ -22,6 +24,11 @@ course from `courses/`, and no code path SHALL fall back to it.
 #### Scenario: Learning wins over a duplicate legacy folder
 - **WHEN** the same slug exists in both `learning/x/` and `courses/x/`
 - **THEN** discovery returns exactly one course, read from `learning/x/`
+
+#### Scenario: A course leaves learning only through archive
+- **WHEN** a course is removed from `learning/<slug>/`
+- **THEN** its files already exist under `.course_archive/` and, for a programming course, its
+  commits remain reachable on branch `archive/<slug>`
 
 ### Requirement: Explicit course directory override
 
