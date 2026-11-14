@@ -9,7 +9,7 @@ When user runs `professor:worktrees`, list all available learning courses.
 
 **Steps:**
 
-1. **Check for learning/ directory** (new worktree courses):
+1. **Check for learning/ directory** (every course lives here):
    - If `learning/` directory exists, scan for subdirectories containing `COURSE.md`
    - For each worktree found, extract:
      - Tech slug (directory name)
@@ -21,11 +21,7 @@ When user runs `professor:worktrees`, list all available learning courses.
    - If `.course_archive/` directory exists, scan for archived courses
    - Display archived courses in a separate section
 
-3. **Check for legacy courses/** directory:
-   - If courses/ exists (legacy structure), scan for any remaining courses
-   - Note: These are the old-style courses not in worktrees
-
-4. **Display results**:
+3. **Display results**:
    
    If worktrees found:
    ```
@@ -50,7 +46,7 @@ When user runs `professor:worktrees`, list all available learning courses.
    If nothing found:
    > "No learning worktrees or archived courses found. Start a new course with `professor:new-topic`."
 
-5. **Handle edge cases**:
+4. **Handle edge cases**:
    - If learning/ doesn't exist: show helpful message about creating courses
    - If worktree contains incomplete data: skip gracefully, log warning
 

@@ -7,14 +7,14 @@ Display the capstone project brief for the active course.
 
 **Steps:**
 
-1. Check if a `courses/` directory exists in the current working directory.
-   - If no `courses/` directory or no active course is found, respond:
+1. Check for courses under `learning/` in the current working directory (`learning/*/COURSE.md`).
+   - If no course is found, respond:
      > "No active course found. Run `/professor:new-topic` to start a course first."
    - Stop here if no course exists.
 
 2. Identify the active course (read `COURSE.md` if only one course exists; ask the user which course if multiple exist).
 
-3. Check if `CAPSTONE.md` exists in the active course folder (`courses/{topic-slug}/CAPSTONE.md`).
+3. Check if `CAPSTONE.md` exists in the active course folder (`learning/{topic-slug}/CAPSTONE.md`).
    - If `CAPSTONE.md` does not exist, respond:
      > "No capstone brief found. This may be an older course. Run `/professor:new-topic` to create a new course with a capstone brief."
    - Stop here if the file is missing.

@@ -131,6 +131,8 @@ describe('course storage contract', () => {
       expect(text).toContain('skillforce create');
       expect(text).not.toMatch(/git worktree add/);
     }
-    expect(read('professor-skill/SKILL.md')).toMatch(/learning\/\*\/COURSE\.md` first/);
+    expect(read('professor-skill/SKILL.md')).toMatch(
+      /Look for courses in `learning\/\*\/COURSE\.md`/,
+    );
   });
 });

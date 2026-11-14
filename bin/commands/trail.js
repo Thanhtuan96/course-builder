@@ -24,10 +24,10 @@ export function resolveCourse(cwd, slug) {
   if (slug) {
     const hit = courses.find((c) => c.slug === slug);
     if (hit) return hit;
-    throw new Error(`No course "${slug}" under learning/ or courses/. Found: ${courses.map((c) => c.slug).join(', ') || 'none'}.`);
+    throw new Error(`No course "${slug}" under learning/. Found: ${courses.map((c) => c.slug).join(', ') || 'none'}.`);
   }
   if (courses.length === 1) return courses[0];
-  if (!courses.length) throw new Error('No course found under learning/ or courses/. Run professor:new-topic first.');
+  if (!courses.length) throw new Error('No course found under learning/. Run professor:new-topic first.');
   throw new Error(`Several courses found — pass the slug: ${courses.map((c) => c.slug).join(', ')}.`);
 }
 

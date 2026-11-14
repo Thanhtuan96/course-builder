@@ -1,7 +1,7 @@
 /**
  * Course reader — pure parsers for course files on disk.
  *
- * Reads `learning/{slug}/` (primary) and `courses/{slug}/` (legacy). Every
+ * Reads `learning/{slug}/`, the single course location. Every
  * function here is side-effect free apart from reading files, so Phase 31
  * (`studio`, `review`, `import`) can reuse the same shapes without going
  * through the CLI.
@@ -488,10 +488,10 @@ export function resolveExercise(course, { lecture = null } = {}) {
 
 /**
  * Find every course directory on disk.
- * Scans `learning/*​/` first, then legacy `courses/*​/` (dedup by slug).
+ * Scans `learning/*​/` only — it is the single course location.
  * @param {string} cwd
- * @param {{ dir?: string }} [opts] `dir` overrides the roots (single course or parent)
- * @returns {{ slug: string, dir: string, location: 'learning'|'courses'|'custom' }[]}
+ * @param {{ dir?: string }} [opts] `dir` overrides the root (single course or parent)
+ * @returns {{ slug: string, dir: string, location: 'learning'|'custom' }[]}
  */
 export function findCourses(cwd, { dir } = {}) {
   if (dir) {
@@ -501,16 +501,7 @@ export function findCourses(cwd, { dir } = {}) {
     }
     return scanRoot(abs, 'custom');
   }
-  const results = [];
-  const seen = new Set();
-  for (const [name, location] of [['learning', 'learning'], ['courses', 'courses']]) {
-    for (const course of scanRoot(join(cwd, name), location)) {
-      if (seen.has(course.slug)) continue;
-      seen.add(course.slug);
-      results.push(course);
-    }
-  }
-  return results;
+  return scanRoot(join(cwd, 'learning'), 'learning');
 }
 
 function scanRoot(root, location) {

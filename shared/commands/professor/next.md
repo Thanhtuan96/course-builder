@@ -38,7 +38,7 @@ Then write the lecture so that every key factual claim carries a `[n]` citation.
 
 1. **Archive the existing `LECTURE.md`** (skip if it does not exist, and skip if you are not moving to a different section):
    - **Only archive when the section number changes.** If the existing and new lecture share the same section number, this is an in-place edit — do NOT archive (it would create duplicate `NN-x.md`, `NN-x-2.md` files). If either lecture has no section number, archive only when both the content and the title differ.
-   - Determine the course directory: check `learning/{slug}/` first, then fall back to `courses/{slug}/`
+   - Determine the course directory: `learning/{slug}/`
    - Parse the section number from the existing lecture's `# Section N:` / `# 📖 Section N:` heading
    - Move (rename) the file to `lectures/NN-<section-slug>.md`:
      - `NN` = zero-padded section number (e.g. `02`); if the heading has no number, use the next free number after the files already in `lectures/`
@@ -50,8 +50,7 @@ Then write the lecture so that every key factual claim carries a `[n]` citation.
 **After writing LECTURE.md, auto-create the exercise file:**
 
 1. **Determine course location**:
-   - First check `learning/{slug}/` (worktree courses - Phase 7)
-   - Fall back to `courses/{slug}/` (legacy)
+   - The course directory is `learning/{slug}/`
 
 2. **Read the course Kind** from `COURSE.md` metadata (`**Kind**: ...`, right under `**Level**`):
    - If the field is missing, treat it as `programming` (backward compatible).

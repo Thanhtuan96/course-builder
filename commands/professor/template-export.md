@@ -10,11 +10,11 @@ When user runs `professor:template-export`, follow these steps:
 
 1. **Determine course location:**
    - Check if in `learning/{slug}/` directory
-   - If not, check if there's a `learning/` or `courses/` subdirectory with a course
+   - If not, check if there's a `learning/` subdirectory with a course
    - If still not found: check for `COURSE.md` in current directory
 
 2. **If no course found:**
-   - Show error: "Run this command from within a course directory (learning/{slug}/ or courses/{slug}/)"
+   - Show error: "Run this command from within a course directory (learning/{slug}/)"
 
 ## Step 2: Read Course Files
 

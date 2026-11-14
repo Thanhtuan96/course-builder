@@ -7,10 +7,9 @@ When user runs `professor:publish`, follow these steps to share your course or s
 
 ## Step 1: Find Active Course Directory
 
-Check both worktree and legacy structures:
-- If already in `learning/{slug}/` or `courses/{slug}/` directory, use that.
+Check the course structure:
+- If already in `learning/{slug}/` directory, use that.
 - Otherwise, check for `COURSE.md` in `learning/` subdirectory.
-- If not found there, check `courses/` subdirectory (legacy).
 - If still not found, check for `COURSE.md` in the current working directory.
 - If no active course is found, respond:
   > "No active course found. Run `/professor:new-topic` to start a course first."

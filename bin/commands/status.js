@@ -64,7 +64,7 @@ export async function run({ args = [], cwd = process.cwd(), chalk } = {}) {
       return;
     }
     console.log('');
-    console.log(style('info', 'No courses found in learning/ or courses/.'));
+    console.log(style('info', 'No courses found in learning/.'));
     console.log('');
     console.log('  Start one in your agent:   /professor:new-topic');
     console.log('  Or install a course:       npx ronin-skillforce install <name>');

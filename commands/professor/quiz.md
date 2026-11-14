@@ -17,7 +17,7 @@ After the user answers, review each answer with Socratic feedback — never just
 
 **Persist the quiz results:**
 
-Append a quiz entry to `LEARNING-LOG.md` in the course directory (`learning/{slug}/` first, then `courses/{slug}/`; create the file if missing):
+Append a quiz entry to `LEARNING-LOG.md` in the course directory (`learning/{slug}/`; create the file if missing):
 
 - **Date** — today
 - **Scope** — current section / entire course / specific concept

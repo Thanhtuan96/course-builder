@@ -7,10 +7,9 @@ When user runs `professor:skill-export`, follow these steps to encode your capst
 
 ## Step 1: Find Active Course Directory
 
-Check both worktree and legacy structures:
-- If already in `learning/{slug}/` or `courses/{slug}/` directory, use that.
+Check the course structure:
+- If already in `learning/{slug}/` directory, use that.
 - Otherwise, check for `COURSE.md` in `learning/` subdirectory.
-- If not found there, check `courses/` subdirectory (legacy).
 - If still not found, check for `COURSE.md` in the current working directory.
 - If no active course is found, respond:
   > "No active course found. Run `/professor:new-topic` to start a course first."
@@ -38,7 +37,7 @@ Extract:
 
 ## Step 4: Generate SKILL.md
 
-Write `learning/{slug}/SKILL.md` (or `courses/{slug}/SKILL.md` — same directory as COMPLETION.md) with 50–150 lines:
+Write `learning/{slug}/SKILL.md` (same directory as COMPLETION.md) with 50–150 lines:
 
 ```markdown
 ---

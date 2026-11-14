@@ -33,8 +33,8 @@ const LEGACY_BUILD_MESSAGE = `<!doctype html>
   <p>Run <code>npm run build</code> from the repository root, or use Professor Studio.</p>
 </body></html>`;
 
-function defaultCoursesDir() {
-  return process.env.COURSES_DIR || './courses';
+export function defaultCoursesDir(env = process.env) {
+  return env.COURSES_DIR || './learning';
 }
 
 function defaultStudioDist() {
@@ -310,7 +310,7 @@ export async function startServer({
     token,
     getToken,
     origins,
-    coursesDir: rest.coursesDir ?? env.COURSES_DIR ?? './courses',
+    coursesDir: rest.coursesDir ?? env.COURSES_DIR ?? defaultCoursesDir(env),
     studioDist: rest.studioDist ?? env.STUDIO_DIST ?? join(REPO_ROOT, 'studio', 'dist'),
     legacyDist:
       rest.legacyDist ?? env.LEGACY_DIST ?? join(REPO_ROOT, 'web', 'client', 'dist'),
