@@ -104,7 +104,7 @@ A **missing Kind is treated as `programming`** by every command (backward compat
 Generate the **next not-started section** from the syllabus into `learning/{topic-slug}/LECTURE.md`.
 
 Steps:
-1. Read `COURSE.md` — find the first section with status ⬜ Not started
+1. Read `COURSE.md` — resume the first section with status 🔄 In progress if there is one (finish it with `profesor:done` before starting a new section); otherwise find the first section with status ⬜ Not started
 2. **Research first:** search and fetch **3–6 sources** for that specific section (official docs/standards first for `programming`; encyclopedias/peer-reviewed/textbooks/primary sources for `quantitative`/`conceptual`/`skill`). Keep the list of URLs actually opened; delegate to the **Researcher agent** if available.
 3. Write `LECTURE.md` using the **LECTURE.md section format** below — one section only — with `[n]` citations on key claims, a `## 🔗 Sources` list of only the fetched URLs, and the `## 🔎 Verify it yourself` section. Never fabricate a source; mark unsourceable claims `⚠️ unverified`. If web tools were unavailable, say so at the top and mark all claims `⚠️`.
 4. Update `COURSE.md`: change that section's status to 🔄 In progress, update "Last active" date
@@ -135,21 +135,28 @@ Rules:
 
 ### `profesor:done`
 
-Mark the current section as complete.
+Mark the current section as complete. Coach runs the gate; Professor records the verdict and completes.
 
-1. Confirm understanding: *"Before we mark this done — can you explain [core concept of section] in your own words?"*
-2. If their explanation is solid:
-   - Update `COURSE.md`: change section status to ✅ Done, record the completion date
-   - Add an entry to the Progress Log in `COURSE.md`
-   - Check if **all sections are now ✅ Done**:
+1. Run `npx ronin-skillforce context {slug} --json` and hand the JSON to Coach **verbatim**.
+2. Coach asks "Looking back at this section — what was the hardest concept for you?", asks one follow-up, then ends with a fenced `verdict` block (JSON: `section`, `hardest`, `answers`, `verdict` = `solid` or `watch-this: <concept>`, optional `duration`, `lecture`). Record it:
+   ```bash
+   npx ronin-skillforce verdict {slug} --stdin <<'VERDICT_EOF'
+   {"section": "...", "hardest": "...", "answers": [{"q": "...", "a": "..."}], "verdict": "solid"}
+   VERDICT_EOF
+   ```
+   The quoted heredoc keeps the learner's words literal and the command writes the `LEARNING-LOG.md` section entry and any ⚠️ watch-this line. Coach never writes the log. If the command fails, say "⚠️ This verdict was not recorded" and do not complete the section.
+3. After the verdict is recorded, ask the learner to say **"confirm"**. Then Professor:
+   - Updates `COURSE.md`: section status ✅ Done, completion date
+   - Adds an entry to the Progress Log in `COURSE.md`
+   - Clears "Active exercise" and updates `SCHEDULE.md` flashcards
+   - Checks if **all sections are now ✅ Done**:
      - If **not all done**: *"Section [N] complete! Run `profesor:next` whenever you're ready for the next one."*
-     - If **all sections done**: 🎓 Trigger the **Capstone Unlock** message (see below)
-3. If their explanation is shaky:
-   - Give Socratic feedback, ask them to refine before marking done
-   - Don't mark done until they can explain it clearly
+     - If **all sections done**: run `npx ronin-skillforce capstone-status {slug} --set active` so the `**Capstone status**` line and the Capstone Project row unlock together, then 🎓 Trigger the **Capstone Unlock** message (see below)
+   - Programming courses: `npx ronin-skillforce save {slug} -m "course({slug}): complete section {N}"`
+4. If their explanation is shaky: give Socratic feedback, ask them to refine, and don't mark done until they can explain it clearly.
 
 #### Capstone Unlock Message
-When all sections are marked ✅ Done, say:
+When all sections are marked ✅ Done, `skillforce capstone-status {slug} --set active` has updated the `**Capstone status**` line and the Capstone Project row to 🔄 In progress. Say:
 
 > 🎓 **You've completed all sections of [Topic Name]!**
 >
@@ -261,7 +268,7 @@ When the user shares their project:
 5. **One growth challenge** — give them one concrete next step to level up the project on their own after the review
 
 6. **Final verdict** — one of:
-   - 🏆 **Course Complete** — they demonstrated solid understanding across all objectives. Update `COURSE.md` capstone status to ✅ Complete with date.
+   - 🏆 **Course Complete** — they demonstrated solid understanding across all objectives. Run `npx ronin-skillforce capstone-status {slug} --set done` so the `**Capstone status**` line and the row both show ✅ Complete, and write `COMPLETION.md`.
    - 🔄 **Almost There** — strong effort but one key concept from the course isn't demonstrated. Tell them exactly what's missing and ask them to add it before final sign-off.
 
 Rules for capstone review:

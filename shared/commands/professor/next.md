@@ -3,9 +3,14 @@ name: professor:next
 description: Load the next section of your course
 ---
 
-Read `COURSE.md` and find the first section with status ⬜ Not started.
+Read `COURSE.md` and pick the section to work on:
 
-If no ⬜ sections remain, check for any 🔄 In progress sections and prompt the user to complete those first.
+1. **Resume first:** if any section has status 🔄 In progress, resume the first one — load that
+   section's lecture and exercise again and do not start a new section. Tell the learner:
+   "Section {N} is still in progress — finish it with `professor:done` before starting a new one."
+2. Otherwise load the first section with status ⬜ Not started.
+3. If no ⬜ sections remain and none is 🔄 In progress, every section is done — say so and point at
+   `professor:capstone`.
 
 If no course exists at all, respond: "No active course found. Start one with `/professor:new-topic` first."
 

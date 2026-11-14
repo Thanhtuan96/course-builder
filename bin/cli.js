@@ -664,8 +664,10 @@ switch (command) {
   case 'save':
   case 'archive':
   case 'context':
-  case 'trail': {
-    const file = { save: 'create', context: 'trail' }[command] || command;
+  case 'trail':
+  case 'verdict':
+  case 'capstone-status': {
+    const file = { save: 'create', context: 'trail', verdict: 'trail' }[command] || command;
     const { run } = await import(`./commands/${file}.js`);
     await run({ args: args.slice(1), cwd: process.cwd(), chalk, style, command });
     break;
@@ -743,6 +745,8 @@ COMMANDS
   ${chalk.bold('archive')} <slug> [--json]  Copy a course to .course_archive/ and keep its branch
   ${chalk.bold('context')} [slug] --json  Course context for Coach (path, section, exercise, trail)
   ${chalk.bold('trail')} <slug> --learner .. --asked .. --concept ..  Record a Coach review round
+  ${chalk.bold('verdict')} <slug> --stdin     Record a Coach done-gate verdict (section entry + watch flag)
+  ${chalk.bold('capstone-status')} <slug> --set locked|active|done  Update the capstone header and row
   ${chalk.bold('doctor')}               Check the local environment (Node, git, agents, Ollama, port, DB)
   ${chalk.bold('studio')}               Start local server + Studio, pair and open the browser (Node 22.5+)
   ${chalk.bold('review')} [--limit N]   Review due flashcards in the terminal (SM-2) (Node 22.5+)

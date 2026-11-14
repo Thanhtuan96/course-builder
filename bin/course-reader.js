@@ -252,7 +252,7 @@ export function parseSections(content) {
   return parseListSections(region);
 }
 
-function parseCapstoneStatus(content, rowStatus) {
+export function parseCapstoneStatus(content, rowStatus) {
   const raw = metaValue(content, 'Capstone status');
   if (raw) {
     const lower = raw.toLowerCase();

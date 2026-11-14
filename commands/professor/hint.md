@@ -3,6 +3,19 @@ name: professor:hint
 description: "Get the next hint layer without revealing the answer"
 ---
 
+**Capstone guard — check this before any hint:**
+
+Read `COURSE.md` first. `professor:hint` is refused during the **capstone phase**: when every
+syllabus section is ✅ Done, or when `**Capstone status**` is 🔄 In progress or ✅ Complete. In that
+case refuse:
+
+> "No hints in the capstone phase — the rules change here: build the project yourself, with no hints
+> and no `professor:stuck`. You can run `professor:discuss` to talk a concept through, but I won't
+> touch your code."
+
+Stop there. Do not give a hint layer. A course with at least one ⬜ or 🔄 section and
+`**Capstone status**: 🔒 Locked` (or no status line) is not capstone — continue normally.
+
 **Before giving hints, check for Active exercise:**
 
 1. Read `COURSE.md` first (this is required at conversation start)

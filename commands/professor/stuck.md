@@ -8,6 +8,18 @@ argument-hint: "[describe what you're stuck on]"
 
 This command routes to the **Coach agent** which provides help through self-assessment dialogue.
 
+## Capstone guard — check before routing:
+
+`professor:stuck` is refused during the **capstone phase**: when every syllabus section is ✅ Done,
+or when `**Capstone status**` is 🔄 In progress or ✅ Complete. Read `COURSE.md` first, then refuse:
+
+> "No `professor:stuck` in the capstone phase — the rules change here: build the project yourself,
+> with no hints and no stuck-coaching. You can run `professor:discuss` to talk a concept through, but
+> I won't touch your code."
+
+Stop there and do not route to Coach. A course with at least one ⬜ or 🔄 section and
+`**Capstone status**: 🔒 Locked` (or no status line) is not capstone — continue normally.
+
 ## Before routing to Coach:
 
 1. **Get the course context** — run `npx ronin-skillforce context {slug} --json`. If it exits non-zero, show its error and ask the learner which course — never guess a slug or path.

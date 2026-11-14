@@ -6,7 +6,7 @@ description: >
   wants to find best practices, common pitfalls, or current recommendations.
   The researcher guides users to find information themselves rather than providing direct answers.
   Works in conjunction with the professor agent for course creation and advancement.
-tools: WebFetch, Read, Grep, Bash
+tools: WebFetch, WebSearch, Read, Grep, Bash
 color: green
 mode: subagent
 model: inherit

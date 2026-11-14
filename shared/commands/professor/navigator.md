@@ -48,7 +48,31 @@ Ask learner which format to display the bridge:
 - **concept-map** — Visual map with arrows showing relationships
 - **socratic** — Questions that help learner discover connections
 
-Or use the stored `preferred_format` from LEARNING-LOG.md if set.
+Or use the stored `**Preferred format:**` from the Concept Thread section if set.
+
+### Step 5: Record the thread (Professor only)
+
+When Navigator returns a fenced `thread` block, append it to `## 🧭 Concept Thread` in
+`LEARNING-LOG.md`. Professor is the only writer — Navigator never edits the file:
+
+```markdown
+## 🧭 Concept Thread
+
+**Preferred format:** concept-map
+
+### Section 2 → Section 3
+**Format used:** text-summary
+**Previous:** Closures — functions that "remember" their scope
+**Next:** Higher-order functions — functions that take/return functions
+**Connection:** "Closures enable higher-order functions because you can return a function that still has access to its original scope."
+
+⚠️ Forward reference from Section 1:
+  Previously: "You identified that edge cases matter" → Now: "This connects to defensive programming in error handling"
+```
+
+Create the heading if missing. When the block carries `preferred_format`, update the
+`**Preferred format:**` line instead of adding a second one. If the write fails, say
+"⚠️ This concept-thread entry was not recorded" — never claim it was saved.
 
 ---
 

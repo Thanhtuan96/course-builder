@@ -16,6 +16,7 @@ import { style } from '../registry-helpers.js';
 
 export const MAX_ROUNDS = 5;
 const TRAIL_RE = /^##\s+.*reasoning trail/i;
+const ENTRIES_RE = /^##\s+.*section entries/i;
 const ROUND_RE = /^Round\s+\d+\b/;
 
 /** Pick the course by slug; with no slug only a single course is accepted — never guess. */
@@ -161,12 +162,148 @@ export function recordRound({ cwd, slug, section, learner, asked, concept, evide
   return { recorded: true, path, section: target, rounds, saved };
 }
 
+// ─── Section Entries (done gate verdict) ─────────────────────────────────────
+
+/** Accepts `solid` or `watch-this: <concept>` (leading ⚠️ tolerated). */
+export function normalizeVerdict(raw) {
+  const value = oneLine(raw);
+  if (/^solid$/i.test(value)) return { verdict: 'solid', watch: null };
+  const m = value.match(/^(?:⚠️\s*)?watch-this\s*:\s*(.+)$/i);
+  if (m && oneLine(m[1])) return { verdict: `⚠️ watch-this: ${oneLine(m[1])}`, watch: oneLine(m[1]) };
+  throw new Error('Invalid verdict — use "solid" or "watch-this: <concept>". Nothing was recorded.');
+}
+
+/** Index of the first `##` heading after `start`, or lines.length. */
+function regionEnd(lines, start) {
+  let i = start + 1;
+  while (i < lines.length && !/^##\s/.test(lines[i])) i++;
+  return i;
+}
+
+/** Find or create `## 📝 Section Entries`; returns its line index. */
+function ensureEntriesHeading(lines) {
+  let e = lines.findIndex((l) => ENTRIES_RE.test(l));
+  if (e !== -1) return e;
+  const attempt = lines.findIndex((l) => /^##\s+.*attempt log/i.test(l));
+  let at = attempt === -1 ? lines.length : regionEnd(lines, attempt);
+  while (at > 0 && !lines[at - 1].trim()) at--;
+  lines.splice(at, 0, '', '## 📝 Section Entries', '');
+  return lines.findIndex((l) => ENTRIES_RE.test(l));
+}
+
+function verdictEntryLines(entry) {
+  const out = [`### Section ${entry.section}`, '', `- Date: ${entry.date}`];
+  if (entry.hardest) out.push(`- Hardest: ${oneLine(entry.hardest)}`);
+  if (entry.duration) out.push(`- Duration: ${oneLine(entry.duration)}`);
+  for (const { q, a } of entry.answers) out.push(`- Q: "${oneLine(q)}" → A: "${oneLine(a)}"`);
+  out.push(`- Verdict: ${entry.verdict}`);
+  if (entry.lecture) out.push(`- Archived lecture: ${oneLine(entry.lecture)}`);
+  return out;
+}
+
+/** Put the watch-this flag under the section's reasoning trail, replacing an older one. */
+function addTrailWatch(lines, section, watch) {
+  let t = lines.findIndex((l) => TRAIL_RE.test(l));
+  if (t === -1) {
+    const e = lines.findIndex((l) => ENTRIES_RE.test(l));
+    let at = e === -1 ? lines.length : e;
+    while (at > 0 && !lines[at - 1].trim()) at--;
+    lines.splice(at, 0, '', '## 🗣️ Reasoning Trail', '');
+    t = at + 1;
+  }
+  let end = regionEnd(lines, t);
+  const key = sectionKey(section);
+  let h = -1;
+  for (let i = t + 1; i < end; i++) if (sectionHeadRe(key).test(lines[i])) { h = i; break; }
+  const flag = `⚠️ watch-this: ${oneLine(watch)}`;
+  if (h === -1) {
+    while (end > t + 1 && !lines[end - 1].trim()) end--;
+    lines.splice(end, 0, '', `### Section ${section}`, '', flag, '');
+    return;
+  }
+  let blockEnd = h + 1;
+  while (blockEnd < lines.length && !/^#{2,3}\s/.test(lines[blockEnd])) blockEnd++;
+  const block = lines.slice(h + 1, blockEnd);
+  const { preface, rounds } = splitRounds(block);
+  const keep = preface.filter((l) => !/watch-this/i.test(l));
+  keep.push(flag);
+  const rebuilt = [
+    '', ...keep, '',
+    ...rounds.flatMap((r) => [...r, '']).slice(0, -1),
+    '',
+  ];
+  lines.splice(h + 1, block.length, ...rebuilt);
+}
+
+/** Pure: return LEARNING-LOG.md text with the section entry for `entry`. */
+export function appendVerdict(text, entry) {
+  let src = text && text.trim()
+    ? text
+    : `---\ncourse: ${entry.slug}\nupdated: ${entry.date}\n---\n\n# Learning Log\n`;
+  src = src.replace(/^(---\n[\s\S]*?^updated:\s*).*$/m, `$1${entry.date}`);
+  const lines = src.replace(/\n+$/, '').split('\n');
+
+  const e = ensureEntriesHeading(lines);
+  const headRe = sectionHeadRe(sectionKey(entry.section));
+  let h = -1;
+  for (let i = e + 1; i < lines.length && !/^##\s/.test(lines[i]); i++) {
+    if (headRe.test(lines[i])) { h = i; break; }
+  }
+  const body = verdictEntryLines(entry);
+  if (h === -1) {
+    let at = regionEnd(lines, e);
+    while (at > e + 1 && !lines[at - 1].trim()) at--;
+    lines.splice(at, 0, '', ...body, '');
+  } else {
+    let end = h + 1;
+    while (end < lines.length && !/^#{2,3}\s/.test(lines[end])) end++;
+    while (end > h + 1 && !lines[end - 1].trim()) end--;
+    lines.splice(h, end - h, ...body, '');
+  }
+
+  if (entry.watch || /watch-this/i.test(entry.verdict)) {
+    const watch = entry.watch || normalizeVerdict(entry.verdict).watch;
+    if (watch) addTrailWatch(lines, entry.section, watch);
+  }
+
+  while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
+  return { text: `${lines.join('\n').replace(/\n{3,}/g, '\n\n')}\n` };
+}
+
+/** Record the done-gate verdict; Professor is the only writer of LEARNING-LOG.md. */
+export function recordVerdict({
+  cwd, slug, section, hardest, answers, verdict, duration, lecture, date = todayISO(),
+}) {
+  if (!slug) throw new Error('Pass the course slug — verdict never guesses which course to write.');
+  const normalized = normalizeVerdict(verdict);
+  if (!oneLine(hardest)) throw new Error('Missing hardest — nothing was recorded.');
+  const cleaned = (Array.isArray(answers) ? answers : [])
+    .map((a) => (typeof a === 'string' ? { q: 'What was the hardest concept?', a } : a || {}))
+    .map((a) => ({ q: oneLine(a.q), a: oneLine(a.a) }))
+    .filter((a) => a.q && a.a);
+  if (!cleaned.length) throw new Error('Missing answers — nothing was recorded.');
+  const ctx = buildContext({ cwd, slug });
+  const target = section || ctx.section;
+  if (!target) throw new Error('No current section in COURSE.md — pass --section "N — Title".');
+  const path = ctx.learningLog;
+  const before = existsSync(path) ? readFileSync(path, 'utf-8') : '';
+  const { text } = appendVerdict(before, {
+    slug, section: target, date, duration, hardest, answers: cleaned,
+    verdict: normalized.verdict, watch: normalized.watch, lecture,
+  });
+  writeFileSync(path, text);
+  return { recorded: true, path, section: target, verdict: normalized.verdict, watch: normalized.watch };
+}
+
 function flagValue(args, name) {
   const i = args.indexOf(name);
   return i !== -1 && args[i + 1] !== undefined && !args[i + 1].startsWith('--') ? args[i + 1] : null;
 }
 
-const VALUE_FLAGS = ['--section', '--learner', '--asked', '--concept', '--evidence', '--watch', '--date'];
+const VALUE_FLAGS = [
+  '--section', '--learner', '--asked', '--concept', '--evidence', '--watch', '--date',
+  '--hardest', '--answers', '--verdict', '--duration', '--lecture',
+];
 
 function positionals(args) {
   const out = [];
@@ -195,6 +332,19 @@ export async function run({ args = [], cwd = process.cwd(), command = 'context' 
         console.log(style('success', `Recorded review round ${r.rounds} for Section ${r.section} in ${relative(cwd, r.path)}`
           + (r.saved ? ' (committed)' : '')));
       }
+      return;
+    }
+    if (command === 'verdict') {
+      // Same stdin-only rule as trail: the learner's words never appear inside a shell flag.
+      const fromStdin = args.includes('--stdin') ? JSON.parse(readFileSync(0, 'utf-8')) : {};
+      const f = (n) => fromStdin[n.slice(2)] ?? flagValue(args, n);
+      const r = recordVerdict({
+        cwd, slug, section: f('--section'), hardest: f('--hardest'), answers: f('--answers'),
+        verdict: f('--verdict'), duration: f('--duration'), lecture: f('--lecture'),
+        date: f('--date') || undefined,
+      });
+      if (json) console.log(JSON.stringify(r));
+      else console.log(style('success', `Recorded verdict "${r.verdict}" for Section ${r.section} in ${relative(cwd, r.path)}`));
       return;
     }
     const ctx = buildContext({ cwd, slug });

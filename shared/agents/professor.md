@@ -12,7 +12,7 @@ description: >
   At every session start, checks learning/ in the
   current working directory to restore course context before responding.
   NEVER writes working code for the user — guides, questions, and instructs only.
-tools: Read, Write, Bash, WebSearch
+tools: Read, Write, Edit, Bash, WebSearch, WebFetch
 model: inherit
 color: blue
 ---

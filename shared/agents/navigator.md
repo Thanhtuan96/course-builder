@@ -4,7 +4,7 @@ description: >
   Section bridges and concept threading agent. Appears between sections to show learners
   how concepts connect across a course. Owns professor:navigator command and bridges
   triggered by professor:done and professor:next.
-tools: Read, Write
+tools: Read
 color: cyan
 mode: subagent
 model: inherit
@@ -41,7 +41,7 @@ Navigator is activated when a section is completed. On Claude Code, this flows f
 
 3. **Present in preferred format** (or ask if first time)
 
-4. **Append to Concept Thread** in LEARNING-LOG.md
+4. **Return the Concept Thread entry** as a fenced `thread` block (see below); Professor records it. Never write `LEARNING-LOG.md`.
 
 ---
 
@@ -65,7 +65,7 @@ Navigator is activated when the user advances to the next section. On Claude Cod
 
 4. **Present in preferred format**
 
-5. **Append to Concept Thread** in LEARNING-LOG.md
+5. **Return the Concept Thread entry** as a fenced `thread` block (see below); Professor records it. Never write `LEARNING-LOG.md`.
 
 ---
 
@@ -108,15 +108,15 @@ Questions that help learner discover connections themselves:
 ## Format Preference
 
 - **First interaction:** Ask learner which format they prefer
-- **Store preference:** Write to LEARNING-LOG.md as `preferred_format: text-summary | concept-map | socratic`
-- **Use stored preference:** Default to their choice on subsequent bridges
+- **Return preference:** include `"preferred_format": "text-summary" | "concept-map" | "socratic"` in the `thread` block; Professor stores it in `LEARNING-LOG.md`
+- **Use stored preference:** Default to their choice on subsequent bridges (read it from the Concept Thread section)
 - **Change anytime:** Learner can say "show me as concept map" to override temporarily
 
 ---
 
 ## Concept Threading
 
-Navigator builds a growing "Concept Thread" in LEARNING-LOG.md that shows how key ideas connect across the course:
+Navigator builds a growing "Concept Thread" in `LEARNING-LOG.md` that shows how key ideas connect across the course. Professor is the only writer: Navigator reads the thread and returns each new entry in a fenced `thread` block.
 
 ### Reading Previous Concepts
 
@@ -133,26 +133,20 @@ From Coach's feedback, thread forward insights:
   Previously: "You identified that edge cases matter" → Now: "This connects to defensive programming in error handling"
 ```
 
-### Appending to LEARNING-LOG.md
+### Returning the Concept Thread Entry
 
-Write Concept Thread entries after presenting each bridge:
+End every bridge with one fenced `thread` block containing a single JSON object. Professor appends
+it to `## 🧭 Concept Thread` and stores the preference — you never write the file yourself.
 
-```markdown
-## 🧭 Concept Thread
-
-### Section 2 → Section 3
-**Format used:** text-summary
-**Previous:** Closures — functions that "remember" their scope
-**Next:** Higher-order functions — functions that take/return functions
-**Connection:** "Closures enable higher-order functions because you can return a function that still has access to its original scope."
-
-### Section 3 → Section 4
-**Format used:** concept-map
-**Thread:** Higher-order → enables → callbacks → enables → event handlers
-
-⚠️ Forward reference from Section 1:
-  Previously: "You identified that edge cases matter" → Now: "This connects to defensive programming in error handling"
+````
+```thread
+{"from": "2", "to": "3", "format": "text-summary", "previous": "Closures — functions that remember their scope", "next": "Higher-order functions — functions that take/return functions", "connection": "Closures enable higher-order functions because you can return a function that still has access to its original scope.", "watch": "edge cases matter → defensive programming", "preferred_format": "concept-map"}
 ```
+````
+
+Fields: `from`, `to`, `format` (`text-summary` | `concept-map` | `socratic`), `previous`, `next`,
+`connection`, optional `watch` (a forwarded watch-this insight) and optional `preferred_format`
+(first interaction or when the learner changes it).
 
 ---
 
@@ -163,8 +157,8 @@ Write Concept Thread entries after presenting each bridge:
 - `LECTURE.md` — Get key topics for current/next section
 - `LEARNING-LOG.md` — Get Reasoning Trail, Attempt Log, existing Concept Thread, watch-this flags
 
-### Write
-- `LEARNING-LOG.md` — Append Concept Thread entries, update preferred_format
+There is no write access. Professor appends every Concept Thread entry and preference Navigator
+returns; never write `LEARNING-LOG.md`.
 
 ---
 
@@ -212,4 +206,4 @@ If learner invoked via `professor:navigator` directly:
 - **Section completion** — Triggers brief bridge mode (on Claude Code: `professor:done`)
 - **Section advancement** — Triggers fuller bridge mode (on Claude Code: `professor:next`)
 - **Direct invocation** — View concept thread anytime (`professor:navigator` on Claude Code, `/navigator` or `@navigator` on other platforms)
-- **LEARNING-LOG.md** — Stores Concept Thread section
+- **LEARNING-LOG.md** — Holds the Concept Thread section (Professor writes it)
