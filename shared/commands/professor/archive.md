@@ -1,89 +1,96 @@
 ---
 name: professor:archive
-description: "Archive completed course with full learning context"
+description: "Archive a completed course without losing any work"
 ---
 
 When user runs `professor:archive`, follow the instructions below.
 
 ## Archive Behavior
 
-**Step 1: Detect course type**
+**Step 1: Find the course**
 
-Check if the current course is in `learning/{slug}/`, where every course lives.
+Every course lives in `learning/{slug}/`. Read `learning/{slug}/COURSE.md` for the topic name,
+**Kind** and level. If no course exists, tell the learner to start one with
+`professor:new-topic` and stop.
 
-> **Note:** non-programming courses (`**Kind**` is `quantitative`, `conceptual`, or `skill`) are **plain folders** under `learning/{slug}/` — there is no worktree or branch. Archive them the same way but skip the `git worktree remove` / `git branch -D` steps and just delete the plain folder.
+> Programming courses are git worktrees on branch `learning/{slug}`; other kinds are plain folders.
+> The CLI step below handles both — this file never runs git commands itself.
 
-**Step 2: Worktree archive mode (learning/)**
+**Step 2: Check for incomplete sections**
 
-If course is in `learning/{slug}/`:
+Parse COURSE.md for ⬜ status. If incomplete sections exist, use AskUserQuestion:
 
-a. **Read source files**:
-   - `learning/{slug}/COURSE.md`
-   - `learning/{slug}/NOTES.md` (if exists)
-   - `learning/{slug}/CAPSTONE.md`
+> "You have X incomplete sections. Archive anyway?"
+> Options: "Yes, archive" / "No, go back"
 
-b. **Check for incomplete sections**:
-   - Parse COURSE.md for ⬜ status
-   - If incomplete sections exist: Use AskUserQuestion:
-     > "You have X incomplete sections. Archive anyway?"
-     > Options: "Yes, archive" / "No, go back"
-   - If user chooses "No, go back": Exit gracefully
+If the learner chooses "No, go back", exit gracefully.
 
-c. **Generate SUMMARY.md** retrospective with format:
-   ```markdown
-   # Learning Summary: {Topic Name}
+**Step 3: Generate SUMMARY.md**
 
-   ## Course Overview
-   - Level: {level}
-   - Started: {start_date}
-   - Archived: {current_date}
+Write `learning/{slug}/SUMMARY.md` before anything else, so the archive contains it:
 
-   ## Sections Completed
-   - Section 1: {Title} ({date})
-   ...
+```markdown
+# Learning Summary: {Topic Name}
 
-   ## Key Concepts Learned
-   {extracted from progress log}
+## Course Overview
+- Level: {level}
+- Started: {start_date}
+- Archived: {current_date}
 
-   ## Notes
-   {summary of NOTES.md content or "No notes recorded"}
+## Sections Completed
+- Section 1: {Title} ({date})
+...
 
-   ## Capstone Project
-   {capstone title} - {completed/not completed}
-   ```
+## Key Concepts Learned
+{extracted from progress log}
 
-d. **Determine archive path**:
-   - Primary: `.course_archive/{slug}/`
-   - If exists: `.course_archive/{slug}-{YYYY-MM-DD}/`
+## Notes
+{summary of NOTES.md content or "No notes recorded"}
 
-e. **Create archive directory**: Use Bash mkdir -p
+## Capstone Project
+{capstone title} - {completed/not completed}
+```
 
-f. **Write archive files**:
-   - COURSE.md
-   - NOTES.md (if exists)
-   - CAPSTONE.md
-   - SUMMARY.md
+**Step 4: Confirm**
 
-g. **Remove worktree**:
-   ```bash
-   git worktree remove learning/{slug}/ --force
-   git branch -D learning/{slug}
-   ```
+Nothing is removed before the learner says yes. Use AskUserQuestion:
 
-h. **Success message**:
-   > "Course archived! Your learning journey is saved to:
-   > - .course_archive/{slug}/
-   > 
-   > The git worktree has been removed.
-   > 
-   > Start a new course anytime with professor:new-topic."
+> "Archive {Topic Name} now? Every file (lectures, learning log, exercises, notes, summary) is
+> copied to `.course_archive/{slug}/`. A programming course keeps its commits on branch
+> `archive/{slug}`."
+> Options: "Yes, archive" / "No, cancel"
 
-**Archive path handling:**
-- Primary: `.course_archive/{slug}/`
-- If exists: `.course_archive/{slug}-{YYYY-MM-DD}/`
+If the learner cancels, stop and leave the course untouched.
+
+**Step 5: Archive through the CLI**
+
+```bash
+npx ronin-skillforce archive {slug}
+```
+
+The command copies the whole course directory except `.git` to `.course_archive/{slug}/` (or the
+next free `-2`, `-3`, … target), then commits pending work, renames the branch to
+`archive/{slug}` and removes the worktree — or removes the plain folder after verifying the copy.
+
+Do not run `git worktree`, `git branch` or folder-deletion commands yourself. If the command exits
+non-zero, show its message and stop: the course is still in `learning/{slug}/` unless the message
+says otherwise.
+
+**Step 6: Success message**
+
+Use the result printed by the CLI (`archivedTo`, `branch`, `removed`):
+
+> "Course archived! Your learning journey is saved to:
+> - {archivedTo}/
+>
+> {History kept on branch archive/{slug}. | (plain-folder course: no branch)}
+>
+> Start a new course anytime with professor:new-topic."
 
 **Rules:**
-- Always remove worktree and branch after archiving
-- Never delete the exercises/ folder
-- Never include LECTURE.md in archive
-- Always auto-version if archive already exists
+- Never overwrite or delete an existing archive — the CLI picks the next free suffix.
+- Never remove anything before the CLI has verified the copy.
+- Never run git worktree/branch commands in this file; the CLI owns them and never forces a removal.
+- Everything except `.git` is preserved: `lectures/`, `exercises/`, `LEARNING-LOG.md`,
+  `SCHEDULE.md`, `COMPLETION.md`, `SKILL.md`, `LECTURE.md`, `COURSE.md`, `CAPSTONE.md`, `NOTES.md`
+  and `SUMMARY.md`.

@@ -662,6 +662,7 @@ switch (command) {
   case 'import':
   case 'create':
   case 'save':
+  case 'archive':
   case 'context':
   case 'trail': {
     const file = { save: 'create', context: 'trail' }[command] || command;
@@ -739,6 +740,7 @@ COMMANDS
   ${chalk.bold('check')} [slug]         Run the active exercise's self-checks
   ${chalk.bold('create')} <slug> --kind K  Create a course folder (programming = verified git worktree)
   ${chalk.bold('save')} <slug> [-m msg]   Commit a programming course's worktree
+  ${chalk.bold('archive')} <slug> [--json]  Copy a course to .course_archive/ and keep its branch
   ${chalk.bold('context')} [slug] --json  Course context for Coach (path, section, exercise, trail)
   ${chalk.bold('trail')} <slug> --learner .. --asked .. --concept ..  Record a Coach review round
   ${chalk.bold('doctor')}               Check the local environment (Node, git, agents, Ollama, port, DB)
@@ -784,6 +786,7 @@ EXAMPLES
   npx ronin-skillforce status --json           # Machine-readable status
   npx ronin-skillforce next                    # What to work on, and how to continue
   npx ronin-skillforce check nextjs            # Run the active exercise's self-checks
+  npx ronin-skillforce archive nextjs           # Archive a course, keeping every file and commit
   npx ronin-skillforce doctor                  # Diagnose your local setup
   npx ronin-skillforce studio                  # One command: server + Studio + pairing
   npx ronin-skillforce review                  # Review due flashcards in the terminal
