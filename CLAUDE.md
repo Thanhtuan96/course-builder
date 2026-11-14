@@ -33,6 +33,8 @@ node bin/cli.js check [slug]          # Run the active exercise's self-checks
 node bin/cli.js doctor                # Environment checklist with fix hints
 node bin/cli.js create <slug> --kind K  # Create course folder (programming = verified worktree, rollback on failure)
 node bin/cli.js save <slug> [-m msg]  # Commit a programming course worktree on its learning/<slug> branch
+node bin/cli.js context [slug] --json  # Explicit course context passed to Coach (no path guessing)
+node bin/cli.js trail <slug> --learner .. --asked .. --concept ..  # Append a Coach round to LEARNING-LOG.md (max 5/section)
 
 # Tests (Vitest: registry helpers, course reader and CLI commands)
 npm test                              # Run all tests
