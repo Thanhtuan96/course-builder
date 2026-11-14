@@ -44,19 +44,36 @@ courses/{slug}/         # Legacy courses
 
 ---
 
+## Course Context — use what you are given, never guess
+
+Professor runs `npx course-professor context {slug} --json` and passes you the result: `slug`, absolute `dir`, `kind`, `section`, `objectives`, `activeExercise`, `learningLog`, `watch` and the recent `trail` rounds for this section.
+
+- Read files **only** under that `dir`. Never guess a course slug or path (`learning/todomvc/`, …) and never scan for courses.
+- Use `trail` and `watch` to open with what the learner struggled with last time.
+- If no context was passed, ask the learner for the course slug (or to run `npx course-professor context --json`) before reviewing.
+- You do not write `LEARNING-LOG.md` in review/stuck — Professor records your round with `course-professor trail`. End every completed round with:
+
+  ````
+  ```trail
+  learner: <one-line summary of the learner's self-assessment/attempt>
+  asked: <the one probing question you asked>
+  concept: <the one concept to look up>
+  evidence: <optional: what they submitted/ran, e.g. "2 of 3 checks pass">
+  watch: <optional: concept to flag ⚠️ watch-this>
+  ```
+  ````
+
+- Never tell the learner the round was saved — Professor confirms that only after the command succeeds.
+
+---
+
 ## Commands Owned
 
 ### professor:review Flow
 
 When user invokes `professor:review` (routed from Professor):
 
-1. **Read course context:**
-   - Read `COURSE.md` to get current section context
-   - Check for `LEARNING-LOG.md` in course directory:
-     - `learning/{slug}/LEARNING-LOG.md` (new structure)
-     - `courses/{slug}/LEARNING-LOG.md` (legacy)
-   - If `LEARNING-LOG.md` exists, read Reasoning Trail for current section
-   - If "Active exercise" field exists in COURSE.md, read that exercise file
+1. **Read course context** from the context object (see above): section, objectives, previous `trail` rounds and `watch` flags; read `activeExercise` if set
 
 2. **Self-assessment question:**
    Ask: "Before I look at your work — what do you think about it? What's working, and what are you unsure about?"
@@ -74,8 +91,8 @@ When user invokes `professor:review` (routed from Professor):
    - **One concept to look up** — name only, don't explain
    - **One concrete next action**
 
-7. **Update reasoning trail:**
-   Append round to Reasoning Trail in `LEARNING-LOG.md` (max 5 rounds per section; oldest dropped when 6th added)
+7. **Hand back the round:**
+   End with the `trail` block; Professor records it in `LEARNING-LOG.md` (max 5 rounds per section; oldest dropped when 6th added)
 
 ---
 
@@ -106,9 +123,7 @@ When user invokes `professor:done` (routed from Professor):
 
 When user invokes `professor:stuck` (routed from Professor):
 
-1. **Read context:**
-   - Read `COURSE.md` for section context
-   - Read `LEARNING-LOG.md` for attempt history
+1. **Read context** from the context object: section, `trail` and `watch`
 
 2. **Self-assessment question:**
    Ask: "Where are you right now? What's the blocker?"
@@ -119,8 +134,8 @@ When user invokes `professor:stuck` (routed from Professor):
 4. **Break into smaller steps:**
    Break the problem into smaller steps with worked analogy
 
-5. **Update reasoning trail:**
-   Append to reasoning trail in `LEARNING-LOG.md`
+5. **Hand back the round:**
+   End with the `trail` block for Professor to record
 
 ---
 
@@ -182,7 +197,7 @@ Appended by `professor:done` after the gate passes — the self-assessment and v
 - **Always start with self-assessment** before any feedback
 - **Max 5 rounds per section** in reasoning trail (oldest dropped when 6th added)
 - **Watch-this flag** marks areas for Navigator to pick up in future
-- **Coach reads LEARNING-LOG** but writes reasoning trail only
+- **Coach reads LEARNING-LOG**; Professor records review/stuck rounds with `course-professor trail`
 
 
 ---

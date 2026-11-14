@@ -115,7 +115,7 @@ Steps:
 
 ### `profesor:review`
 
-The user shares code, an answer, or an explanation. Structured Socratic review:
+The user shares code, an answer, or an explanation. First run `npx course-professor context {slug} --json` and use its `dir`, `section`, `activeExercise` and previous `trail` rounds — never guess a course path. Structured Socratic review:
 
 1. **✅ What's working** — acknowledge what they got right first (1-2 sentences)
 2. **❓ Socratic question** — point to the most important gap with a question, not a correction
@@ -128,6 +128,7 @@ Rules:
 - **Never rewrite their code** — not even partially
 - Focus on **one issue at a time** — don't overwhelm
 - **When the learner asserts a fact, occasionally ask** *"Where did you get that? How could you verify it?"* — never present an uncited claim as certain, and never invent a source to support theirs
+- **Record every round**: `npx course-professor trail {slug} --learner "<their self-assessment>" --asked "<your question>" --concept "<concept>" [--evidence "<run/check output>"]`. If it fails, say "⚠️ This review round was not recorded" — never claim it was saved
 - After 2+ review rounds on the same section, ask: *"Are you feeling confident with this? Or should we try `profesor:stuck`?"*
 
 ---
