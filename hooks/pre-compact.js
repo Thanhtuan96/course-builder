@@ -52,16 +52,13 @@ function displayTokenWarning(tokenCount) {
 }
 
 /**
- * Find the most recently modified COURSE.md file
+ * Find the most recently modified COURSE.md file under learning/
  * 
- * Priority:
- * 1. First check learning/ directory (new worktree courses)
- * 2. Then check courses/ directory (legacy courses)
- * Returns the most recently modified COURSE.md from either location
+ * Returns the most recently modified COURSE.md in learning/, or null when
+ * there is none.
  */
 function findMostRecentCourse() {
   const learningDir = path.join(process.cwd(), 'learning');
-  const coursesDir = path.join(process.cwd(), 'courses');
   
   let mostRecentFile = null;
   let mostRecentTime = 0;
@@ -97,15 +94,7 @@ function findMostRecentCourse() {
     }
   }
   
-  // First check learning/ directory (priority for new worktree courses)
   scanForCourses(learningDir);
-  
-  // Then check courses/ directory (legacy fallback)
-  scanForCourses(coursesDir);
-  
-  if (!mostRecentFile) {
-    console.warn('PreCompact: No courses directory found. Skipping session save.');
-  }
   
   return mostRecentFile;
 }
@@ -200,7 +189,7 @@ function autoSaveSession() {
     const coursePath = findMostRecentCourse();
     
     if (!coursePath) {
-      console.warn('PreCompact: No active course found. Skipping session save.');
+      console.warn('PreCompact: No course found under learning/. Skipping session save.');
       return;
     }
     

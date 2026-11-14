@@ -74,12 +74,11 @@ Node floors: the CLI runs on Node 18+; Studio, `review` and `import` need **Node
 
 ### Course storage
 
-Courses live in `learning/{slug}/` (primary) or `courses/{slug}/` (legacy); every reader checks
-`learning/` first. `COURSE.md` records a **Kind** (`programming | quantitative | conceptual |
-skill`; missing → `programming`). `programming` courses are git worktrees on branch
-`learning/{slug}` (created by `bin/commands/create.js`, `learning/` added to `.git/info/exclude`);
-other kinds are plain folders. `bin/course-reader.js` parses COURSE.md / LECTURE.md /
-LEARNING-LOG.md / SCHEDULE.md for every CLI command.
+Courses live in `learning/{slug}/`, the only course location. `COURSE.md` records a **Kind**
+(`programming | quantitative | conceptual | skill`; missing → `programming`). `programming` courses
+are git worktrees on branch `learning/{slug}` (created by `bin/commands/create.js`, `learning/`
+added to `.git/info/exclude`); other kinds are plain folders. `bin/course-reader.js` parses
+COURSE.md / LECTURE.md / LEARNING-LOG.md / SCHEDULE.md for every CLI command.
 
 Per course: `COURSE.md` (syllabus + progress, source of truth), `LECTURE.md` (active section;
 archived to `lectures/NN-<slug>.md` before being replaced), `LEARNING-LOG.md` (Coach trail,
@@ -121,7 +120,7 @@ must carry the same version (`test/shared-drift.test.js`). Betas publish from `d
 
 1. **Never write working code** for the learner and never complete exercises for them.
 2. **Capstone phase**: no hints, no `professor:stuck`, no code nudges — `professor:discuss` only.
-3. **Read `COURSE.md` first** at conversation start (`learning/` before `courses/`) and **update it
+3. **Read `COURSE.md` first** at conversation start (under `learning/`) and **update it
    immediately** when a section's status changes.
 4. **LECTURE.md is archived, not lost**; **CAPSTONE.md is immutable**.
 5. **Never fabricate sources** — lectures research 3–6 sources first, cite key claims `[n]`, mark

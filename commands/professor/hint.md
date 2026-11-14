@@ -15,8 +15,7 @@ description: "Get the next hint layer without revealing the answer"
 **Read LEARNING-LOG.md Attempt Log:**
 
 Before applying hint layers, check if LEARNING-LOG.md exists in the course directory:
-1. First check `learning/{slug}/LEARNING-LOG.md` (worktree courses)
-2. Fall back to `courses/{slug}/LEARNING-LOG.md` (legacy)
+1. Read `learning/{slug}/LEARNING-LOG.md`
 3. If found, read the **## 📋 Attempt Log** section for the current section
 4. If attempt log has entries for this section:
    - Acknowledge the learner's stated sticking point from the log

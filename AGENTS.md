@@ -70,7 +70,7 @@ const path = require('path');
 | Functions/variables | camelCase | `validateItemName`, `fetchRegistryIndex` |
 | Constants | UPPER_SNAKE_CASE | `SUPPORTED_AGENTS` |
 | Commands | `professor:<action>` | `professor:new-topic` |
-| Course dirs | kebab-case slugs | `courses/javascript-fundamentals/` |
+| Course dirs | kebab-case slugs | `learning/javascript-fundamentals/` |
 | Course files | UPPER_SNAKE_CASE | `COURSE.md`, `LECTURE.md` |
 
 ### Formatting
@@ -168,8 +168,7 @@ course-learning-plugin/
 ├── test/                   # Test files (Vitest)
 │   └── cli.test.js
 ├── web/                    # Express + React web UI (optional)
-├── learning/               # Git worktrees per course (primary)
-├── courses/                # Legacy course storage
+├── learning/               # Every course (git worktrees per programming course)
 └── plugin.json             # Plugin manifest
 ```
 
@@ -196,14 +195,14 @@ These must never be violated:
 1. **Never write working code** for the user — not in review, hint, discuss, or anywhere
 2. **Never complete exercises** on the user's behalf
 3. **During capstone phase**: no hints, no `profesor:stuck`, no code nudges
-4. **Always read `COURSE.md` first** at conversation start (check `learning/` before `courses/`)
+4. **Always read `COURSE.md` first** at conversation start (under `learning/`)
 5. **Always update `COURSE.md`** immediately when section status changes
 6. **LECTURE.md is disposable** — overwritten by each `profesor:next`
 7. **CAPSTONE.md is immutable** — never edit after creation
 
 ### Course Storage Locations
-- **Primary**: `learning/{slug}/` (git worktrees with branch `learning/{slug}`)
-- **Legacy**: `courses/{slug}/`
+- **Courses**: `learning/{slug}/` — the only course location (git worktrees with branch
+  `learning/{slug}` for `programming` courses; plain folders otherwise)
 - **Archived**: `.course_archive/{slug}/`
 
 ### Course Files

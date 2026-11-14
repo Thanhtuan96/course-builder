@@ -46,7 +46,7 @@ Wait for the user to confirm or request adjustments (including a different kind)
    ```
    - `programming`: creates and **verifies** a registered git worktree at `learning/{slug}/` on branch `learning/{slug}` (reattaches the branch if it already exists), keeps `learning/` out of the host repo's `git status`, and rolls everything back if any step fails.
    - `quantitative` / `conceptual` / `skill` (PLUG-05): creates a plain folder `learning/{slug}/` — no git, no scaffolding. `exercises/` is created lazily by `professor:next`.
-   - **If the command exits non-zero, stop.** Show its error message to the user and do **not** write any course file anywhere (no fallback folder, no `courses/`).
+   - **If the command exits non-zero, stop.** Show its error message to the user and do **not** write any course file anywhere (no fallback folder).
    - **Programming only — scaffolding:** framework courses (React, Vue, Django, …) get a basic project structure (`package.json` or equivalent, `src/`, README with setup instructions); standalone courses get an empty `exercises/` directory. Do **not** create per-section exercise files — `professor:next` creates each one when its section starts.
 
 3. **Write course files** to `learning/{slug}/`:

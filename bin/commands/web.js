@@ -5,7 +5,7 @@
  * Legacy mode is the explicit opt-in (`--legacy` or `PROFESSOR_LEGACY=1`) and keeps the old
  * Anthropic/OpenAI fallback prompt. The server itself owns legacy-dev Vite startup (D-08).
  */
-import { existsSync, readFileSync, writeFileSync, readdirSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
@@ -297,13 +297,7 @@ export async function run({ args = [], style, startServerImpl } = {}) {
 
   process.env.PORT = positionalPort;
 
-  let defaultCourses = './courses';
-  if (existsSync('./courses')) {
-    if (readdirSync('./courses').length === 0) defaultCourses = './learning';
-  } else if (existsSync('./learning')) {
-    defaultCourses = './learning';
-  }
-  process.env.COURSES_DIR = process.env.COURSES_DIR || defaultCourses;
+  process.env.COURSES_DIR = process.env.COURSES_DIR || './learning';
 
   const token =
     rotatedToken ||

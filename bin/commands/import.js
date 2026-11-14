@@ -1,9 +1,9 @@
 /**
  * `skillforce import [slug|--all] [--dry-run]` (CLI-07) — bring CLI courses into Studio.
  *
- * Reads `learning/{slug}/` (primary) and legacy `courses/{slug}/` through `course-reader.js` and
- * writes them into the shared Studio SQLite DB. Everything goes through the repository or the same
- * StorageAdapter, so Studio sees identical rows:
+ * Reads `learning/{slug}/` through `course-reader.js` and writes them into the shared Studio SQLite
+ * DB. Everything goes through the repository or the same StorageAdapter, so Studio sees identical
+ * rows:
  *
  *   COURSE.md          → courses (title, level, kind, goal) + lessons (sections, status, dates)
  *   lectures/NN-*.md   → lesson_versions (ordered)
@@ -496,14 +496,14 @@ export async function run(ctx = {}) {
   const selected = slug ? courses.filter((c) => c.slug === slug) : courses;
 
   if (slug && selected.length === 0) {
-    console.error(style('error', `No course "${slug}" found in learning/ or courses/.`));
+    console.error(style('error', `No course "${slug}" found in learning/.`));
     process.exitCode = 1;
     return { courses: 0, error: `not found: ${slug}` };
   }
 
   if (selected.length === 0) {
     console.log('');
-    console.log(style('info', 'No courses found in learning/ or courses/.'));
+    console.log(style('info', 'No courses found in learning/.'));
     console.log('');
     return { courses: 0 };
   }

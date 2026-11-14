@@ -75,12 +75,13 @@ describe('findCourses', () => {
     expect(courses.every((c) => c.location === 'custom')).toBe(true);
   });
 
-  it('scans learning/ before legacy courses/ and dedups by slug', () => {
+  it('ignores legacy courses/ and dedups by slug (RON-354)', () => {
     const root = join(__dirname, 'fixtures', 'roots');
     const courses = findCourses(root);
-    expect(courses.map((c) => c.slug)).toEqual(['primary', 'shared', 'legacy']);
-    expect(courses.find((c) => c.slug === 'shared').location).toBe('learning');
-    expect(courses.find((c) => c.slug === 'legacy').location).toBe('courses');
+    expect(courses.map((c) => c.slug)).toEqual(['primary', 'shared']);
+    expect(courses.every((c) => c.location === 'learning')).toBe(true);
+    expect(courses.some((c) => c.slug === 'legacy')).toBe(false);
+    expect(courses.every((c) => c.dir.startsWith(join(root, 'learning')))).toBe(true);
   });
 
   it('ignores directories without a COURSE.md', () => {

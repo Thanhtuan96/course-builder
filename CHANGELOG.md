@@ -4,6 +4,15 @@ All notable changes to **ronin-skillforce** are documented here. The format is b
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Courses live only in `learning/<slug>/`. The legacy `courses/` location is no longer read:
+  `professor:capstone` and `professor:syllabus` now find every course created since 0.1.0, and the
+  CLI and PreCompact hook look in `learning/` only. If you still have a pre-0.1.0 `courses/<slug>/`
+  folder, move it to `learning/<slug>/` by hand — nothing is migrated automatically.
+
 ## [0.1.0] — 2026-11-14
 
 First release under the new name. Earlier versions were published as `course-professor`

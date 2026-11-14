@@ -76,8 +76,8 @@ npm i -g ronin-skillforce              # then run `skillforce <command>`
 npm uninstall -g ronin-skillforce
 ```
 
-Your courses (`learning/`, `courses/`) and Studio's database live outside the package and are not
-removed when you uninstall.
+Your courses (in `learning/`) and Studio's database live outside the package and are not removed
+when you uninstall.
 
 ---
 

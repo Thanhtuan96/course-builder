@@ -62,7 +62,7 @@ After each check-in, append an entry to `LEARNING-LOG.md`:
 
 ## File Paths
 
-- Course: `learning/{slug}/` (worktree) or `courses/{slug}/` (legacy)
+- Course: `learning/{slug}/`
 - LEARNING-LOG.md: In the course directory alongside COURSE.md
 
 ---

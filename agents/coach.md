@@ -31,12 +31,7 @@ The learner's self-assessment shapes everything you say next. If they correctly 
 Every course lives in a folder. Coach interacts with:
 
 ```
-learning/{slug}/         # New worktree-based courses
-├── COURSE.md           # Read for context
-├── LEARNING-LOG.md     # Read/write reasoning trail
-└── ...
-
-courses/{slug}/         # Legacy courses
+learning/{slug}/         # Every course lives here
 ├── COURSE.md           # Read for context
 ├── LEARNING-LOG.md     # Read/write reasoning trail
 └── ...
