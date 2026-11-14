@@ -1,9 +1,8 @@
 /**
  * `skillforce studio --autostart on|off`, `--status` and `--stop` (RON-297).
  *
- * Everything here runs through argument arrays — `launchctl`, `ps` and the signal call — and every
- * one of them is injectable, so tests never load a real LaunchAgent, never list a real process and
- * never signal one.
+ * Every launchd, process-list and signal call below uses an argument array and is injectable, so
+ * tests never load a real LaunchAgent, never list a real process and never signal one.
  */
 import { execFileSync } from 'child_process';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'fs';
@@ -129,8 +128,8 @@ export function buildLaunchAgentPlist({
 }
 
 /**
- * Refuse to install an agent that points into a throwaway path. A npx cache entry is deleted whenever
- * npm feels like it, which would leave a LaunchAgent that fails at every login.
+ * Refuse to install an agent that points into a throwaway path. A npx cache entry is deleted
+ * whenever npm feels like it, which would leave a LaunchAgent that fails at every login.
  *
  * @param {{ cliPath: string, execPath?: string }} opts
  * @returns {{ cliPath: string, nodePath: string }}
@@ -145,8 +144,8 @@ export function assertStableInstall({ cliPath, execPath = process.execPath } = {
   const unstable = [cliPath, execPath].find((value) => String(value).includes('/_npx/'));
   if (unstable) {
     throw new Error(
-      `Studio auto-start needs a stable install: this copy runs from the npx cache (${unstable}), ` +
-        `which can be deleted at any time. ${STABLE_INSTALL_HINT}`
+      `Studio auto-start needs a stable install: this copy runs from the npx cache ` +
+        `(${unstable}), which can be deleted at any time. ${STABLE_INSTALL_HINT}`
     );
   }
   return { cliPath, nodePath: execPath };

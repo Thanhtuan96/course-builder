@@ -528,7 +528,31 @@ describe('RON-297 auto-start on/off', () => {
     expect(exec.calls).toHaveLength(0);
   });
 
-  it('installs through the CLI and reports the URL and the log path', async () => {
+  it('pins the default ports when no port flags are given', async () => {
+    const userHome = mkTemp();
+    const repoRoot = mkTemp();
+    mkdirSync(join(repoRoot, 'bin'), { recursive: true });
+    writeFileSync(join(repoRoot, 'bin', 'cli.js'), '#!/usr/bin/env node\n');
+
+    const { code } = await captureRun({
+      args: ['--autostart', 'on'],
+      repoRoot,
+      userHome,
+      env: { PROFESSOR_HOME: mkTemp(), PATH: '/usr/bin:/bin' },
+      platform: 'darwin',
+      exec: recordingExec(),
+      execPath: '/usr/local/bin/node',
+      uid: 501,
+      isPortBusy: async () => false,
+    });
+
+    expect(code).toBe(0);
+    const written = readFileSync(launchAgentPath({ home: userHome }), 'utf8');
+    expect(written).toContain('<string>5180</string>');
+    expect(written).toContain('<string>3000</string>');
+  });
+
+  it('pins explicit ports through the CLI and reports the URL and the log path', async () => {
     const userHome = mkTemp();
     const professorHomeDir = mkTemp();
     const repoRoot = mkTemp();
@@ -896,7 +920,7 @@ describe('RON-297 run wiring', () => {
     try {
       const done = run({
         repoRoot,
-        args: ['--no-open', '--port', String(port)],
+        args: ['--no-open', '--strict-port', '--port', String(port)],
         nodeVersion: process.version,
         ora: () => spinner,
         spawnImpl: () => child,

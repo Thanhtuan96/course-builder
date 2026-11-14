@@ -1,6 +1,6 @@
 /**
- * Background state for `skillforce studio` (RON-297): the `studio.json` snapshot that `--status` and
- * `--stop` read, plus the two probes they need (pid liveness and a one-shot health check).
+ * Background state for `skillforce studio` (RON-297): the `studio.json` snapshot that `--status`
+ * and `--stop` read, plus the two probes they need (pid liveness, one-shot health check).
  *
  * Nothing here writes during a read path: `writeState` is only called by a running server, and
  * `readState`/`probeStudioHealth` never create a file or a token.
@@ -104,7 +104,7 @@ export function removeState({ env = process.env, home } = {}) {
 }
 
 /**
- * True when the pid exists. `EPERM` counts as alive: the process exists but belongs to someone else.
+ * True when the pid exists. `EPERM` counts as alive: the process exists but is not ours.
  * @param {number} pid
  * @param {{ kill?: (pid: number, signal?: number) => void }} [opts]
  * @returns {boolean}
@@ -119,7 +119,9 @@ export function isPidAlive(pid, { kill = process.kill } = {}) {
   }
 }
 
-/** A timeout signal when the runtime has one; `undefined` keeps the probe working on older Nodes. */
+/**
+ * A timeout signal when the runtime has one; `undefined` keeps the probe working on older Nodes.
+ */
 function abortTimeout(ms) {
   try {
     return typeof AbortSignal?.timeout === 'function' ? AbortSignal.timeout(ms) : undefined;

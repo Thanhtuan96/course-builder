@@ -140,7 +140,7 @@ skillforce studio --autostart on       # installs the login item and prints the 
 
 The LaunchAgent (`~/Library/LaunchAgents/com.ronin-skillforce.studio.plist`) pins the ports in use
 when you ran the command and starts Studio with `--strict-port`, so the URL and pairing URL stay the
-same at every login. If a pinned port is busy at login, Studio does not start: the reason is the first
+same at every login. If a pinned port is busy at login, Studio does not start: the reason is the last
 line of `~/.professor/logs/studio.log` (or `$PROFESSOR_HOME/logs/studio.log` when that is set).
 
 ```bash
