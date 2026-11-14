@@ -121,12 +121,39 @@ npx ronin-skillforce <command>         # or `skillforce <command>` after a globa
 | `next [slug]` | Current lesson summary and how to continue |
 | `check [slug]` | Run the active exercise's self-checks (never shows solutions) |
 | `doctor` | Check Node, git, agents, Ollama, ports and the database, with fix hints |
-| `studio [--no-open] [--port N --api-port N]` | Start the local server and Studio, print a pairing URL |
+| `studio [--no-open] [--port N --api-port N] [--status \| --stop \| --autostart on\|off]` | Start the local server and Studio, print a pairing URL, or check/stop the background copy |
 | `review [--limit N]` | Review due flashcards in the terminal (shared with Studio) |
 | `import [slug \| --all] [--dry-run]` | Import Markdown courses into Studio's database |
 | `create`, `save`, `context`, `trail` | Course steps the agent commands run for you |
 | `courses`, `search`, `install`, `update`, `installed`, `remove` | Community courses and skills (beta) |
 | `web` | Start only the bridge server (see below) |
+
+### Run Studio in the background (macOS)
+
+On macOS you can let Studio start at login instead of running `npx ronin-skillforce studio` yourself.
+Auto-start needs a global install, because a path in the npx cache can be deleted at any time:
+
+```bash
+npm i -g ronin-skillforce
+skillforce studio --autostart on       # installs the login item and prints the fixed URL
+```
+
+The LaunchAgent (`~/Library/LaunchAgents/com.ronin-skillforce.studio.plist`) pins the ports in use
+when you ran the command and starts Studio with `--strict-port`, so the URL and pairing URL stay the
+same at every login. If a pinned port is busy at login, Studio does not start: the reason is the last
+line of `~/.professor/logs/studio.log` (or `$PROFESSOR_HOME/logs/studio.log` when that is set).
+
+```bash
+skillforce studio --status             # running? URL, pairing URL, autostart, log path
+skillforce studio --stop               # stop it; never touches another app's process
+skillforce studio --autostart off      # remove the login item
+```
+
+Pick a specific port with `--autostart on --port 5190 --api-port 3005` (a busy port is refused, not
+silently changed). Re-run `--autostart on` after changing Node (nvm, a global upgrade) so the agent
+points at the new binary, and run `--autostart off` before uninstalling the package. Log out and back
+in once to see it start by itself; `--status` may say "not running" for a moment after login while
+Studio boots.
 
 ### Starting the bridge manually
 

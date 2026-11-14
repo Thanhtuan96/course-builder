@@ -669,7 +669,8 @@ switch (command) {
   case 'capstone-status': {
     const file = { save: 'create', context: 'trail', verdict: 'trail' }[command] || command;
     const { run } = await import(`./commands/${file}.js`);
-    await run({ args: args.slice(1), cwd: process.cwd(), chalk, style, command });
+    const code = await run({ args: args.slice(1), cwd: process.cwd(), chalk, style, command });
+    if (typeof code === 'number' && code !== 0) process.exit(code);
     break;
   }
 
@@ -782,6 +783,10 @@ FLAGS
   --port <n>        For \`studio\`, the Studio port (default 5180)
   --api-port <n>    For \`studio\`, the local server port (default 3000)
   --no-open         For \`studio\`, do not open the browser
+  --strict-port     For \`studio\`, never fall back to another port when one is busy
+  --autostart on|off  For \`studio\`, start at login with a macOS LaunchAgent (global install only)
+  --status          For \`studio\`, show whether Studio is running, its URLs and the log path
+  --stop            For \`studio\`, stop the running Studio
   --limit <n>       For \`review\`, max cards to review (default 20)
   --dry-run         For \`import\`, print what would be imported without writing
 

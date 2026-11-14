@@ -6,6 +6,17 @@ All notable changes to **ronin-skillforce** are documented here. The format is b
 
 ## [Unreleased]
 
+### Added
+
+- `skillforce studio --autostart on|off` starts Professor Studio at login on macOS through a
+  LaunchAgent (`com.ronin-skillforce.studio`), pins the ports the first time so the URL and pairing
+  URL stop changing, and refuses to install from an npx cache (use a global install).
+- `skillforce studio --status` reports whether Studio runs, its URL and pairing URL, the autostart
+  state and the log path (`${PROFESSOR_HOME:-~/.professor}/logs/studio.log`). `--stop` stops it —
+  through launchd when the login item is installed, otherwise through the pid in
+  `${PROFESSOR_HOME:-~/.professor}/studio.json` — and never signals a process that is not Studio.
+- `skillforce studio --strict-port` fails instead of moving to another port when one is busy.
+
 ### Changed
 
 - Courses live only in `learning/<slug>/`. The legacy `courses/` location is no longer read:

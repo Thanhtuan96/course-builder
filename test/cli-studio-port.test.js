@@ -194,6 +194,32 @@ describe('fix-studio-port: port resolution', () => {
       await close(server);
     }
   });
+
+  it('RON-297 strict: a busy default port fails instead of auto-picking', async () => {
+    const { server, port } = await listen('127.0.0.1');
+    try {
+      await expect(
+        resolveStudioPorts({ port, apiPort: 0, strict: true })
+      ).rejects.toThrow(/Port \d+ is already in use/);
+      await expect(
+        resolveStudioPorts({ port, apiPort: 0, strict: true, findFree: async (from) => from })
+      ).rejects.toThrow(/--port <free port>/);
+    } finally {
+      await close(server);
+    }
+  });
+
+  it('RON-297 strict: keeps free ports and stays quiet', async () => {
+    const port = await canListen('127.0.0.1').then(async (ok) => {
+      if (!ok) return 0;
+      const { server, port: free } = await listen('127.0.0.1');
+      await close(server);
+      return free;
+    });
+    if (!port) return;
+    const resolved = await resolveStudioPorts({ port, apiPort: port, strict: true });
+    expect(resolved).toEqual({ port, apiPort: port, notices: [] });
+  });
 });
 
 describe('fix-studio-port: health poll names the other app', () => {
