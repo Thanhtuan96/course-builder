@@ -144,7 +144,7 @@ function localToolchainError(language, command) {
     'unavailable',
     `${label} needs its toolchain installed and the local server running.`
   );
-  err.hint = `Start the local server (\`npx course-professor web\`)${command ? ` and make sure \`${command}\` is on your PATH` : ''}. The local runner writes files to ~/.professor/workspaces/ so you can also open them in your editor. You can still write and save code without running it.`;
+  err.hint = `Start the local server (\`npx ronin-skillforce web\`)${command ? ` and make sure \`${command}\` is on your PATH` : ''}. The local runner writes files to ~/.professor/workspaces/ so you can also open them in your editor. You can still write and save code without running it.`;
   return err;
 }
 

@@ -1,12 +1,12 @@
 /**
- * `course-professor create <slug> --kind <kind>` — create the course folder the
+ * `skillforce create <slug> --kind <kind>` — create the course folder the
  * way `professor:new-topic` promises, so the agent never improvises it (RON-249).
  *
  * - `programming`: a registered git worktree at `learning/<slug>/` on branch
  *   `learning/<slug>`, verified after creation; rolled back on any failure.
  * - other kinds: a plain `learning/<slug>/` folder.
  *
- * `course-professor save <slug> [-m msg]` commits the course worktree so its
+ * `skillforce save <slug> [-m msg]` commits the course worktree so its
  * state lives in git history, not only in untracked files.
  */
 import { execFileSync } from 'child_process';

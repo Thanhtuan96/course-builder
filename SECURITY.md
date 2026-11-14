@@ -17,8 +17,8 @@ to route.
    keys you enter live in `localStorage` and are sent only to the provider you selected. Backups are
    plain JSON and never include keys.
 
-2. **Bridge server (`web/`).** An Express server started by `course-professor studio` or
-   `course-professor web`. It binds to loopback, serves the built Studio app from the same port,
+2. **Bridge server (`web/`).** An Express server started by `skillforce studio` or
+   `skillforce web`. It binds to loopback, serves the built Studio app from the same port,
    accepts only allowlisted origins, and requires the pairing token (`X-Studio-Token`) on every
    route. The bridge is what spawns your own agent CLIs — Claude Code, OpenCode, Cursor Agent,
    Gemini, Antigravity or Ollama — in print/stream mode, in a temporary working directory, with
@@ -52,13 +52,13 @@ suspected vulnerability.
 
 Include:
 
-- the version you ran (`npx course-professor --version`) and your OS/Node version;
+- the version you ran (`npx ronin-skillforce --version`) and your OS/Node version;
 - which of the three components above is affected (browser app, bridge, runner);
 - the steps to reproduce, including the command you started and the settings involved;
 - what you expected versus what happened, and the impact you believe it has.
 
 Never include real API keys, pairing tokens or personal data in a report; rotate the pairing token
-with `course-professor web --rotate-token` if you think it leaked.
+with `skillforce web --rotate-token` if you think it leaked.
 
 ## Scope
 
@@ -69,7 +69,7 @@ boundaries.
 
 **The deprecated legacy web UI is in scope while it still ships.** The recommended mitigation is to
 not use `--legacy` / `PROFESSOR_LEGACY=1` at all; it is scheduled for removal and
-`course-professor doctor` already reports it as a failing check.
+`skillforce doctor` already reports it as a failing check.
 
 Also out of scope: issues that require an attacker to already control your OS account, your browser
 profile or your agent CLI configuration; and findings in third-party providers or agent CLIs

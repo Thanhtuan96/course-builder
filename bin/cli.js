@@ -65,7 +65,7 @@ async function promptScope(platform) {
 async function setupAgent(agent) {
   const agentLower = agent.toLowerCase();
   if (!SUPPORTED_AGENTS.includes(agentLower)) {
-    console.error(style('error', `Unsupported agent: ${agent}. Supported: ${SUPPORTED_AGENTS.join(', ')}. Run 'course-professor list' for details.`));
+    console.error(style('error', `Unsupported agent: ${agent}. Supported: ${SUPPORTED_AGENTS.join(', ')}. Run 'skillforce list' for details.`));
     process.exit(1);
   }
   const scope = isGlobal ? 'global' : isLocal ? 'local' : await promptScope(agentLower);
@@ -75,7 +75,7 @@ async function setupAgent(agent) {
 
 async function promptAgentSelection(agents) {
   if (!process.stdin.isTTY) {
-    console.error(style('error', 'Non-interactive mode. Run with: course-professor setup <agent> --local or --global'));
+    console.error(style('error', 'Non-interactive mode. Run with: skillforce setup <agent> --local or --global'));
     process.exit(1);
   }
   const { agent } = await inquirer.prompt([{
@@ -143,7 +143,7 @@ switch (command) {
       await init();
     }
     console.log(
-      chalk.dim('\n  Studio: npx course-professor studio (Studio app + local bridge, Node 22.5+)')
+      chalk.dim('\n  Studio: npx ronin-skillforce studio (Studio app + local bridge, Node 22.5+)')
     );
     break;
   }
@@ -174,7 +174,7 @@ switch (command) {
   case 'search': {
     const keyword = args.slice(1).find((a) => !a.startsWith('--'));
     if (!keyword) {
-      console.error(style('error', 'Usage: course-professor search <keyword>'));
+      console.error(style('error', 'Usage: skillforce search <keyword>'));
       process.exit(1);
     }
     const spinner = ora('Searching registry…').start();
@@ -207,9 +207,9 @@ switch (command) {
     const noImport = args.includes('--no-import');
     const itemName = args.slice(1).find((a) => !a.startsWith('--'));
     if (!itemName) {
-      console.error(style('error', 'Usage: course-professor install <name>'));
-      console.error('       course-professor install --skill <name>   — install a skill instead');
-      console.error('       course-professor courses                  — list available courses');
+      console.error(style('error', 'Usage: skillforce install <name>'));
+      console.error('       skillforce install --skill <name>   — install a skill instead');
+      console.error('       skillforce courses                  — list available courses');
       process.exit(1);
     }
     validateItemName(itemName);
@@ -275,7 +275,7 @@ switch (command) {
     } else {
       // Update a single skill
       if (!itemName) {
-        console.error(style('error', 'Usage: course-professor update <skill-name>'));
+        console.error(style('error', 'Usage: skillforce update <skill-name>'));
         process.exit(1);
       }
       validateItemName(itemName);
@@ -286,7 +286,7 @@ switch (command) {
         : join(process.cwd(), '.claude', 'skills', itemName);
 
       if (!existsSync(join(destDir, 'SKILL.md'))) {
-        console.error(style('error', `Skill "${itemName}" not installed. Run: course-professor install --skill ${itemName}`));
+        console.error(style('error', `Skill "${itemName}" not installed. Run: skillforce install --skill ${itemName}`));
         process.exit(1);
       }
 
@@ -329,7 +329,7 @@ switch (command) {
     }
 
     if (rows.length === 0) {
-      console.log(style('info', 'No skills installed. Run: course-professor search'));
+      console.log(style('info', 'No skills installed. Run: skillforce search'));
       break;
     }
 
@@ -353,7 +353,7 @@ switch (command) {
   case 'remove': {
     const itemName = args.slice(1).find((a) => !a.startsWith('--'));
     if (!itemName) {
-      console.error(style('error', 'Usage: course-professor remove <skill-name> [--local|--global] [--force]'));
+      console.error(style('error', 'Usage: skillforce remove <skill-name> [--local|--global] [--force]'));
       process.exit(1);
     }
     validateItemName(itemName);
@@ -613,7 +613,7 @@ switch (command) {
     let prUrl;
     try {
       const prOutput = execSync(
-        `gh pr create --json url --jq .url --repo professor-skills-hub/courses-skills-registry --title "${commitMsg}" --body "Published via course-professor publish."`,
+        `gh pr create --json url --jq .url --repo professor-skills-hub/courses-skills-registry --title "${commitMsg}" --body "Published via skillforce publish."`,
         { cwd: repoDir, encoding: 'utf-8', stdio: 'pipe' }
       );
       prUrl = prOutput.trim();
@@ -675,7 +675,7 @@ switch (command) {
     SUPPORTED_AGENTS.forEach((agent, i) => {
       console.log(`  ${i + 1}. ${agent}`);
     });
-    console.log('\nUse course-professor setup <agent> to install.\n');
+    console.log('\nUse skillforce setup <agent> to install.\n');
     break;
 
   case 'help':
@@ -726,12 +726,12 @@ function registryRow(command, description) {
 
 function printUsage() {
   console.log(`
-Usage: course-professor [command] [options]
+Usage: skillforce [command] [options]
 
 Description:
   Socratic learning assistant — teaches by asking questions. Set up for your
   agent (Claude Code, Gemini, OpenCode, Cursor), then start Professor Studio
-  with npx course-professor studio (Node 22.5+).
+  with npx ronin-skillforce studio (Node 22.5+).
 
 COMMANDS
   ${chalk.bold('status')} [--json]      Show every course: progress, current section, due cards, streak
@@ -780,30 +780,30 @@ FLAGS
   --dry-run         For \`import\`, print what would be imported without writing
 
 EXAMPLES
-  npx course-professor status                  # See every course + overall streak
-  npx course-professor status --json           # Machine-readable status
-  npx course-professor next                    # What to work on, and how to continue
-  npx course-professor check nextjs            # Run the active exercise's self-checks
-  npx course-professor doctor                  # Diagnose your local setup
-  npx course-professor studio                  # One command: server + Studio + pairing
-  npx course-professor review                  # Review due flashcards in the terminal
-  npx course-professor import --all            # Import every CLI course into Studio
-  npx course-professor import react-hooks      # Import one course
-  npx course-professor import --all --dry-run  # Preview the import, write nothing
-  npx course-professor init                    # Auto-detect and setup
-  npx course-professor setup claude            # Setup for Claude Code (prompts for scope)
-  npx course-professor setup claude --global   # Install globally
-  npx course-professor courses                        # Browse community courses
-  npx course-professor search react                   # Search for React courses
-  npx course-professor install react-hooks            # Install course → learning/react-hooks/
-  npx course-professor install --skill react-hooks-reviewer           # Install skill (prompts scope)
-  npx course-professor install --skill react-hooks-reviewer --global  # Install skill globally
-  npx course-professor update react-hooks-reviewer     # Update a skill
-  npx course-professor update --all                    # Update all installed skills
-  npx course-professor installed                        # List installed skills
-  npx course-professor remove react-hooks-reviewer     # Remove a skill
-  npx course-professor publish --dry-run                 # Preview packaged files (no GitHub)
-  npx course-professor publish --type skill --name foo   # Publish a skill
+  npx ronin-skillforce status                  # See every course + overall streak
+  npx ronin-skillforce status --json           # Machine-readable status
+  npx ronin-skillforce next                    # What to work on, and how to continue
+  npx ronin-skillforce check nextjs            # Run the active exercise's self-checks
+  npx ronin-skillforce doctor                  # Diagnose your local setup
+  npx ronin-skillforce studio                  # One command: server + Studio + pairing
+  npx ronin-skillforce review                  # Review due flashcards in the terminal
+  npx ronin-skillforce import --all            # Import every CLI course into Studio
+  npx ronin-skillforce import react-hooks      # Import one course
+  npx ronin-skillforce import --all --dry-run  # Preview the import, write nothing
+  npx ronin-skillforce init                    # Auto-detect and setup
+  npx ronin-skillforce setup claude            # Setup for Claude Code (prompts for scope)
+  npx ronin-skillforce setup claude --global   # Install globally
+  npx ronin-skillforce courses                        # Browse community courses
+  npx ronin-skillforce search react                   # Search for React courses
+  npx ronin-skillforce install react-hooks            # Install course → learning/react-hooks/
+  npx ronin-skillforce install --skill react-hooks-reviewer           # Install skill (prompts scope)
+  npx ronin-skillforce install --skill react-hooks-reviewer --global  # Install skill globally
+  npx ronin-skillforce update react-hooks-reviewer     # Update a skill
+  npx ronin-skillforce update --all                    # Update all installed skills
+  npx ronin-skillforce installed                        # List installed skills
+  npx ronin-skillforce remove react-hooks-reviewer     # Remove a skill
+  npx ronin-skillforce publish --dry-run                 # Preview packaged files (no GitHub)
+  npx ronin-skillforce publish --type skill --name foo   # Publish a skill
 
 SUPPORTED AGENTS
   ${SUPPORTED_AGENTS.join(', ')}

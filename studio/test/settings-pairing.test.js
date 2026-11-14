@@ -1,5 +1,5 @@
 /**
- * CLI-05 — `course-professor studio` pairing: `applyPairingFromUrl` reads the bridge URL and token
+ * CLI-05 — `skillforce studio` pairing: `applyPairingFromUrl` reads the bridge URL and token
  * from the URL hash, saves them, picks the local-agent provider on a fresh install, and strips the
  * secrets from the address bar.
  * @vitest-environment node

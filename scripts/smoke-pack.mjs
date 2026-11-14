@@ -7,11 +7,11 @@
  *   1. build both bundles (legacy client + Studio) so the tarball is complete
  *   2. `npm pack` → install the .tgz into a fresh temp project (`npm init -y && npm i <tgz>`)
  *   3. run, against a throwaway `PROFESSOR_HOME`:
- *        course-professor --help            → usage
- *        course-professor doctor            → env checklist
- *        course-professor status            → empty state is fine
- *        course-professor import --all --dry-run (from a fixture dir) → plans an import
- *        course-professor studio --no-open --port <p> --api-port <a>
+ *        skillforce --help            → usage
+ *        skillforce doctor            → env checklist
+ *        skillforce status            → empty state is fine
+ *        skillforce import --all --dry-run (from a fixture dir) → plans an import
+ *        skillforce studio --no-open --port <p> --api-port <a>
  *            GET  studio URL                → 200 HTML (the shipped studio/dist)
  *            GET  /api/studio/health        → 200 with the pairing token
  *            GET  /api/studio/db/health     → sqlite + migrations applied (shipped migrations)
@@ -211,28 +211,28 @@ async function main() {
   runSync('npm', ['init', '-y'], { cwd: projectDir, capture: true });
   runSync('npm', ['install', tgzPath, '--no-audit', '--no-fund'], { cwd: projectDir, capture: true });
 
-  const pkgDir = join(projectDir, 'node_modules', 'course-professor');
+  const pkgDir = join(projectDir, 'node_modules', 'ronin-skillforce');
   const cliPath = join(pkgDir, 'bin', 'cli.js');
   if (!existsSync(cliPath)) fail(`installed CLI not found at ${cliPath}`);
 
   const professorHome = mkWorkTemp('professor-smoke-home-');
   const env = { ...process.env, PROFESSOR_HOME: professorHome, STUDIO_BRIDGE_TOKEN: TOKEN, NO_COLOR: '1' };
 
-  step('course-professor --help');
+  step('skillforce --help');
   const help = runCli(cliPath, ['--help'], { cwd: projectDir, env });
-  if (!/Usage: course-professor/.test(help.stdout)) fail('`--help` did not print usage');
+  if (!/Usage: skillforce/.test(help.stdout)) fail('`--help` did not print usage');
   console.log('   ok');
 
-  step('course-professor doctor');
+  step('skillforce doctor');
   const doctor = runCli(cliPath, ['doctor'], { cwd: projectDir, env });
   if (!/Professor doctor/.test(doctor.stdout)) fail('`doctor` did not print the checklist');
   console.log('   ok');
 
-  step('course-professor status (empty — must not error)');
+  step('skillforce status (empty — must not error)');
   runCli(cliPath, ['status'], { cwd: projectDir, env });
   console.log('   ok');
 
-  step('course-professor import --all --dry-run (fixture course)');
+  step('skillforce import --all --dry-run (fixture course)');
   const fixtureDir = mkWorkTemp('professor-smoke-courses-');
   const courseDir = join(fixtureDir, 'learning', 'smoke-course');
   mkdirSync(courseDir, { recursive: true });
@@ -258,7 +258,7 @@ async function main() {
   }
   console.log('   ok');
 
-  step(`course-professor studio --no-open --port ${STUDIO_PORT} --api-port ${API_PORT}`);
+  step(`skillforce studio --no-open --port ${STUDIO_PORT} --api-port ${API_PORT}`);
   studioChild = spawn(
     process.execPath,
     [cliPath, 'studio', '--no-open', '--port', String(STUDIO_PORT), '--api-port', String(API_PORT)],

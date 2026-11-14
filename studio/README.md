@@ -27,16 +27,16 @@ npm run dev            # http://localhost:5180
 `npm run dev` also works with zero configuration: a bundled demo course is available immediately
 under **Course** without any AI source.
 
-### One command: `course-professor studio` (recommended)
+### One command: `skillforce studio` (recommended)
 
 From the repository root, one command installs and builds what is missing, starts the bridge server
 and the built Studio app, and pairs them for you. Studio needs **Node 22.5+** (it uses the built-in
 `node:sqlite` module).
 
 ```bash
-npx course-professor studio              # starts server + Studio and opens the browser
-npx course-professor studio --no-open    # print the pairing URL only
-npx course-professor studio --port 5180 --api-port 3000
+npx ronin-skillforce studio              # starts server + Studio and opens the browser
+npx ronin-skillforce studio --no-open    # print the pairing URL only
+npx ronin-skillforce studio --port 5180 --api-port 3000
 ```
 
 It prints a **pairing URL** like
@@ -66,7 +66,7 @@ driven through its own CLI in a read-only, text-only way:
 
 ```bash
 # from the repository root
-npx course-professor web        # or: cd web && node server.js
+npx ronin-skillforce web        # or: cd web && node server.js
 ```
 
 The server prints a banner:
@@ -115,15 +115,15 @@ runs them in a throwaway empty temp directory (deleted when the run ends) and, f
 `OPENCODE_CONFIG_CONTENT` to deny `edit`/`bash`/`webfetch` — so the tutor can only produce text and
 never touches your files. For the cheapest, fastest tutor calls prefer **Claude Code**.
 
-### Terminal review & import (`course-professor review` / `import`)
+### Terminal review & import (`skillforce review` / `import`)
 
 The CLI and Studio share the same SQLite file and the same repository logic:
 
 ```bash
-npx course-professor review                  # due flashcards: Space flips, 1 again · 2 hard · 3 good · 4 easy, q quits
-npx course-professor review --limit 10
-npx course-professor import --all            # COURSE.md + lectures/ + SCHEDULE.md + LEARNING-LOG.md → SQLite
-npx course-professor import nextjs --dry-run # preview the import, write nothing
+npx ronin-skillforce review                  # due flashcards: Space flips, 1 again · 2 hard · 3 good · 4 easy, q quits
+npx ronin-skillforce review --limit 10
+npx ronin-skillforce import --all            # COURSE.md + lectures/ + SCHEDULE.md + LEARNING-LOG.md → SQLite
+npx ronin-skillforce import nextjs --dry-run # preview the import, write nothing
 ```
 
 `import` is idempotent — it stores `source: 'cli'` and a stable `external_id`, so re-running updates
@@ -241,7 +241,7 @@ course creation and stored **immutably** (`capstones`), so you always build agai
   never a rewritten solution.
 - **Completion (CAP-05):** a **Course Complete** verdict shows the completion page and an
   **Export COMPLETION.md** button (plugin-compatible, with the artifact so it is portfolio-ready). The
-  course list shows a 🎓 badge. `course-professor import` brings CLI `CAPSTONE.md` and `COMPLETION.md`
+  course list shows a 🎓 badge. `skillforce import` brings CLI `CAPSTONE.md` and `COMPLETION.md`
   into Studio (idempotent via `external_id`).
 
 Built-in demo: the bundled “How to learn anything” course ships a conceptual capstone and its artifact

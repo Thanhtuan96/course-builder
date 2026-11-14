@@ -128,7 +128,7 @@ describe('course storage contract', () => {
   it('new-topic and SKILL.md create courses through the CLI, under learning/', () => {
     for (const p of ['commands/professor/new-topic.md', 'professor-skill/SKILL.md']) {
       const text = read(p);
-      expect(text).toContain('course-professor create');
+      expect(text).toContain('skillforce create');
       expect(text).not.toMatch(/git worktree add/);
     }
     expect(read('professor-skill/SKILL.md')).toMatch(/learning\/\*\/COURSE\.md` first/);

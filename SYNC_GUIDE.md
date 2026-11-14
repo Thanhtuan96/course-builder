@@ -4,7 +4,7 @@ This document outlines how to keep the root (`agents/`, `commands/`, `hooks/`) a
 
 ## Why This Matters
 
-The `shared/` directory is used by the CLI (`bin/cli.js`) to set up the plugin for users. If `shared/` is out of sync, users who run `npx course-professor setup` will get outdated features.
+The `shared/` directory is used by the CLI (`bin/cli.js`) to set up the plugin for users. If `shared/` is out of sync, users who run `npx ronin-skillforce setup` will get outdated features.
 
 ## The Rule
 

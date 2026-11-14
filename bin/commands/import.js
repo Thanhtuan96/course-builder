@@ -1,5 +1,5 @@
 /**
- * `course-professor import [slug|--all] [--dry-run]` (CLI-07) — bring CLI courses into Studio.
+ * `skillforce import [slug|--all] [--dry-run]` (CLI-07) — bring CLI courses into Studio.
  *
  * Reads `learning/{slug}/` (primary) and legacy `courses/{slug}/` through `course-reader.js` and
  * writes them into the shared Studio SQLite DB. Everything goes through the repository or the same

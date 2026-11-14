@@ -131,7 +131,6 @@ afterEach(() => {
 describe('beta report: app version provenance', () => {
   it('injects the ROOT package.json version through __APP_VERSION__', () => {
     expect(JSON.parse(APP_VERSION_DEFINE.__APP_VERSION__)).toBe(ROOT_PACKAGE.version);
-    expect(ROOT_PACKAGE.version).toBe('1.6.0-beta.1');
   });
 
   it('wires the define into the exported Vite config', () => {
@@ -139,9 +138,9 @@ describe('beta report: app version provenance', () => {
     expect(config.define.__APP_VERSION__).toBe(APP_VERSION_DEFINE.__APP_VERSION__);
   });
 
-  it('never sources the version from studio/package.json (the stale 0.1.0 field)', () => {
+  it('never sources the version from studio/package.json (a private placeholder)', () => {
     expect(JSON.parse(config.define.__APP_VERSION__)).not.toBe(STUDIO_PACKAGE.version);
-    expect(STUDIO_PACKAGE.version).toBe('0.1.0');
+    expect(STUDIO_PACKAGE.version).toBe('0.0.0-private');
   });
 
   it('keeps the serve-only dev CSP plugin untouched', () => {

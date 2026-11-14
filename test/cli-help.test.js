@@ -21,7 +21,7 @@ const REPO_ROOT = resolve(HERE, '..');
 const CLI = join(REPO_ROOT, 'bin', 'cli.js');
 
 const ANSI = /\u001B\[[0-9;]*m/g;
-const HINT = 'Studio: npx course-professor studio (Studio app + local bridge, Node 22.5+)';
+const HINT = 'Studio: npx ronin-skillforce studio (Studio app + local bridge, Node 22.5+)';
 
 /** Spawn the real CLI with an absolute entry point and return de-coloured output. */
 function runCli(args, { cwd = REPO_ROOT, env = process.env } = {}) {
@@ -60,7 +60,7 @@ describe('RON-167 CLI help via the real binary', () => {
 
   it('RON-167 exits 0 and points new users at Studio with the Node requirement', () => {
     expect(status).toBe(0);
-    expect(text).toContain('npx course-professor studio');
+    expect(text).toContain('npx ronin-skillforce studio');
     expect(text).toContain('Node 22.5+');
   });
 
@@ -89,9 +89,9 @@ describe('RON-167 CLI help via the real binary', () => {
 
   it('RON-167 never runs web or legacy mode in an example', () => {
     const examples = text.slice(text.indexOf('\nEXAMPLES'), text.indexOf('\nSUPPORTED AGENTS'));
-    expect(examples).toContain('npx course-professor studio');
+    expect(examples).toContain('npx ronin-skillforce studio');
     for (const line of examples.split('\n').filter((entry) => entry.trim().startsWith('npx '))) {
-      expect(line).not.toContain('course-professor web');
+      expect(line).not.toContain('skillforce web');
       expect(line).not.toContain('--legacy');
     }
   });
@@ -134,8 +134,8 @@ describe('RON-167 setup closes with a single Studio hint', () => {
 describe('RON-167 READMEs put Studio before the manual bridge', () => {
   it('RON-167 places the studio command before web in README.md', () => {
     const readme = readRepoFile('README.md');
-    const studio = readme.search(/course-professor(?:@next)? studio/);
-    const web = readme.search(/course-professor(?:@next)? web/);
+    const studio = readme.search(/skillforce(?:@next)? studio/);
+    const web = readme.search(/skillforce(?:@next)? web/);
     expect(studio).toBeGreaterThan(-1);
     expect(web).toBeGreaterThan(-1);
     expect(studio).toBeLessThan(web);
@@ -143,8 +143,8 @@ describe('RON-167 READMEs put Studio before the manual bridge', () => {
 
   it('RON-167 places the studio command before web in studio/README.md', () => {
     const readme = readRepoFile('studio/README.md');
-    const studio = readme.search(/course-professor(?:@next)? studio/);
-    const web = readme.search(/course-professor(?:@next)? web/);
+    const studio = readme.search(/skillforce(?:@next)? studio/);
+    const web = readme.search(/skillforce(?:@next)? web/);
     expect(studio).toBeGreaterThan(-1);
     expect(web).toBeGreaterThan(-1);
     expect(studio).toBeLessThan(web);
@@ -167,7 +167,7 @@ describe('RON-167 READMEs put Studio before the manual bridge', () => {
 
   it('RON-167 states the Node requirement where studio/README.md introduces the command', () => {
     const readme = readRepoFile('studio/README.md');
-    const studio = readme.search(/course-professor(?:@next)? studio/);
+    const studio = readme.search(/skillforce(?:@next)? studio/);
     const node = readme.indexOf('Node 22.5+');
     expect(node).toBeGreaterThan(-1);
     expect(node).toBeGreaterThan(studio);
@@ -259,7 +259,7 @@ describe('RON-167 SECURITY.md boundary', () => {
 
 describe('RON-167 CHANGELOG records the Studio-only default', () => {
   it('RON-167 adds an Unreleased section before the released beta', () => {
-    const changelog = readRepoFile('CHANGELOG.md');
+    const changelog = readRepoFile('docs/history/CHANGELOG-course-professor.md');
     const unreleased = changelog.indexOf('## [Unreleased]');
     const beta = changelog.indexOf('## [1.6.0-beta.1]');
     expect(unreleased).toBeGreaterThan(-1);

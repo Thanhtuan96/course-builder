@@ -1,7 +1,7 @@
 /**
  * Static Studio server for the E2E Studio origin (RON-168).
  *
- * Uses the same `bin/static-server.js` handler as `course-professor studio`, so the suite tests the
+ * Uses the same `bin/static-server.js` handler as `skillforce studio`, so the suite tests the
  * shipped static behaviour (SPA fallback, MIME types, no directory listing) and not `vite dev`.
  */
 import { existsSync } from 'node:fs';

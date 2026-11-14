@@ -1,5 +1,5 @@
 /**
- * bin/commands/web.js — the `course-professor web` command.
+ * bin/commands/web.js — the `skillforce web` command.
  *
  * Studio-only by default: no API-key discovery/prompt and no `.env`, keychain or agent-home scan.
  * Legacy mode is the explicit opt-in (`--legacy` or `PROFESSOR_LEGACY=1`) and keeps the old
@@ -20,7 +20,7 @@ const DEFAULT_PORT = '3000';
 
 /** Usage text for `web --help`. */
 export const WEB_USAGE = `
-Usage: course-professor web [port] [options]
+Usage: skillforce web [port] [options]
 
 Start the Studio bridge server; --production also serves the built Studio app
 from the same port.
@@ -144,14 +144,14 @@ export async function run({ args = [], style, startServerImpl } = {}) {
       if (!existsSync(distPath)) {
         console.error(style('warning', 'Production build not found.'));
         console.error('   From repo root: npm run build');
-        console.error('   Then: npx course-professor web --legacy --production');
+        console.error('   Then: npx ronin-skillforce web --legacy --production');
         process.exit(1);
       }
     } else {
       const studioIndex = join(REPO_ROOT, 'studio', 'dist', 'index.html');
       if (!existsSync(studioIndex)) {
         console.error(style('warning', 'Studio build not found.'));
-        console.error('   Run: npx course-professor studio');
+        console.error('   Run: npx ronin-skillforce studio');
         console.error('   Or:  npm run build:studio');
         process.exit(1);
       }
@@ -170,7 +170,7 @@ export async function run({ args = [], style, startServerImpl } = {}) {
       if (err?.code === 'EACCES' || /EACCES|permission denied|read-only/i.test(message)) {
         console.error(style('error',
           'Cannot install web dependencies: the package directory is read-only (npx cache). ' +
-          'Install globally (`npm i -g course-professor`) or run from a git clone.'));
+          'Install globally (`npm i -g ronin-skillforce`) or run from a git clone.'));
       } else {
         console.error(style('error', `Check your network and try: cd ${webDir} && npm install`));
       }

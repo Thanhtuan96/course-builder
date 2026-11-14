@@ -1,5 +1,5 @@
 /**
- * `course-professor status` — one table for every course on disk.
+ * `skillforce status` — one table for every course on disk.
  */
 import { computeStreak, findCourses, readCourse, todayISO } from '../course-reader.js';
 import { style } from '../registry-helpers.js';
@@ -67,7 +67,7 @@ export async function run({ args = [], cwd = process.cwd(), chalk } = {}) {
     console.log(style('info', 'No courses found in learning/ or courses/.'));
     console.log('');
     console.log('  Start one in your agent:   /professor:new-topic');
-    console.log('  Or install a course:       npx course-professor install <name>');
+    console.log('  Or install a course:       npx ronin-skillforce install <name>');
     console.log('');
     return;
   }

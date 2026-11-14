@@ -3,7 +3,7 @@
  *
  * RON-279 — `install <course>` wrote `learning/{slug}/` and stopped there: Studio keeps its courses
  * in SQLite (`$PROFESSOR_HOME/professor.db`), so the course was invisible until the learner found
- * `course-professor import`. The install now imports through the same code path as `import`, writes
+ * `skillforce import`. The install now imports through the same code path as `import`, writes
  * the absolute path, and points at the correct next step.
  *
  * Everything here runs against a temp cwd + temp `PROFESSOR_HOME` with a stubbed registry fetch.
@@ -139,7 +139,7 @@ describe('RON-279 install <course>', () => {
     const output = log.text();
     expect(output).toContain(coursePath); // absolute path, not the misleading relative one
     expect(output).toContain('Imported into Studio');
-    expect(output).toContain('course-professor studio');
+    expect(output).toContain('skillforce studio');
     expect(output).toContain(`professor:switch ${SLUG}`);
     expect(output).not.toContain('professor:new-topic');
   });
@@ -170,7 +170,7 @@ describe('RON-279 install <course>', () => {
     expect(counts()).toEqual({ courses: 0, lessons: 0 });
 
     const output = log.text();
-    expect(output).toContain(`course-professor import ${SLUG}`);
+    expect(output).toContain(`skillforce import ${SLUG}`);
     expect(output).toContain(`professor:switch ${SLUG}`);
     expect(output).not.toContain('professor:new-topic');
   });
@@ -196,7 +196,7 @@ describe('RON-279 install <course>', () => {
     const output = log.text();
     expect(output).toContain('Not imported into Studio');
     expect(output).toContain('Node 22.5+');
-    expect(output).toContain(`course-professor import ${SLUG}`);
+    expect(output).toContain(`skillforce import ${SLUG}`);
     expect(output).not.toContain('professor:new-topic');
     expect(process.exitCode).toBeFalsy();
   });

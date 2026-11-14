@@ -178,7 +178,7 @@ export function StorageSection({ settings, update }) {
         {adapter?.path && <p className="mt-0.5 break-all text-xs text-neutral-500">{adapter.path}</p>}
         {current === STORAGE_SQLITE && sqliteStatus && !sqliteStatus.available && (
           <p className="mt-1 text-amber-700 dark:text-amber-300">
-            {t('storage.serverDown')} <code>course-professor studio</code>{t('storage.serverDownAfter')}
+            {t('storage.serverDown')} <code>npx ronin-skillforce studio</code>{t('storage.serverDownAfter')}
           </p>
         )}
       </div>

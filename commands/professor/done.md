@@ -34,7 +34,7 @@ This command routes to the **Coach agent** for self-assessment before marking co
    - Professor clears "Active exercise" field
    - Professor creates/updates SCHEDULE.md with flashcards
    - Professor checks if all sections done → trigger Capstone Unlock if complete
-   - Programming courses: `npx course-professor save {slug} -m "course({slug}): complete section {N}"` so the progress is committed on the course branch
+   - Programming courses: `npx ronin-skillforce save {slug} -m "course({slug}): complete section {N}"` so the progress is committed on the course branch
 
 ## Watch-this Flag:
 

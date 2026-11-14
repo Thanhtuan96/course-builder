@@ -42,7 +42,7 @@ Wait for the user to confirm or request adjustments (including a different kind)
 
 2. **Create the course folder** with the CLI — never with hand-written `git`/`mkdir` commands:
    ```bash
-   npx course-professor create {slug} --kind {kind}
+   npx ronin-skillforce create {slug} --kind {kind}
    ```
    - `programming`: creates and **verifies** a registered git worktree at `learning/{slug}/` on branch `learning/{slug}` (reattaches the branch if it already exists), keeps `learning/` out of the host repo's `git status`, and rolls everything back if any step fails.
    - `quantitative` / `conceptual` / `skill` (PLUG-05): creates a plain folder `learning/{slug}/` — no git, no scaffolding. `exercises/` is created lazily by `professor:next`.
@@ -64,7 +64,7 @@ Wait for the user to confirm or request adjustments (including a different kind)
 
 5. **Save** (programming only): commit the new course on its own branch so it survives restarts and pruned worktrees:
    ```bash
-   npx course-professor save {slug} -m "course({slug}): create"
+   npx ronin-skillforce save {slug} -m "course({slug}): create"
    ```
    All course files live in `learning/{slug}/`; reference that path from now on.
 

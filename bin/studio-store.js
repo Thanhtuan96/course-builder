@@ -1,7 +1,7 @@
 /**
  * studio-store — a Node StorageAdapter over the Studio SQLite layer (`web/studio-db.js`).
  *
- * The CLI (`course-professor review`, `course-professor import`) and Studio share one database
+ * The CLI (`skillforce review`, `skillforce import`) and Studio share one database
  * file (`${PROFESSOR_HOME:-~/.professor}/professor.db`). Implementations differ in the storage
  * medium but never in business rules: installing this adapter with `installStudioStore()` (which
  * calls `useAdapter()` from `studio/src/lib/repo/index.js`) makes `gradeCard`, `addCards`, … the

@@ -4,7 +4,7 @@ import App from './App.jsx';
 import { applyPairingFromUrl } from './lib/settings.js';
 import './index.css';
 
-// One-command pairing (`course-professor studio`): read bridge/token from the URL hash, save them
+// One-command pairing (`npx ronin-skillforce studio`): read bridge/token from the URL hash, save them
 // as settings and clean the address bar before the app renders.
 applyPairingFromUrl();
 

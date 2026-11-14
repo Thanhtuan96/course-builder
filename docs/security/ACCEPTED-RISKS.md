@@ -1,6 +1,6 @@
 # Accepted Security Risks — Beta
 
-- **Scope:** local `course-professor` beta (Studio, legacy web UI, bridge agents and the learner runner).
+- **Scope:** local `skillforce` beta (Studio, legacy web UI, bridge agents and the learner runner).
 - **Date:** 2026-10-22
 - **Owner:** post-beta security follow-up (DEBT-05); reviewed by the Phase 2 release gate.
 - **Source of findings:** `.planning/codebase/CONCERNS.md` (Priority Summary #1–#10 and the
@@ -14,7 +14,7 @@ accepted here.
 
 ### Community registry install integrity
 
-- **What is accepted:** `course-professor install` / `update` fetch `index.json` and course/skill
+- **What is accepted:** `skillforce install` / `update` fetch `index.json` and course/skill
   files over HTTPS from the registry's `main` branch and write them into `learning/<slug>/` or
   `~/.claude/skills/<name>/` without a signature or checksum.
 - **Why:** installs are user-initiated, HTTPS-only and scoped to a per-user directory. Registry
@@ -65,7 +65,7 @@ These remain available for the beta but are loud and non-combinable:
 - `PROFESSOR_ALLOW_BASH=1` — lets learner exercises from the explicit `bash` language run.
 - `PROFESSOR_ALLOW_NON_LOOPBACK_OLLAMA=1` — lets the Ollama host leave loopback.
 
-`course-professor doctor` reports all of them, and the release gate refuses the wildcard-Origin +
+`skillforce doctor` reports all of them, and the release gate refuses the wildcard-Origin +
 non-loopback combination before binding.
 
 ## Residual risks (accepted as design constraints)

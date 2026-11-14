@@ -21,7 +21,7 @@ release; file product bugs as a new Linear issue under RON-168 rather than chang
 
 - [ ] **Clean state** — use a fresh `PROFESSOR_HOME` (e.g. `export PROFESSOR_HOME="$(mktemp -d)"`)
       and a fresh browser profile so no prior course, token or provider leaks in.
-- [ ] **Start Studio + bridge** — `npx course-professor studio --no-open` from the repository root
+- [ ] **Start Studio + bridge** — `npx ronin-skillforce studio --no-open` from the repository root
       (Node 22.5+). Expected: the bridge prints a pairing URL and Studio serves on its own port.
 - [ ] **Pair the browser** — open the printed URL, confirm **Settings → AI source → My local agent**
       is selected, the bridge URL is loopback, and **Test connection** returns a real reply.

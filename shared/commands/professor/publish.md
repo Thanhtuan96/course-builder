@@ -65,16 +65,16 @@ If the user says no: stop and say "No problem — run `professor:publish` again 
 
 Run Bash to check the CLI version:
 ```
-npx course-professor --version
+npx ronin-skillforce --version
 ```
 If the version is significantly older than expected, warn the user:
-> "You may need to update: `npm install -g course-professor`"
+> "You may need to update: `npm install -g ronin-skillforce`"
 
 ## Step 8: Shell Out to CLI
 
 Run via Bash tool:
 ```
-npx course-professor publish --type [course|skill] --name [slug]
+npx ronin-skillforce publish --type [course|skill] --name [slug]
 ```
 
 Capture stdout. Parse for the PR URL — look for a bare `https://github.com/` URL on its own line. On non-zero exit, surface stderr verbatim.

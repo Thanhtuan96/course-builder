@@ -8,207 +8,145 @@ Always respond in English as default, respond in the same language as the user's
 
 ## What This Project Is
 
-**Course Learning Plugin ("Professor")** — a multi-platform Socratic learning assistant that teaches by asking questions instead of giving answers. It ships as:
+**Ronin SkillForce** (npm `ronin-skillforce`, CLI `skillforce`; formerly `course-professor`) — a
+Socratic learning coach that teaches by asking questions instead of giving answers. It ships as:
 
-1. A **Claude Code plugin** installed at `~/.claude/plugins/professor/` (or symlinked)
-2. An **npx CLI** (`course-professor`) for setup, registry browsing, and skill management
-3. A **web UI** (React + Express) for visual learning at `localhost:3000`
+1. **An agent plugin** — Markdown agents and `professor:*` slash commands for Claude Code, plus
+   generated installs for Gemini CLI, OpenCode and Cursor. No build step.
+2. **The `skillforce` CLI** (`bin/cli.js`) — platform setup, course create/save, dev fast-path
+   (`status`/`next`/`check`/`doctor`), terminal flashcards, import into Studio, registry.
+3. **Studio** (`studio/`) — a local-first Vite + React SPA (lessons, quiz, flashcards, tutor,
+   exercises, capstone) served by `skillforce studio` together with a local bridge server.
 
-The plugin's core (agents, commands, hooks) has no build step — all components are Markdown files read directly by Claude Code, plus one Node.js hook script.
+`course-professor` and `professor` remain bin aliases. Slash commands are still `professor:*` and
+data still lives in `~/.professor/` (renaming those is RON-316 / RON-317).
 
 ## Development Commands
 
 ```bash
-# CLI (no build step)
+# Tests — one Vitest run with two projects: root (test/) and studio (studio/test/)
+npm test
+npx vitest run test/cli-create.test.js                 # one root test file
+npx vitest run --project studio studio/test/srs.test.js # one Studio test file
+npx vitest run -t "rolls back"                         # by test name
+npm run test:security                                  # test/security only
+npm run test:drift                                     # shared/ + manifest parity
+npm run test:e2e                                       # Playwright (e2e/), needs a Studio build
+npm run smoke:pack                                     # npm pack → install → run every bin + Studio
+
+# Studio
+cd studio && npm run dev                               # Vite dev server :5180, demo course, no AI needed
+npm run build:studio                                   # build studio/dist (shipped in the package)
+node bin/cli.js studio --no-open                       # bridge + built Studio + pairing URL
+
+# CLI (no build step) — every command lives in bin/commands/<name>.js
 node bin/cli.js --help
-node bin/cli.js init                  # Auto-detect platform and setup
-node bin/cli.js setup claude          # Setup for Claude Code
-node bin/cli.js list                  # List supported agents
+node bin/cli.js status | next [slug] | check [slug] | doctor
+node bin/cli.js create <slug> --kind K                 # programming = verified worktree, rollback on failure
+node bin/cli.js save <slug> [-m msg]                   # commit a course worktree on learning/<slug>
+node bin/cli.js context [slug] --json                  # explicit course context handed to Coach
+node bin/cli.js trail <slug> --stdin                   # append a Coach round to LEARNING-LOG.md (JSON on stdin)
 
-# Dev fast-path (reads learning/ then courses/)
-node bin/cli.js status                # Every course: progress, current section, due cards, streak
-node bin/cli.js status --json         # Machine-readable status
-node bin/cli.js next [slug]           # Current lecture summary + agent command to continue
-node bin/cli.js check [slug]          # Run the active exercise's self-checks
-node bin/cli.js doctor                # Environment checklist with fix hints
-node bin/cli.js create <slug> --kind K  # Create course folder (programming = verified worktree, rollback on failure)
-node bin/cli.js save <slug> [-m msg]  # Commit a programming course worktree on its learning/<slug> branch
-node bin/cli.js context [slug] --json  # Explicit course context passed to Coach (no path guessing)
-node bin/cli.js trail <slug> --learner .. --asked .. --concept ..  # Append a Coach round to LEARNING-LOG.md (max 5/section)
-
-# Tests (Vitest: registry helpers, course reader and CLI commands)
-npm test                              # Run all tests
-npx vitest run test/cli.test.js       # Run specific test file
-npx vitest run test/cli-course-reader.test.js  # COURSE.md/LECTURE.md/SCHEDULE.md parsers
-npx vitest run test/cli-commands.test.js        # status/next/check/doctor helpers
-npx vitest --reporter=verbose         # Verbose output
-
-# Web UI
-npm run build                         # Build React client (web/client/)
-npm start                             # Start Express server on :3000
-
-# Web client dev mode
-cd web/client && npm run dev          # Vite dev server
+# After editing agents/, commands/professor/, hooks/pre-compact.js or professor-skill/SKILL.md
+node scripts/sync-shared.mjs                           # regenerate shared/ (CI fails on drift)
+node scripts/sync-shared.mjs --check
 ```
 
-## Repository Structure
+Node floors: the CLI runs on Node 18+; Studio, `review` and `import` need **Node 22.5+**
+(`node:sqlite`), checked at the point of use by `bin/node-version.js`.
 
-```
-plugin.json                  <- Plugin manifest (Claude Code auto-discovery)
-agents/                      <- 5 agent definitions (Markdown)
-commands/professor/          <- 25 command definitions (Markdown, one per professor:* command)
-hooks/pre-compact.js         <- PreCompact hook (CommonJS) — saves course state before compression
-shared/                      <- Platform-neutral canonical files (tool names as placeholders)
-templates/                   <- Per-platform setup templates (claude/, gemini/, cursor/, opencode/)
-bin/cli.js                   <- CLI entry point (ES modules)
-bin/registry-helpers.js      <- Shared CLI utilities (registry fetch, install, validate)
-bin/platforms/               <- Platform detection + install logic (_shared.js, claude.js, etc.)
-web/                         <- Express server + React frontend
-test/cli.test.js             <- Vitest tests for registry-helpers.js
-professor-skill/SKILL.md     <- Source-of-truth behavior spec for the professor agent
-learning/{slug}/             <- Primary: git worktree for programming courses, plain folder for other kinds
-courses/{slug}/              <- Legacy fallback: older courses
-.course_archive/{slug}/      <- Archived courses (created by professor:archive)
-```
+## Architecture
 
-## Plugin Manifest
+### Plugin: canonical Markdown → generated `shared/`
 
-`plugin.json` declares all components for Claude Code auto-discovery:
-- `agents[]` → agent files under `agents/`
-- `commands[]` → command files under `commands/professor/`
-- `hooks[]` → hook scripts under `hooks/`
+- Canonical sources: `agents/*.md`, `commands/professor/*.md`, `hooks/pre-compact.js`,
+  `professor-skill/SKILL.md` (behaviour spec used by non-Claude platforms). **Never edit `shared/`
+  by hand** — `scripts/sync-shared.mjs` copies the canonical bytes there.
+- `plugin.json` registers agents/commands/hooks for Claude Code; a new command must be added there.
+- At install time `bin/platforms/_shared.js#substituteTokens()` swaps the `AskUserQuestion`
+  placeholder per platform (Gemini `ask_user`, OpenCode `question`, Cursor inline text);
+  `bin/platforms/<platform>.js` handle detection and file placement.
+- Markdown commands must call deterministic CLI steps instead of improvising file/git operations:
+  `npx ronin-skillforce create|save|context|trail`. Pass learner-written text to `trail` as JSON in a
+  quoted heredoc (`--stdin <<'TRAIL_EOF'`), never inside shell flags.
+- Agents: `professor` (main, has Bash), `coach` (review/done/stuck — reads only under the `dir` it is
+  given), `spotter`, `navigator`, `researcher`.
 
-When adding a new command or agent, register it in `plugin.json` or it won't be discovered.
+### Course storage
 
-## Multi-Platform Architecture
+Courses live in `learning/{slug}/` (primary) or `courses/{slug}/` (legacy); every reader checks
+`learning/` first. `COURSE.md` records a **Kind** (`programming | quantitative | conceptual |
+skill`; missing → `programming`). `programming` courses are git worktrees on branch
+`learning/{slug}` (created by `bin/commands/create.js`, `learning/` added to `.git/info/exclude`);
+other kinds are plain folders. `bin/course-reader.js` parses COURSE.md / LECTURE.md /
+LEARNING-LOG.md / SCHEDULE.md for every CLI command.
 
-The plugin supports Claude Code, Gemini CLI, OpenCode, and Cursor. Platform differences are abstracted via `bin/platforms/_shared.js`:
+Per course: `COURSE.md` (syllabus + progress, source of truth), `LECTURE.md` (active section;
+archived to `lectures/NN-<slug>.md` before being replaced), `LEARNING-LOG.md` (Coach trail,
+attempts, section entries), `CAPSTONE.md` (immutable), `NOTES.md`, `exercises/`.
 
-- Canonical files live in `shared/` using `AskUserQuestion` as a tool name placeholder
-- At install time, `_shared.js` runs `substituteTokens()` to replace placeholders per platform:
-  - Claude Code → `AskUserQuestion`
-  - Gemini CLI → `ask_user`
-  - OpenCode → `question`
-  - Cursor / others → inline text response
+### Studio and the local server
 
-Platform modules (`bin/platforms/claude.js`, `gemini.js`, etc.) handle detection and file placement.
+- `studio/src/lib/repo/` is the single data layer. `select-adapter.js` picks one adapter — IndexedDB
+  (browser) or `remote-adapter.js` → SQLite at `~/.professor/professor.db` through the local server —
+  and Studio writes only to the store the learner chose.
+- The CLI shares that same repo code: `bin/studio-store.js` installs a SQLite adapter so
+  `skillforce review` / `import` grade cards and write rows exactly like Studio.
+- `web/server.js` serves only the Studio API by default (`web/studio-api/`: health, db, bridge to
+  local agent CLIs, guards behind a pairing token). The old React UI in `web/client/` runs only with
+  `--legacy` / `PROFESSOR_LEGACY=1` and is slated for removal.
+- SQL migrations are in `studio/migrations/NNNN_*.sql` — add a new file, never edit an applied one.
+- AI calls go straight from the browser (`studio/src/lib/ai/`: Anthropic, OpenAI-compatible, Ollama)
+  or through the bridge to a local agent; prompts live in `studio/src/lib/prompts/`. Interactive
+  exercises are declarative zod specs in `studio/src/lib/exercises/`; code runs in
+  `studio/src/lib/runner/` (browser or local runner).
+- The app version shown in Studio is the **root** `package.json` version injected by
+  `studio/vite.config.js`; `studio/package.json` is private and unversioned.
 
-## JavaScript Conventions
+### Versions and releases
 
-- `bin/cli.js` and `bin/platforms/` use **ES modules** (`import`/`export`)
-- `hooks/pre-compact.js` uses **CommonJS** (`require`) for broader runtime compatibility
-- 2-space indentation, semicolons, 100-char line limit
-- Always use `path.join()` for paths; use `fileURLToPath(import.meta.url)` for `__dirname` in ES modules
+`package.json`, `plugin.json`, `templates/claude/plugin.json` and `.claude-plugin/marketplace.json`
+must carry the same version (`test/shared-drift.test.js`). Betas publish from `develop` with
+`npm publish --tag next`; see `RELEASING.md`. `prepublishOnly` builds both web clients.
 
-## Course Storage: Worktrees vs Legacy
+## Conventions
 
-Every course records a **Kind** in `COURSE.md` (`**Kind**: programming | quantitative | conceptual | skill`, written under `**Level**`). `professor:new-topic` proposes the kind and the learner can change it. Commands treat a **missing Kind as `programming`** (backward compatible with existing courses).
+- `bin/` and `bin/platforms/` are ES modules; `hooks/pre-compact.js` is CommonJS. 2-space indent,
+  semicolons, 100-char lines, `path.join()` for paths.
+- Shell out with `execFileSync('git', [...])`, never a composed command string.
+- New Markdown behaviour that the CLI must honour gets a contract test that reads the Markdown
+  (see the `contract` blocks in `test/cli-create.test.js`, `test/cli-trail.test.js`).
 
-- **`programming` courses** are created as **git worktrees** at `learning/{slug}/` with branch `learning/{slug}` and `exercises/` scaffolding. `professor:new-topic` requires the user to be inside a git repository.
-- **`quantitative` / `conceptual` / `skill` courses** are created as **plain folders** at `learning/{slug}/` — no git requirement, no worktree, no framework scaffolding; `exercises/` is created lazily by `professor:next`.
+## Core Behavior Rules (professor agent and all commands)
 
-Older courses exist under `courses/{slug}/` (legacy). All commands check `learning/` first, then fall back to `courses/`.
-
-Each course directory contains:
-- `COURSE.md` — syllabus + progress tracker (single source of truth, always update immediately on status change)
-- `LECTURE.md` — current active section; before `professor:next` overwrites it, the previous lecture is archived to `lectures/NN-<slug>.md` (history is kept, never deleted)
-- `lectures/` — archived lectures, one per delivered section (`NN` = zero-padded section number)
-- `LEARNING-LOG.md` — Coach self-assessment, verdicts, quiz results and per-section entries
-- `CAPSTONE.md` — project brief (immutable after creation)
-- `NOTES.md` — learner notes
-
-## Core Behavior Rules
-
-These apply to the professor agent and all commands — never violate them:
-
-1. **Never write working code** for the user — not in review, hint, discuss, or anywhere
-2. **Never complete exercises** on the user's behalf under any circumstances
-3. **During capstone phase**: no hints, no `professor:stuck`, no code nudges — `professor:discuss` for concepts only
-4. **Always read `COURSE.md` first** at conversation start to restore context (check `learning/` before `courses/`)
-5. **Always update `COURSE.md` immediately** when section status changes
-6. **LECTURE.md is archived, not lost** — `professor:next` archives the previous lecture to `lectures/NN-<slug>.md` before overwriting; never delete an archive
-7. **CAPSTONE.md is immutable** — never edit after creation
-8. **Never fabricate sources** — every cited URL, title, author and quote must come from a source actually fetched in the session; lectures research 3–6 sources first, cite key claims `[n]`, mark unsourceable claims `⚠️ unverified`, and list only fetched URLs in `## 🔗 Sources`
-
-## Agents
-
-| Agent | File | Purpose |
-|---|---|---|
-| **professor** | `agents/professor.md` | Main teaching agent; tools: `Read, Write, Bash, WebSearch` |
-| **researcher** | `agents/researcher.md` | Socratic research guide for course creation; returns a 3–6 source list with credibility tiers (only fetched URLs); tools: `WebFetch, Read, Grep, Bash` |
-| **coach** | `agents/coach.md` | Mentoring agent for capstone phase |
-| **spotter** | `agents/spotter.md` | Detects anti-patterns and learning gaps |
-| **navigator** | `agents/navigator.md` | Course navigation and progression helper |
-
-## Commands Reference
-
-| Command | Behavior |
-|---|---|
-| `professor:new-topic` | Asks 4 questions, researches topic, proposes a **course Kind** (`programming`/`quantitative`/`conceptual`/`skill`) + syllabus; `programming` → git worktree at `learning/{slug}/`, other kinds → plain folder |
-| `professor:next` | Researches 3–6 sources, then generates a grounded `LECTURE.md` (shared learning core + kind-specific block + `[n]` citations + 🔗 Sources + 🔎 Verify it yourself) for next ⬜ section; creates the kind-appropriate `exercises/` file; updates `COURSE.md` status to 🔄 |
-| `professor:done` | Confirms understanding verbally, marks section ✅, unlocks capstone when all done |
-| `professor:review` | Socratic review: what's working → question → one concept to study → next action |
-| `professor:hint` | Layer 1 (conceptual) → Layer 2 (tool/pattern) → Layer 3 (pseudo-code only); no skipping |
-| `professor:stuck` | Structured breakdown: what they tried → exact sticking point → smaller steps → analogy |
-| `professor:discuss` | Conceptual Q&A only; no full code dumps |
-| `professor:quiz` | 5 questions matched to level; Socratic review of answers |
-| `professor:recall` | Retrieves earlier concepts for spaced repetition review |
-| `professor:schedule` | Displays study schedule / pacing |
-| `professor:syllabus` | Displays `COURSE.md` |
-| `professor:progress` | Reads `COURSE.md`; shows completed/current/remaining + weak areas |
-| `professor:capstone` | Displays `CAPSTONE.md` |
-| `professor:capstone-review` | Full project review (only after all sections ✅); still no code writing |
-| `professor:note` | Saves a note to `NOTES.md` |
-| `professor:export` | Exports notes/progress to Notion or Obsidian via MCP |
-| `professor:archive` | Generates SUMMARY.md, copies to `.course_archive/{slug}/`, removes worktree and branch |
-| `professor:switch` | Switches agent context to a different course in `learning/`; interactive if no slug given |
-| `professor:worktrees` | Lists all active learning worktrees and archived courses with their progress |
-| `professor:template-export` | Exports a course as a reusable template |
-| `professor:template-import` | Imports a course from a template |
-| `professor:spotter` | Delegates to the spotter agent |
-| `professor:navigator` | Delegates to the navigator agent |
-| `professor:skill-export` | Encodes completed capstone into a reusable `SKILL.md`; requires `COMPLETION.md` with `Course Complete` verdict |
-| `professor:publish` | Publishes a course template or earned skill to the community registry via GitHub PR (`npx course-professor publish`) |
-
-## PreCompact Hook
-
-`hooks/pre-compact.js` fires on the `PreCompact` event. It checks if token count exceeds 80% of the 200k-token limit. If so, it finds the most recently modified `COURSE.md` (checking `learning/` first, then `courses/`) and writes a `session_state` YAML frontmatter block with `last_active_section`, `last_updated`, and `lecture_summary` so the next session can restore context.
+1. **Never write working code** for the learner and never complete exercises for them.
+2. **Capstone phase**: no hints, no `professor:stuck`, no code nudges — `professor:discuss` only.
+3. **Read `COURSE.md` first** at conversation start (`learning/` before `courses/`) and **update it
+   immediately** when a section's status changes.
+4. **LECTURE.md is archived, not lost**; **CAPSTONE.md is immutable**.
+5. **Never fabricate sources** — lectures research 3–6 sources first, cite key claims `[n]`, mark
+   unsourceable claims `⚠️ unverified`, and list only URLs actually fetched in `## 🔗 Sources`.
 
 ## Work Tracking: Linear + OpenSpec
 
-Tickets and backlog live in **Linear** — team `RON`, project
+Tickets live in **Linear** — team `RON`, project
 [Skill-Forces](https://linear.app/ronnie-workspace/project/skill-forces-3e1c22eb08c9). Specs and
-change proposals live in **OpenSpec** (`openspec/`, config in `openspec/config.yaml`).
+change proposals live in **OpenSpec** (`openspec/`).
 
 1. Pick (or create) a Linear issue; move it to **In Progress**.
-2. Create one OpenSpec change per issue, named `ron-<number>-<slug>`:
-   `/opsx:explore` (optional, for unclear scope) → `/opsx:propose` → `/opsx:apply`.
-3. Branch with the issue's Linear branch name (`feature/ron-<number>-…`) and put `RON-<number>` in
-   commit messages / the PR title so Linear links them.
-4. `/opsx:verify` + `npm test`, open the PR, move the issue to **In Review**.
-5. After merge: `/opsx:archive` (folds delta specs into `openspec/specs/`), mark the issue **Done**.
+2. One OpenSpec change per issue, named `ron-<number>-<slug>`: `/opsx:propose` → `/opsx:apply`.
+3. Branch with the issue's Linear branch name and put `RON-<number>` in commits / the PR title.
+4. `/opsx:verify` + `npm test`, open the PR against `develop`, move the issue to **In Review**.
+5. After merge: `/opsx:archive`, mark the issue **Done**.
 
-Delegated work runs through the dev-orchestrator skill (config in `.claude/dev-orchestrator.env`,
-`TRACKER=linear`): the coordinator writes the brief into the Linear issue description, then
-`.planning/workers/dispatch.sh <ISSUE-ID> <gitBranchName> <change-name>` opens one OpenCode worker
-in its own worktree and starts `/opsx-propose`. The coordinator reviews after propose (CP1) and
-after apply + verify (CP2), releases `/opsx-archive`, and merges the PR; the worker never merges.
+Delegated work runs through the dev-orchestrator skill (`.claude/dev-orchestrator.env`:
+`TRACKER=linear`, `SPEC_BY=agent`, `MERGE_BY=coordinator`, max 4 agents). With `SPEC_BY=agent` a
+hook blocks this session from running OpenSpec; workers dispatched with
+`.planning/workers/dispatch.sh <ISSUE-ID> <gitBranchName> <change-name>` run propose/apply/archive.
+Bugs found mid-change get a new Linear issue. `.planning/`, `.planning-archive/` and `TODOS.md`
+are **legacy history (read-only)**.
 
-Bugs found mid-change get a new Linear issue instead of widening the change. `.planning/` and
-`TODOS.md` are **legacy GSD history (read-only)** — don't add new work there; phases 1–10 map to
-RON-157…RON-166.
+## Optional MCP export
 
-## Adding New Features
-
-1. Create `commands/professor/<command-name>.md` with YAML frontmatter + behavior
-2. Register in `plugin.json` under `commands[]`
-3. Add the canonical version in `shared/commands/professor/<command-name>.md`
-4. Update this CLAUDE.md with the new command
-
-## Export Feature (Optional MCP)
-
-`professor:export` requires an MCP server in the project environment:
-- **Notion**: `@modelcontextprotocol/server-notion` with `NOTION_API_TOKEN`
-- **Obsidian**: `mcp-obsidian` with `OBSIDIAN_API_KEY` + `OBSIDIAN_HOST` + `OBSIDIAN_PORT`
-
-Configure in `.mcp.json` at project root. The core learning flow works without either.
+`professor:export` needs a Notion (`@modelcontextprotocol/server-notion`, `NOTION_API_TOKEN`) or
+Obsidian (`mcp-obsidian`) MCP server in `.mcp.json`; the core learning flow works without either.

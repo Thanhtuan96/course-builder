@@ -1,10 +1,10 @@
 /**
  * RON-250 — give Coach the real course and keep its review trail on disk.
  *
- * `course-professor context [slug] --json` prints one explicit context object (absolute course
+ * `skillforce context [slug] --json` prints one explicit context object (absolute course
  * path, section, objectives, active exercise, recent trail) so Coach never guesses a path.
  *
- * `course-professor trail <slug> --stdin <<'EOF' {"learner","asked","concept","evidence?","watch?"} EOF`
+ * `skillforce trail <slug> --stdin <<'EOF' {"learner","asked","concept","evidence?","watch?"} EOF`
  * (or the same fields as `--learner ..` flags) appends one review round to `LEARNING-LOG.md` → `## 🗣️ Reasoning Trail` (max 5 rounds per
  * section, oldest dropped), then commits programming course worktrees.
  */
