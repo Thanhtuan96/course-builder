@@ -11,7 +11,7 @@ import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import inquirer from 'inquirer';
 import ora from 'ora';
-import { buildPairingUrl } from './studio.js';
+import { buildPairingUrl, loopbackUrl, toLoopbackUrl } from './studio.js';
 import * as security from '../../web/security.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -324,7 +324,11 @@ export async function run({ args = [], style, startServerImpl } = {}) {
     host: process.env.HOST,
     logBanner: false,
   });
-  const uiUrl = started?.uiUrl || `http://localhost:${expectedUiPort}`;
+  // Printed links use the IPv4 literal: `localhost` can resolve to `::1`, where another dev server
+  // may answer instead of this one (the server itself binds 127.0.0.1). Legacy dev is left alone
+  // because Vite owns that port.
+  const uiBase = started?.uiUrl || loopbackUrl(expectedUiPort);
+  const uiUrl = legacy && !isProduction ? uiBase : toLoopbackUrl(uiBase);
   const uiPort = (() => {
     try {
       return new URL(uiUrl).port || expectedUiPort;

@@ -13,6 +13,16 @@ All notable changes to **ronin-skillforce** are documented here. The format is b
   CLI and PreCompact hook look in `learning/` only. If you still have a pre-0.1.0 `courses/<slug>/`
   folder, move it to `learning/<slug>/` by hand — nothing is migrated automatically.
 
+### Fixed
+
+- `skillforce studio` polls and prints `http://127.0.0.1:<port>` instead of `http://localhost:<port>`,
+  matching the loopback bind. On macOS `localhost` resolves to `::1` first, so a health poll could
+  reach another dev server holding `[::1]:3000` and fail with "did not become healthy … (HTTP 404)".
+- `skillforce studio` checks both loopback families before starting. A busy default port moves to the
+  next free one with a notice, a busy `--port` / `--api-port` fails with a message naming the port and
+  the flag to change, and a health answer that is not Studio says another app is on that port.
+- `skillforce web` prints its UI URL on `127.0.0.1` (legacy Vite dev is unchanged).
+
 ## [0.1.0] — 2026-11-14
 
 First release under the new name. Earlier versions were published as `course-professor`

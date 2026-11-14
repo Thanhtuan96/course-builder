@@ -35,7 +35,7 @@ describe('buildPairingUrl', () => {
   it('uses the fragment form and omits bridge for the default API port', () => {
     for (const apiPort of [3000, '3000']) {
       const { pairingUrl } = buildPairingUrl({ studioPort: 5180, apiPort, token: 'abc/def' });
-      expect(pairingUrl).toBe('http://localhost:5180/#token=abc%2Fdef');
+      expect(pairingUrl).toBe('http://127.0.0.1:5180/#token=abc%2Fdef');
       expect(pairingUrl).not.toContain('?token=');
       expect(pairingUrl).not.toContain('bridge=');
     }
@@ -45,7 +45,7 @@ describe('buildPairingUrl', () => {
     for (const apiPort of [4000, '4000']) {
       const { pairingUrl } = buildPairingUrl({ studioPort: 5180, apiPort, token: 't' });
       expect(pairingUrl).toBe(
-        'http://localhost:5180/#token=t&bridge=http%3A%2F%2Flocalhost%3A4000'
+        'http://127.0.0.1:5180/#token=t&bridge=http%3A%2F%2F127.0.0.1%3A4000'
       );
     }
   });
