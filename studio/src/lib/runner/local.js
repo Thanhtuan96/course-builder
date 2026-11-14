@@ -16,7 +16,7 @@ import { isAbortError, providerError } from '../ai/errors.js';
 import { DEFAULT_BRIDGE_URL } from '../ai/bridge.js';
 import { assertLoopbackBridgeUrl } from '../settings.js';
 
-const RUN_HINT = 'Start the local server (`npx course-professor web` or `npm start`), then retry. Or pick a language that runs in the browser.';
+const RUN_HINT = 'Start the local server (`npx ronin-skillforce web` or `npm start`), then retry. Or pick a language that runs in the browser.';
 
 /**
  * @param {object} settings

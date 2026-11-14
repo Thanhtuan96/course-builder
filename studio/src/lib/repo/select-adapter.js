@@ -212,7 +212,7 @@ export async function selectAdapter({ settings, timeoutMs = PROBE_TIMEOUT_MS, fe
       return { adapter, kind: 'remote', storage, health: probe.health };
     }
     const reason = probe.configured
-      ? 'The local server isn’t running — start it with `course-professor studio`.'
+      ? 'The local server isn’t running — start it with `npx ronin-skillforce studio`.'
       : 'SQLite storage needs the local server, but no bridge is paired.';
     return {
       adapter: createBlockedAdapter({ kind: 'sqlite', reason, path: probe.path }),

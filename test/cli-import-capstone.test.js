@@ -1,7 +1,7 @@
 /**
  * @vitest-environment node
  *
- * CAP-05 — `course-professor import` brings CLI `CAPSTONE.md` into `capstones` (rubric parsed when
+ * CAP-05 — `skillforce import` brings CLI `CAPSTONE.md` into `capstones` (rubric parsed when
  * present) and `COMPLETION.md` into a `course_complete` submission row, idempotently.
  */
 import { describe, it, expect, afterEach } from 'vitest';

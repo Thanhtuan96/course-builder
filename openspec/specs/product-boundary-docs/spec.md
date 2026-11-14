@@ -14,22 +14,22 @@ surface, and SHALL state the Node requirement (22.5+) where the command is first
 
 #### Scenario: Help names Studio and its Node requirement
 - **WHEN** a user runs `node bin/cli.js help`
-- **THEN** the output contains `npx course-professor studio` and `Node 22.5+`
+- **THEN** the output contains `npx ronin-skillforce studio` and `Node 22.5+`
 
 #### Scenario: README introduces Studio before the manual bridge
 - **WHEN** `README.md` is read top to bottom
-- **THEN** the first occurrence of `course-professor studio` precedes the first occurrence of
-  `course-professor web`
+- **THEN** the first occurrence of `skillforce studio` precedes the first occurrence of
+  `skillforce web`
 
 #### Scenario: Studio README introduces Studio before the manual bridge
 - **WHEN** `studio/README.md` is read top to bottom
-- **THEN** the first occurrence of `course-professor studio` precedes the first occurrence of
-  `course-professor web`, and the manual bridge section is labelled as the alternative to the
+- **THEN** the first occurrence of `skillforce studio` precedes the first occurrence of
+  `skillforce web`, and the manual bridge section is labelled as the alternative to the
   one-command path
 
 #### Scenario: init and setup close with a Studio hint
-- **WHEN** `course-professor init` or `course-professor setup <agent>` completes setup
-- **THEN** one additional line recommends `npx course-professor studio` (Node 22.5+) without
+- **WHEN** `skillforce init` or `skillforce setup <agent>` completes setup
+- **THEN** one additional line recommends `npx ronin-skillforce studio` (Node 22.5+) without
   changing any platform-specific "Next steps" text
 
 ### Requirement: Help describes `web` as the Studio-only bridge server

@@ -48,7 +48,7 @@ export function configIssue(settings = {}, provider = settings.provider) {
         return {
           code: 'auth',
           message: 'Add the local bridge URL',
-          hint: 'Run `npx course-professor web` and paste the URL it prints.',
+          hint: 'Run `npx ronin-skillforce web` and paste the URL it prints.',
         };
       }
       if (!filled(settings.bridge?.bridgeToken) && !filled(settings.bridgeToken)) {

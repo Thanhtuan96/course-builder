@@ -1,85 +1,93 @@
 {
-    "name": "course-professor",
-    "version": "1.6.0-beta.1",
-    "description": "A Socratic learning assistant - teaches by asking questions instead of giving answers. Works with Claude Code, OpenCode, Gemini CLI, and other AI agents.",
-    "type": "module",
-    "bin": {
-        "course-professor": "./bin/cli.js",
-        "professor": "./bin/cli.js"
-    },
-    "scripts": {
-        "build": "cd web/client && npm install && npm run build",
-        "build:studio": "npm --prefix studio install --no-audit --no-fund && npm --prefix studio run build",
-        "smoke:pack": "node scripts/smoke-pack.mjs",
-        "start": "cd web && node server.js",
-        "test": "vitest run",
-        "test:e2e": "playwright test --config e2e/playwright.config.js",
-        "test:watch": "vitest",
-        "test:security": "vitest run test/security --project root",
-        "test:drift": "vitest run test/shared-drift.test.js --project root",
-        "prepublishOnly": "npm run build && npm run build:studio"
-    },
-    "files": [
-        "bin/",
-        "templates/",
-        "shared/",
-        "plugin.json",
-        "web/server.js",
-        "web/security.js",
-        "web/legacy-server.js",
-        "web/studio-api.js",
-        "web/studio-api/",
-        "web/studio-db.js",
-        "web/studio-runner.js",
-        "web/lecture-archive.js",
-        "web/package.json",
-        "web/package-lock.json",
-        "web/dist/",
-        "web/client/src/",
-        "web/client/index.html",
-        "web/client/package.json",
-        "web/client/package-lock.json",
-        "web/client/vite.config.js",
-        "web/client/tailwind.config.js",
-        "web/client/postcss.config.js",
-        "web/client/components.json",
-        "studio/dist/",
-        "studio/migrations/",
-        "studio/src/lib/",
-        "README.md",
-        "CHANGELOG.md",
-        "LICENSE"
-    ],
-    "keywords": [
-        "learning",
-        "socratic",
-        "education",
-        "ai",
-        "claude",
-        "opencode",
-        "teacher",
-        "course"
-    ],
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/Thanhtuan96/course-builder"
-    },
-    "dependencies": {
-        "chalk": "^5.3.0",
-        "cors": "^2.8.5",
-        "express": "^4.21.0",
-        "inquirer": "^9.2.23",
-        "ora": "^8.1.1"
-    },
-    "engines": {
-        "node": ">=18.0.0"
-    },
-    "author": "ronnie-tk",
-    "license": "MIT",
-    "packageManager": "npm@11.19.0",
-    "devDependencies": {
-        "@playwright/test": "^1.50.0",
-        "supertest": "^7.1.0",
-        "vitest": "^5.0.5"
-    }
+  "name": "ronin-skillforce",
+  "version": "0.1.0",
+  "description": "Ronin SkillForce — a Socratic learning coach for AI agents and a local Studio. It teaches by asking questions, grounds lectures in real sources and keeps your progress on disk.",
+  "type": "module",
+  "bin": {
+    "skillforce": "./bin/cli.js",
+    "ronin-skillforce": "./bin/cli.js",
+    "course-professor": "./bin/cli.js",
+    "professor": "./bin/cli.js"
+  },
+  "scripts": {
+    "build": "cd web/client && npm install && npm run build",
+    "build:studio": "npm --prefix studio install --no-audit --no-fund && npm --prefix studio run build",
+    "smoke:pack": "node scripts/smoke-pack.mjs",
+    "start": "cd web && node server.js",
+    "test": "vitest run",
+    "test:e2e": "playwright test --config e2e/playwright.config.js",
+    "test:watch": "vitest",
+    "test:security": "vitest run test/security --project root",
+    "test:drift": "vitest run test/shared-drift.test.js --project root",
+    "prepublishOnly": "npm run build && npm run build:studio"
+  },
+  "files": [
+    "bin/",
+    "templates/",
+    "shared/",
+    "plugin.json",
+    "web/server.js",
+    "web/security.js",
+    "web/legacy-server.js",
+    "web/studio-api.js",
+    "web/studio-api/",
+    "web/studio-db.js",
+    "web/studio-runner.js",
+    "web/lecture-archive.js",
+    "web/package.json",
+    "web/package-lock.json",
+    "web/dist/",
+    "web/client/src/",
+    "web/client/index.html",
+    "web/client/package.json",
+    "web/client/package-lock.json",
+    "web/client/vite.config.js",
+    "web/client/tailwind.config.js",
+    "web/client/postcss.config.js",
+    "web/client/components.json",
+    "studio/dist/",
+    "studio/migrations/",
+    "studio/src/lib/",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "learning",
+    "socratic",
+    "education",
+    "ai",
+    "claude",
+    "opencode",
+    "teacher",
+    "course",
+    "skillforce",
+    "ronin",
+    "spaced-repetition",
+    "gemini-cli",
+    "cursor"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Thanhtuan96/course-builder"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "inquirer": "^9.2.23",
+    "ora": "^8.1.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "ronnie-tk",
+  "license": "MIT",
+  "packageManager": "npm@11.19.0",
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "supertest": "^7.1.0",
+    "vitest": "^5.0.5"
+  },
+  "homepage": "https://github.com/Thanhtuan96/course-builder#readme"
 }

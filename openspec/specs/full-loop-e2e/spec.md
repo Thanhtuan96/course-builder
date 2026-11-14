@@ -12,7 +12,7 @@ the CI job that runs it.
 
 `npm run test:e2e` SHALL serve the built `studio/dist` bundle from a static origin and the local
 bridge from a separate origin, and SHALL pair the browser with the bridge through the
-`#/settings?bridge=…&token=…` pairing URL, exactly as `course-professor studio` does. The suite
+`#/settings?bridge=…&token=…` pairing URL, exactly as `skillforce studio` does. The suite
 MUST NOT start `vite dev` and MUST NOT serve Studio from the bridge's own port.
 
 #### Scenario: Studio and bridge use separate origins

@@ -428,16 +428,16 @@ function printCourseInstallSummary({ slug, destDir, importResult }) {
 
   if (importResult.status === 'imported') {
     console.log(style('success', `Imported into Studio (${importResult.lessons} lessons)`));
-    console.log(style('info', 'Open it with: course-professor studio'));
+    console.log(style('info', 'Open it with: skillforce studio'));
   } else if (importResult.status === 'skipped' && importResult.reason === 'node') {
     console.log(style('warning', `Not imported into Studio — ${importResult.message}`));
-    console.log(style('info', `Import it once you are on Node 22.5+: course-professor import ${slug}`));
+    console.log(style('info', `Import it once you are on Node 22.5+: skillforce import ${slug}`));
   } else if (importResult.status === 'skipped') {
     console.log(style('info', 'Skipped the Studio import (--no-import).'));
-    console.log(style('info', `Import it later with: course-professor import ${slug}`));
+    console.log(style('info', `Import it later with: skillforce import ${slug}`));
   } else {
     console.log(style('warning', `Studio import failed: ${importResult.message}`));
-    console.log(style('info', `Retry with: course-professor import ${slug}`));
+    console.log(style('info', `Retry with: skillforce import ${slug}`));
   }
 
   console.log(style('info', 'In Claude Code, continue with:'), `professor:switch ${slug}`);

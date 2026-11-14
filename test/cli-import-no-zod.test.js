@@ -1,7 +1,7 @@
 /**
  * @vitest-environment node
  *
- * RON-266 — the published CLI (`course-professor import`) resolves its module graph from
+ * RON-266 — the published CLI (`skillforce import`) resolves its module graph from
  * `bin/commands/import.js` inside the packed tarball, where Studio-only dependencies such as `zod`
  * are not installed. The repository module used to import the zod-backed exercise spec statically,
  * which broke the tarball smoke with ERR_MODULE_NOT_FOUND.

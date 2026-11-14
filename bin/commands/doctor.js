@@ -1,5 +1,5 @@
 /**
- * `course-professor doctor` — environment checklist with fix hints.
+ * `skillforce doctor` — environment checklist with fix hints.
  */
 import { existsSync, statSync } from 'fs';
 import { join } from 'path';
@@ -163,7 +163,7 @@ export function buildPostureChecks({
     mode = null;
   }
   if (mode === null) {
-    add('Security · token file', 'warn', 'not created yet', 'Created by `course-professor studio`.');
+    add('Security · token file', 'warn', 'not created yet', 'Created by `skillforce studio`.');
   } else if (mode === 0o600) {
     add('Security · token file', 'ok', `${tokenFile} (0600)`);
   } else {
@@ -266,7 +266,7 @@ export async function buildStudioHealthCheck({
       name,
       status: 'warn',
       detail: 'server reachable but unpaired',
-      hint: 'Open the pairing URL printed by `course-professor studio`.',
+      hint: 'Open the pairing URL printed by `skillforce studio`.',
     };
   }
   const open = await portOpenImpl(port);
@@ -275,7 +275,7 @@ export async function buildStudioHealthCheck({
     name,
     status: 'warn',
     detail: 'port in use but no health endpoint',
-    hint: `Something else is on ${port}. Stop it or start the server with \`npx course-professor web\`.`,
+    hint: `Something else is on ${port}. Stop it or start the server with \`npx ronin-skillforce web\`.`,
   };
 }
 
@@ -334,10 +334,10 @@ export async function runChecks({
   const installed = professorInstalledFor(cwd);
   if (platforms.length) add('Agent detected', 'ok', platforms.join(', '));
   else add('Agent detected', 'warn', 'no agent home directory found',
-    'Run: npx course-professor init');
+    'Run: npx ronin-skillforce init');
   if (installed.length) add('Professor installed', 'ok', installed.join(', '));
   else add('Professor installed', 'warn', 'no installation marker found',
-    'Run: npx course-professor setup <agent>');
+    'Run: npx ronin-skillforce setup <agent>');
 
   const ollama = await httpGet('http://127.0.0.1:11434/api/tags');
   if (ollama.ok) add('Ollama (:11434)', 'ok', 'reachable');
@@ -356,7 +356,7 @@ export async function runChecks({
   const missing = ['python3', 'go'].filter((cmd) => !whichPath(cmd));
   if (missing.length === 0) add('Check toolchains', 'ok', toolchains.join(', '));
   else add('Check toolchains', 'warn', `missing: ${missing.join(', ')}`,
-    'Optional — needed only to run those exercise file types with `course-professor check`.');
+    'Optional — needed only to run those exercise file types with `skillforce check`.');
 
   checks.push(...buildPostureChecks({ env, platform }));
 

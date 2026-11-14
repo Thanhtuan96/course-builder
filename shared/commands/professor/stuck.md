@@ -10,7 +10,7 @@ This command routes to the **Coach agent** which provides help through self-asse
 
 ## Before routing to Coach:
 
-1. **Get the course context** — run `npx course-professor context {slug} --json`. If it exits non-zero, show its error and ask the learner which course — never guess a slug or path.
+1. **Get the course context** — run `npx ronin-skillforce context {slug} --json`. If it exits non-zero, show its error and ask the learner which course — never guess a slug or path.
 2. If `activeExercise` is set, read that file for context
 
 ## Route to Coach:
@@ -24,4 +24,4 @@ Delegate to the Coach agent with:
 
 Coach will guide through self-assessment to identify the exact blocker, then break into smaller steps.
 
-When Coach returns a `trail` block, record it with `npx course-professor trail {slug} --stdin` and a quoted `<<'TRAIL_EOF'` heredoc of JSON, exactly as in `professor:review`. If that fails, say "⚠️ This round was not recorded" — never claim it was saved.
+When Coach returns a `trail` block, record it with `npx ronin-skillforce trail {slug} --stdin` and a quoted `<<'TRAIL_EOF'` heredoc of JSON, exactly as in `professor:review`. If that fails, say "⚠️ This round was not recorded" — never claim it was saved.

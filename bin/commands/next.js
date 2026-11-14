@@ -1,5 +1,5 @@
 /**
- * `course-professor next [slug]` — show the active lecture summary and the
+ * `skillforce next [slug]` — show the active lecture summary and the
  * agent command to continue. Never prints solutions.
  */
 import { existsSync, readFileSync } from 'fs';

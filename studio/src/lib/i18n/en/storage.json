@@ -34,12 +34,12 @@
   "openLocalAgent": "Open Settings → My local agent",
   "reasons": {
     "not_paired": {
-      "short": "Not paired — start the local server (npx course-professor studio) and open the pairing link it prints in this browser.",
+      "short": "Not paired — start the local server (npx ronin-skillforce studio) and open the pairing link it prints in this browser.",
       "hint": "Or paste the bridge URL and pairing token in Settings → My local agent."
     },
     "unreachable": {
       "short": "Offline — the local server isn’t reachable.",
-      "hint": "Start npx course-professor studio, then retry. If it is already running, check the bridge URL and pairing token in Settings → My local agent."
+      "hint": "Start npx ronin-skillforce studio, then retry. If it is already running, check the bridge URL and pairing token in Settings → My local agent."
     },
     "unexpected": {
       "short": "Offline — the local server answered unexpectedly.",

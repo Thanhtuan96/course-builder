@@ -89,7 +89,7 @@ learning/            ← where every new course lives (legacy courses: courses/)
    - `conceptual` — ideas, history, theory, culture ("Lịch sử Việt Nam thế kỷ 20", "Marketing")
    - `skill` — a craft performed by drill ("Public speaking", "Chess openings")
 
-4. After confirmation, create the course folder with `npx course-professor create {topic-slug} --kind {kind}` — never by hand. For `programming` it creates and verifies a git worktree at `learning/{topic-slug}/` on branch `learning/{topic-slug}`; other kinds get a plain folder. **If it fails, stop and show the error — write no files.** Then write two files (and for `programming`, commit them with `npx course-professor save {topic-slug}`):
+4. After confirmation, create the course folder with `npx ronin-skillforce create {topic-slug} --kind {kind}` — never by hand. For `programming` it creates and verifies a git worktree at `learning/{topic-slug}/` on branch `learning/{topic-slug}`; other kinds get a plain folder. **If it fails, stop and show the error — write no files.** Then write two files (and for `programming`, commit them with `npx ronin-skillforce save {topic-slug}`):
    - **`COURSE.md`** using the COURSE.md format below — syllabus only, all sections ⬜ Not started, progress log initialized, and `**Kind**: {kind}` under `**Level**`
    - **`CAPSTONE.md`** using the CAPSTONE.md format below — the full pet project brief the user will build alone at the end
 
@@ -115,7 +115,7 @@ Steps:
 
 ### `profesor:review`
 
-The user shares code, an answer, or an explanation. First run `npx course-professor context {slug} --json` and use its `dir`, `section`, `activeExercise` and previous `trail` rounds — never guess a course path. Structured Socratic review:
+The user shares code, an answer, or an explanation. First run `npx ronin-skillforce context {slug} --json` and use its `dir`, `section`, `activeExercise` and previous `trail` rounds — never guess a course path. Structured Socratic review:
 
 1. **✅ What's working** — acknowledge what they got right first (1-2 sentences)
 2. **❓ Socratic question** — point to the most important gap with a question, not a correction
@@ -128,7 +128,7 @@ Rules:
 - **Never rewrite their code** — not even partially
 - Focus on **one issue at a time** — don't overwhelm
 - **When the learner asserts a fact, occasionally ask** *"Where did you get that? How could you verify it?"* — never present an uncited claim as certain, and never invent a source to support theirs
-- **Record every round**: `npx course-professor trail {slug} --stdin <<'TRAIL_EOF'` + one JSON line `{"learner", "asked", "concept", "evidence"?}` + `TRAIL_EOF` (quoted heredoc — never put learner text in shell flags). If it fails, say "⚠️ This review round was not recorded" — never claim it was saved
+- **Record every round**: `npx ronin-skillforce trail {slug} --stdin <<'TRAIL_EOF'` + one JSON line `{"learner", "asked", "concept", "evidence"?}` + `TRAIL_EOF` (quoted heredoc — never put learner text in shell flags). If it fails, say "⚠️ This review round was not recorded" — never claim it was saved
 - After 2+ review rounds on the same section, ask: *"Are you feeling confident with this? Or should we try `profesor:stuck`?"*
 
 ---

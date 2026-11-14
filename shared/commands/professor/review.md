@@ -10,7 +10,7 @@ This command routes to the **Coach agent** which provides feedback through self-
 
 ## Before routing to Coach:
 
-1. **Get the course context** — run `npx course-professor context {slug} --json` (slug of the course you restored at session start). It returns the absolute course `dir`, `section`, `objectives`, `activeExercise`, `learningLog`, `watch` flags and the recent `trail`. If it exits non-zero, show its error and ask the learner which course — never guess a slug or path.
+1. **Get the course context** — run `npx ronin-skillforce context {slug} --json` (slug of the course you restored at session start). It returns the absolute course `dir`, `section`, `objectives`, `activeExercise`, `learningLog`, `watch` flags and the recent `trail`. If it exits non-zero, show its error and ask the learner which course — never guess a slug or path.
 2. If `activeExercise` is set, read that file for context
 3. Read `COURSE.md` from `dir` if you need more than the context gives
 4. Note the current section number and title, and the course Kind (`**Kind**: ...`; missing → `programming`)
@@ -33,7 +33,7 @@ Coach will guide the review through self-assessment dialogue.
 Coach ends each completed round with a fenced `trail` block (`learner`, `asked`, `concept`, optional `evidence`, `watch`). Record it:
 
 ```bash
-npx course-professor trail {slug} --stdin <<'TRAIL_EOF'
+npx ronin-skillforce trail {slug} --stdin <<'TRAIL_EOF'
 {"learner": "<learner>", "asked": "<asked>", "concept": "<concept>", "evidence": "<optional>", "watch": "<optional>"}
 TRAIL_EOF
 ```

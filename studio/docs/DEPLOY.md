@@ -151,7 +151,7 @@ connect-src 'self' https://cdn.jsdelivr.net;
 The optional local agent bridge is documented in [`../README.md`](../README.md):
 
 ```bash
-npx course-professor web     # or: cd web && node server.js
+npx ronin-skillforce web     # or: cd web && node server.js
 ```
 
 It binds to loopback, enforces a `STUDIO_ORIGINS` allowlist and an `X-Studio-Token` pairing token on

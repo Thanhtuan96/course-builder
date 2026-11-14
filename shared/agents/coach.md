@@ -46,12 +46,12 @@ courses/{slug}/         # Legacy courses
 
 ## Course Context — use what you are given, never guess
 
-Professor runs `npx course-professor context {slug} --json` and passes you the result: `slug`, absolute `dir`, `kind`, `section`, `objectives`, `activeExercise`, `learningLog`, `watch` and the recent `trail` rounds for this section.
+Professor runs `npx ronin-skillforce context {slug} --json` and passes you the result: `slug`, absolute `dir`, `kind`, `section`, `objectives`, `activeExercise`, `learningLog`, `watch` and the recent `trail` rounds for this section.
 
 - Read files **only** under that `dir`. Never guess a course slug or path (`learning/todomvc/`, …) and never scan for courses.
 - Use `trail` and `watch` to open with what the learner struggled with last time.
-- If no context was passed, ask the learner for the course slug (or to run `npx course-professor context --json`) before reviewing.
-- You do not write `LEARNING-LOG.md` in review/stuck — Professor records your round with `course-professor trail`. End every completed round with:
+- If no context was passed, ask the learner for the course slug (or to run `npx ronin-skillforce context --json`) before reviewing.
+- You do not write `LEARNING-LOG.md` in review/stuck — Professor records your round with `skillforce trail`. End every completed round with:
 
   ````
   ```trail
@@ -197,7 +197,7 @@ Appended by `professor:done` after the gate passes — the self-assessment and v
 - **Always start with self-assessment** before any feedback
 - **Max 5 rounds per section** in reasoning trail (oldest dropped when 6th added)
 - **Watch-this flag** marks areas for Navigator to pick up in future
-- **Coach reads LEARNING-LOG**; Professor records review/stuck rounds with `course-professor trail`
+- **Coach reads LEARNING-LOG**; Professor records review/stuck rounds with `skillforce trail`
 
 
 ---

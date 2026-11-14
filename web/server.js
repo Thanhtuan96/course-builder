@@ -23,7 +23,7 @@ const STUDIO_BUILD_MESSAGE = `<!doctype html>
 <html><head><meta charset="utf-8"><title>Professor Studio</title></head>
 <body>
   <h1>Professor Studio build not found</h1>
-  <p>Run <code>course-professor studio</code> or build Studio with <code>npm run build:studio</code>.</p>
+  <p>Run <code>skillforce studio</code> or build Studio with <code>npm run build:studio</code>.</p>
 </body></html>`;
 
 const LEGACY_BUILD_MESSAGE = `<!doctype html>

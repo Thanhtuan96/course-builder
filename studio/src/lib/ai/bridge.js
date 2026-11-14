@@ -20,7 +20,7 @@ import { localFetch, classifyNetworkError, mapHttpError } from './fetch-local.js
 import { assertLoopbackBridgeUrl } from '../settings.js';
 
 export const DEFAULT_BRIDGE_URL = 'http://localhost:3000';
-const RUN_HINT = 'Run `npx course-professor web` (or `npm start` in the repo), then retry.';
+const RUN_HINT = 'Run `npx ronin-skillforce web` (or `npm start` in the repo), then retry.';
 
 /**
  * @param {{ bridgeUrl?: string, bridgeToken?: string, agent?: string, model?: string }} config

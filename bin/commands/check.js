@@ -1,5 +1,5 @@
 /**
- * `course-professor check [slug]` — run the active exercise's self-checks
+ * `skillforce check [slug]` — run the active exercise's self-checks
  * with the right toolchain. Shows pass/fail per check, never solutions.
  */
 import { appendFileSync, existsSync, readFileSync, statSync } from 'fs';

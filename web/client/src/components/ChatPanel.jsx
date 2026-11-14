@@ -362,7 +362,7 @@ export default function ChatPanel({ courseSlug, currentPhase = 'idle', onSendMes
             <AlertTitle>Pair this browser</AlertTitle>
             <AlertDescription>
               {pairingMessage ||
-                'Open the pairing URL printed by `course-professor web` to load the token.'}
+                'Open the pairing URL printed by `skillforce web` to load the token.'}
             </AlertDescription>
           </Alert>
         )}

@@ -1,7 +1,7 @@
 {
   "name": "professor-studio",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.0.0-private",
   "type": "module",
   "description": "Local-first learning dashboard for Professor — AI-generated courses, lessons, quizzes and spaced repetition. BYOK or your own local agent.",
   "scripts": {

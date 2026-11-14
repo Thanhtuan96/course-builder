@@ -1,5 +1,5 @@
 /**
- * `course-professor review [--limit 20]` (CLI-06) — flashcard review in the terminal.
+ * `skillforce review [--limit 20]` (CLI-06) — flashcard review in the terminal.
  *
  * Cards live in the shared Studio SQLite DB (`~/.professor/professor.db`) and are graded through
  * the same repository as Studio (`studio/src/lib/repo/index.js`), so SM-2 scheduling, the

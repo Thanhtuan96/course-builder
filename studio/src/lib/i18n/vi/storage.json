@@ -34,12 +34,12 @@
   "openLocalAgent": "Mở Cài đặt → Agent cục bộ của tôi",
   "reasons": {
     "not_paired": {
-      "short": "Chưa ghép nối — hãy chạy máy chủ cục bộ (npx course-professor studio) và mở liên kết ghép nối mà nó in ra trong trình duyệt này.",
+      "short": "Chưa ghép nối — hãy chạy máy chủ cục bộ (npx ronin-skillforce studio) và mở liên kết ghép nối mà nó in ra trong trình duyệt này.",
       "hint": "Hoặc dán URL bridge và mã ghép nối trong Cài đặt → Agent cục bộ của tôi."
     },
     "unreachable": {
       "short": "Ngoại tuyến — không kết nối được tới máy chủ cục bộ.",
-      "hint": "Hãy chạy npx course-professor studio rồi thử lại. Nếu máy chủ đang chạy, hãy kiểm tra URL bridge và mã ghép nối trong Cài đặt → Agent cục bộ của tôi."
+      "hint": "Hãy chạy npx ronin-skillforce studio rồi thử lại. Nếu máy chủ đang chạy, hãy kiểm tra URL bridge và mã ghép nối trong Cài đặt → Agent cục bộ của tôi."
     },
     "unexpected": {
       "short": "Ngoại tuyến — máy chủ cục bộ trả lời không như mong đợi.",

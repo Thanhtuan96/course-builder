@@ -173,7 +173,7 @@ describe('RON-278 studio --help and web --help print usage and start nothing', (
 
     expect(timedOut).toBe(false);
     expect(status).toBe(0);
-    expect(stdout).toMatch(/Usage: course-professor studio/);
+    expect(stdout).toMatch(/Usage: skillforce studio/);
     for (const flag of ['--port', '--api-port', '--no-open', '--rotate-token']) {
       expect(stdout).toContain(flag);
     }
@@ -185,7 +185,7 @@ describe('RON-278 studio --help and web --help print usage and start nothing', (
   it('studio -h behaves the same as --help', () => {
     const { status, stdout } = runCli(['studio', '-h']);
     expect(status).toBe(0);
-    expect(stdout).toMatch(/Usage: course-professor studio/);
+    expect(stdout).toMatch(/Usage: skillforce studio/);
   });
 
   it('web --help exits 0, prints its flags and binds no port', async () => {
@@ -195,7 +195,7 @@ describe('RON-278 studio --help and web --help print usage and start nothing', (
 
     expect(timedOut).toBe(false);
     expect(status).toBe(0);
-    expect(stdout).toMatch(/Usage: course-professor web/);
+    expect(stdout).toMatch(/Usage: skillforce web/);
     expect(stdout).toContain('--production');
     expect(stdout).toContain('--rotate-token');
     expect(stdout).not.toMatch(/Pairing URL|Starting Professor Web UI/);
@@ -205,7 +205,7 @@ describe('RON-278 studio --help and web --help print usage and start nothing', (
   it('web -h behaves the same as --help', () => {
     const { status, stdout } = runCli(['web', '-h']);
     expect(status).toBe(0);
-    expect(stdout).toMatch(/Usage: course-professor web/);
+    expect(stdout).toMatch(/Usage: skillforce web/);
   });
 });
 

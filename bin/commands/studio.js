@@ -1,5 +1,5 @@
 /**
- * `course-professor studio` (CLI-05) — one command that brings the whole local platform up:
+ * `skillforce studio` (CLI-05) — one command that brings the whole local platform up:
  *
  *   1. installs `web/` and `studio/` deps if missing, builds `studio/dist` if missing/stale
  *   2. starts the local server (`web/server.js`, production, on `--api-port`) with a pairing token
@@ -33,7 +33,7 @@ export const HEALTH_PATH = '/api/studio/health';
  * or binding anything.
  */
 export const STUDIO_USAGE = `
-Usage: course-professor studio [options]
+Usage: skillforce studio [options]
 
 Start the local bridge server and Professor Studio, then open the browser (Node 22.5+).
 
@@ -312,7 +312,7 @@ function ensureDeps({ dir, label, spinner, probe }) {
       throw new Error(
         `Cannot install ${label} dependencies in ${dir} (permission denied). ` +
           'This happens when the package runs from the read-only npx cache. ' +
-          `Install the package globally instead (\`npm i -g course-professor\`) or re-run with a writable cache.`
+          `Install the package globally instead (\`npm i -g ronin-skillforce\`) or re-run with a writable cache.`
       );
     }
     throw new Error(`npm install failed in ${dir}: ${message}`);

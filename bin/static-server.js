@@ -1,5 +1,5 @@
 /**
- * static-server — the tiny `node:http` server `course-professor studio` uses to serve the built
+ * static-server — the tiny `node:http` server `skillforce studio` uses to serve the built
  * Studio SPA (`studio/dist`) on its own port. No dependencies, no directory listing, loopback
  * only, and an `index.html` fallback so deep links keep working (Studio uses hash routing, so in
  * practice the server only ever sees `/` and hashed assets).

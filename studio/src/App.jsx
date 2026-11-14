@@ -116,7 +116,7 @@ function StorageBlocked({ reason, onRetry, onSwitch, busy, switchError }) {
       <Card className="w-full max-w-lg space-y-4">
         <h1 className="text-lg font-semibold">{t('app.storageBlocked.title')}</h1>
         <p className="text-sm text-neutral-600 dark:text-neutral-300">{t('app.storageBlocked.body')}</p>
-        <pre className="overflow-auto rounded-lg bg-neutral-100 p-3 text-xs dark:bg-neutral-800">course-professor studio</pre>
+        <pre className="overflow-auto rounded-lg bg-neutral-100 p-3 text-xs dark:bg-neutral-800">npx ronin-skillforce studio</pre>
         {hint && <p className="text-xs text-amber-700 dark:text-amber-300">{hint}</p>}
         {switchError && <p className="text-xs text-red-600 dark:text-red-400">{switchError}</p>}
         <div className="flex flex-wrap gap-2">

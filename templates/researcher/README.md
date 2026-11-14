@@ -43,7 +43,7 @@ The Researcher should NOT modify files directly. It provides research findings t
 The researcher template is automatically used when running:
 
 ```bash
-npx course-professor setup researcher
+npx ronin-skillforce setup researcher
 ```
 
 This creates a `.researcher/` directory with the necessary configuration.

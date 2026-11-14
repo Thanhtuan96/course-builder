@@ -312,7 +312,7 @@ export function applyPairingFromUrl(env = {}) {
   const patch = { bridge: {} };
   patch.bridge.bridgeUrl = targetBridge;
   if (pairing.token) patch.bridge.bridgeToken = pairing.token;
-  // Choose the local agent unless the learner already has a ready provider: `course-professor
+  // Choose the local agent unless the learner already has a ready provider: `skillforce
   // studio` exists to hand them a working local setup, so an unconfigured/untested provider yields.
   if (!providerIsReady(stored)) patch.provider = BRIDGE_PROVIDER;
   if (!stored || stored.onboardingDone !== true) patch.onboardingDone = true;

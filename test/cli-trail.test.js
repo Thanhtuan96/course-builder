@@ -141,8 +141,8 @@ describe('Coach contract', () => {
   it('review and stuck pass the CLI context to Coach and record through trail', () => {
     for (const p of ['commands/professor/review.md', 'commands/professor/stuck.md']) {
       const text = read(p);
-      expect(text).toContain('course-professor context');
-      expect(text).toContain('course-professor trail');
+      expect(text).toContain('skillforce context');
+      expect(text).toContain('skillforce trail');
       expect(text).toContain("<<'TRAIL_EOF'");
     }
     expect(read('agents/coach.md')).toMatch(/never guess/i);

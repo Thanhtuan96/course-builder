@@ -620,7 +620,7 @@ export async function createExercise({
   if (!lessonId) throw new Error('createExercise: lessonId is required');
   const raw = typeof spec === 'string' ? JSON.parse(spec) : spec;
   // Loaded lazily: zod is a Studio-only dependency, and a static import here would break the
-  // published CLI (`course-professor import`) with ERR_MODULE_NOT_FOUND.
+  // published CLI (`skillforce import`) with ERR_MODULE_NOT_FOUND.
   const { validateExerciseSpec } = await import('../exercises/spec.js');
   const clean = validateExerciseSpec({ ...raw, type });
   const row = stampCreate({
