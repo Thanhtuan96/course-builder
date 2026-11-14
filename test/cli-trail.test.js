@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import { execFileSync } from 'child_process';
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { appendRound, buildContext, recordRound, MAX_ROUNDS } from '../bin/commands/trail.js';
@@ -100,6 +100,15 @@ describe('recordRound', () => {
     expect(buildContext({ cwd: root, slug: 'playwright-e2e' }).trail[0]).toContain('question 1?');
   });
 
+  it('--stdin heredoc keeps shell syntax in learner text literal', () => {
+    const { root, dir } = mkCourse();
+    const cli = new URL('../bin/cli.js', import.meta.url).pathname;
+    const json = JSON.stringify({ learner: 'I ran $(touch pwned) and `id`', asked: 'why?', concept: 'c' });
+    execFileSync('sh', ['-c', `node "${cli}" trail playwright-e2e --stdin <<'TRAIL_EOF'\n${json}\nTRAIL_EOF`], { cwd: root });
+    expect(readFileSync(join(dir, 'LEARNING-LOG.md'), 'utf-8')).toContain('Learner: "I ran $(touch pwned) and `id`"');
+    expect(existsSync(join(root, 'pwned'))).toBe(false);
+  });
+
   it('refuses to record without a slug or required fields', () => {
     const { root } = mkCourse();
     expect(() => recordRound({ cwd: root, ...round(1) })).toThrow(/slug/);
@@ -134,6 +143,7 @@ describe('Coach contract', () => {
       const text = read(p);
       expect(text).toContain('course-professor context');
       expect(text).toContain('course-professor trail');
+      expect(text).toContain("<<'TRAIL_EOF'");
     }
     expect(read('agents/coach.md')).toMatch(/never guess/i);
   });

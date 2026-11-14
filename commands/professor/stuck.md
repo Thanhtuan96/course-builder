@@ -24,4 +24,4 @@ Delegate to the Coach agent with:
 
 Coach will guide through self-assessment to identify the exact blocker, then break into smaller steps.
 
-When Coach returns a `trail` block, record it with `npx course-professor trail {slug} --learner ".." --asked ".." --concept ".."` (same as `professor:review`). If that fails, say "⚠️ This round was not recorded" — never claim it was saved.
+When Coach returns a `trail` block, record it with `npx course-professor trail {slug} --stdin` and a quoted `<<'TRAIL_EOF'` heredoc of JSON, exactly as in `professor:review`. If that fails, say "⚠️ This round was not recorded" — never claim it was saved.

@@ -4,8 +4,8 @@
  * `course-professor context [slug] --json` prints one explicit context object (absolute course
  * path, section, objectives, active exercise, recent trail) so Coach never guesses a path.
  *
- * `course-professor trail <slug> --learner .. --asked .. --concept .. [--evidence ..] [--watch ..]`
- * appends one review round to `LEARNING-LOG.md` → `## 🗣️ Reasoning Trail` (max 5 rounds per
+ * `course-professor trail <slug> --stdin <<'EOF' {"learner","asked","concept","evidence?","watch?"} EOF`
+ * (or the same fields as `--learner ..` flags) appends one review round to `LEARNING-LOG.md` → `## 🗣️ Reasoning Trail` (max 5 rounds per
  * section, oldest dropped), then commits programming course worktrees.
  */
 import { existsSync, readFileSync, writeFileSync } from 'fs';
@@ -183,7 +183,9 @@ export async function run({ args = [], cwd = process.cwd(), command = 'context' 
   const json = args.includes('--json');
   try {
     if (command === 'trail') {
-      const f = (n) => flagValue(args, n);
+      // Agents pass learner text as JSON on stdin (quoted heredoc) so the shell never expands it.
+      const fromStdin = args.includes('--stdin') ? JSON.parse(readFileSync(0, 'utf-8')) : {};
+      const f = (n) => fromStdin[n.slice(2)] ?? flagValue(args, n);
       const r = recordRound({
         cwd, slug, section: f('--section'), learner: f('--learner'), asked: f('--asked'),
         concept: f('--concept'), evidence: f('--evidence'), watch: f('--watch'), date: f('--date') || undefined,

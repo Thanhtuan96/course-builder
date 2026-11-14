@@ -33,7 +33,11 @@ Coach will guide the review through self-assessment dialogue.
 Coach ends each completed round with a fenced `trail` block (`learner`, `asked`, `concept`, optional `evidence`, `watch`). Record it:
 
 ```bash
-npx course-professor trail {slug} --learner "<learner>" --asked "<asked>" --concept "<concept>" [--evidence "<evidence>"] [--watch "<watch>"]
+npx course-professor trail {slug} --stdin <<'TRAIL_EOF'
+{"learner": "<learner>", "asked": "<asked>", "concept": "<concept>", "evidence": "<optional>", "watch": "<optional>"}
+TRAIL_EOF
 ```
+
+Always use this quoted heredoc with JSON — never put the learner's words inside `--learner "..."`, where the shell would expand `$(...)` or backticks.
 
 This appends the round to `LEARNING-LOG.md` (max 5 rounds per section) and commits programming courses, so the next session's `context` shows it. **If the command fails or cannot run**, tell the learner: "⚠️ This review round was not recorded — <error>." Never say the review was saved unless the command succeeded.
