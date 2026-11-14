@@ -44,22 +44,33 @@ function mkTemp(prefix = 'cp-studio-') {
 
 describe('parseStudioArgs', () => {
   it('reads defaults', () => {
-    expect(parseStudioArgs([])).toEqual({ port: 5180, apiPort: 3000, open: true, rotateToken: false });
+    expect(parseStudioArgs([])).toEqual({
+      port: 5180,
+      apiPort: 3000,
+      portExplicit: false,
+      apiPortExplicit: false,
+      open: true,
+      rotateToken: false,
+    });
   });
 
   it('reads --port/--api-port in both forms and --no-open', () => {
     expect(parseStudioArgs(['--port', '6000', '--api-port=4000', '--no-open'])).toEqual({
       port: 6000,
       apiPort: 4000,
+      portExplicit: true,
+      apiPortExplicit: true,
       open: false,
       rotateToken: false,
     });
     expect(parseStudioArgs(['--rotate-token']).rotateToken).toBe(true);
   });
 
-  it('falls back on invalid ports', () => {
+  it('falls back on invalid ports and does not call them explicit', () => {
     expect(parseStudioArgs(['--port', 'abc']).port).toBe(5180);
     expect(parseStudioArgs(['--port', '70000']).port).toBe(5180);
+    expect(parseStudioArgs(['--port', 'abc']).portExplicit).toBe(false);
+    expect(parseStudioArgs(['--api-port', '70000']).apiPortExplicit).toBe(false);
   });
 });
 
@@ -113,17 +124,19 @@ describe('mergeOrigins / buildPairingUrl / resolveStudioToken', () => {
     expect(mergeOrigins('http://other:1', 5180)).toBe('http://other:1,http://localhost:5180,http://127.0.0.1:5180');
   });
 
-  it('builds a fragment pairing URL and only adds &bridge= for a non-default API port', () => {
+  it('builds a fragment pairing URL on 127.0.0.1 and only adds &bridge= for a non-default API port', () => {
     const defaultPort = buildPairingUrl({ studioPort: 5180, apiPort: 3000, token: 'a b/c' });
-    expect(defaultPort.pairingUrl).toBe('http://localhost:5180/#token=a%20b%2Fc');
+    expect(defaultPort.apiUrl).toBe('http://127.0.0.1:3000');
+    expect(defaultPort.studioUrl).toBe('http://127.0.0.1:5180');
+    expect(defaultPort.pairingUrl).toBe('http://127.0.0.1:5180/#token=a%20b%2Fc');
     expect(defaultPort.pairingUrl).not.toContain('?token=');
 
     const stringDefault = buildPairingUrl({ studioPort: 5180, apiPort: '3000', token: 't' });
-    expect(stringDefault.pairingUrl).toBe('http://localhost:5180/#token=t');
+    expect(stringDefault.pairingUrl).toBe('http://127.0.0.1:5180/#token=t');
 
     const custom = buildPairingUrl({ studioPort: 5180, apiPort: '4000', token: 't' });
     expect(custom.pairingUrl).toBe(
-      'http://localhost:5180/#token=t&bridge=http%3A%2F%2Flocalhost%3A4000'
+      'http://127.0.0.1:5180/#token=t&bridge=http%3A%2F%2F127.0.0.1%3A4000'
     );
   });
 
@@ -218,7 +231,7 @@ describe('waitForHealth', () => {
     const fetchImpl = async () => {
       calls += 1;
       if (calls < 3) return { ok: false, status: 503, json: async () => ({}) };
-      return { ok: true, status: 200, json: async () => ({ ok: true }) };
+      return { ok: true, status: 200, json: async () => ({ ok: true, version: '1', agents: {} }) };
     };
     const health = await waitForHealth({ url: 'http://x/health', token: 't', fetchImpl, intervalMs: 1 });
     expect(health.ok).toBe(true);

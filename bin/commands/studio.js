@@ -5,14 +5,18 @@
  *   2. starts the local server (`web/server.js`, production, on `--api-port`) with a pairing token
  *   3. serves `studio/dist` on `--port` (tiny static server, loopback only)
  *   4. waits for `/api/studio/health`, then opens
- *      `http://localhost:<port>/#token=…` (plus `&bridge=…` for a non-default API port)
+ *      `http://127.0.0.1:<port>/#token=…` (plus `&bridge=…` for a non-default API port)
  *      (unless `--no-open`)
+ *
+ * Every URL this command polls or prints uses `127.0.0.1`, matching the server bind: `localhost`
+ * resolves to `::1` first on macOS, where another app may already be listening.
  *
  * Inherited `CLAUDECODE` / `CLAUDE_CODE_*` env vars are stripped from the child so a nested agent
  * CLI (spawned by the bridge) behaves like a normal terminal.
  */
 import { spawn, execSync } from 'child_process';
 import { createServer } from 'http';
+import { createServer as createNetServer } from 'net';
 import { existsSync, statSync, readdirSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
@@ -27,6 +31,19 @@ export const REPO_ROOT = join(__dirname, '..', '..');
 export const DEFAULT_PORT = 5180;
 export const DEFAULT_API_PORT = 3000;
 export const HEALTH_PATH = '/api/studio/health';
+
+/** Hosts probed for a busy port: the `127.0.0.1` bind plus the IPv6 loopback `localhost` may use. */
+export const LOOPBACK_HOSTS = ['127.0.0.1', '::1'];
+
+/** Base URL the CLI polls and prints — the IPv4 literal, never `localhost`. */
+export function loopbackUrl(port) {
+  return `http://127.0.0.1:${port}`;
+}
+
+/** Rewrite an `http://localhost…` URL to the IPv4 loopback literal. */
+export function toLoopbackUrl(url) {
+  return String(url).replace(/^http:\/\/localhost(?=[:/]|$)/, 'http://127.0.0.1');
+}
 
 /**
  * Usage text for `studio --help`. Kept as a plain string so the CLI can print it without starting
@@ -53,8 +70,11 @@ export function wantsHelp(args = []) {
 
 /**
  * Parse `--port`, `--api-port`, `--no-open` (both `--flag value` and `--flag=value` forms).
+ * `portExplicit` / `apiPortExplicit` say whether the value came from a valid flag, which decides
+ * whether a busy port is an error or an auto-pick.
  * @param {string[]} [args]
- * @returns {{ port: number, apiPort: number, open: boolean, rotateToken: boolean }}
+ * @returns {{ port: number, apiPort: number, portExplicit: boolean, apiPortExplicit: boolean,
+ *             open: boolean, rotateToken: boolean }}
  */
 export function parseStudioArgs(args = []) {
   const valueOf = (name, fallback) => {
@@ -64,13 +84,19 @@ export function parseStudioArgs(args = []) {
     if (i !== -1 && args[i + 1] && !args[i + 1].startsWith('--')) return args[i + 1];
     return fallback;
   };
-  const asPort = (raw, fallback) => {
-    const n = Number.parseInt(raw, 10);
-    return Number.isInteger(n) && n > 0 && n < 65536 ? n : fallback;
+  const readPort = (name, fallback) => {
+    const raw = valueOf(name, null);
+    const parsed = Number.parseInt(raw, 10);
+    const valid = Number.isInteger(parsed) && parsed > 0 && parsed < 65536;
+    return { value: valid ? parsed : fallback, explicit: raw !== null && valid };
   };
+  const port = readPort('--port', DEFAULT_PORT);
+  const apiPort = readPort('--api-port', DEFAULT_API_PORT);
   return {
-    port: asPort(valueOf('--port', String(DEFAULT_PORT)), DEFAULT_PORT),
-    apiPort: asPort(valueOf('--api-port', String(DEFAULT_API_PORT)), DEFAULT_API_PORT),
+    port: port.value,
+    apiPort: apiPort.value,
+    portExplicit: port.explicit,
+    apiPortExplicit: apiPort.explicit,
     open: !args.includes('--no-open'),
     rotateToken: args.includes('--rotate-token'),
   };
@@ -171,13 +197,91 @@ export function mergeOrigins(existing, port) {
  * @returns {{ apiUrl: string, studioUrl: string, pairingUrl: string }}
  */
 export function buildPairingUrl({ studioPort, apiPort, token }) {
-  const apiUrl = `http://localhost:${apiPort}`;
-  const studioUrl = `http://localhost:${studioPort}`;
+  const apiUrl = loopbackUrl(apiPort);
+  const studioUrl = loopbackUrl(studioPort);
   let pairingUrl = `${studioUrl}/#token=${encodeURIComponent(token)}`;
   if (Number(apiPort) !== DEFAULT_API_PORT) {
     pairingUrl += `&bridge=${encodeURIComponent(apiUrl)}`;
   }
   return { apiUrl, studioUrl, pairingUrl };
+}
+
+/** `true` when `port` is busy on that family, `false` when free or the family is unavailable. */
+function probeBind(port, host) {
+  return new Promise((resolve) => {
+    const server = createNetServer();
+    server.once('error', (err) => resolve(err?.code === 'EADDRINUSE'));
+    server.listen({ port, host, exclusive: true }, () => {
+      server.close(() => resolve(false));
+    });
+  });
+}
+
+/**
+ * True when something already listens on `port` on any loopback family. An IPv4-only listener
+ * leaves `::1:<port>` free and vice versa, so both families have to be probed.
+ *
+ * @param {number|string} port
+ * @param {{ hosts?: string[], probe?: (port: number, host: string) => Promise<boolean> }} [opts]
+ * @returns {Promise<boolean>}
+ */
+export async function isPortBusy(port, { hosts = LOOPBACK_HOSTS, probe = probeBind } = {}) {
+  const states = await Promise.all(hosts.map((host) => probe(Number(port), host)));
+  return states.some(Boolean);
+}
+
+/**
+ * First port at or above `from` that is free on every loopback family.
+ *
+ * @param {number} from
+ * @param {{ hosts?: string[], maxTries?: number,
+ *           isBusy?: (port: number, opts?: object) => Promise<boolean> }} [opts]
+ * @returns {Promise<number>}
+ */
+export async function findFreePort(
+  from,
+  { hosts = LOOPBACK_HOSTS, maxTries = 25, isBusy = isPortBusy } = {}
+) {
+  const start = Number(from);
+  for (let port = start; port < start + maxTries && port < 65536; port += 1) {
+    if (!(await isBusy(port, { hosts }))) return port;
+  }
+  throw new Error(`No free loopback port between ${start} and ${start + maxTries - 1}.`);
+}
+
+/**
+ * Keep both ports usable before anything binds: a busy default port moves to the next free one,
+ * while a busy port the user pinned with a flag is a hard error.
+ *
+ * @param {{ port: number, apiPort: number, portExplicit?: boolean, apiPortExplicit?: boolean,
+ *           isBusy?: (port: number) => Promise<boolean>,
+ *           findFree?: (from: number) => Promise<number> }} opts
+ * @returns {Promise<{ port: number, apiPort: number, notices: string[] }>}
+ */
+export async function resolveStudioPorts({
+  port,
+  apiPort,
+  portExplicit = false,
+  apiPortExplicit = false,
+  isBusy = (value) => isPortBusy(value),
+  findFree = (from) => findFreePort(from),
+} = {}) {
+  const notices = [];
+  const pick = async (value, explicit, flag, label) => {
+    if (!(await isBusy(value))) return value;
+    if (explicit) {
+      throw new Error(
+        `Port ${value} is already in use on loopback (127.0.0.1 or ::1). ` +
+          `Choose another port: --${flag} <free port>.`
+      );
+    }
+    const next = await findFree(value + 1);
+    notices.push(`Port ${value} is in use; using ${next} for ${label} instead.`);
+    return next;
+  };
+  const resolvedApiPort = await pick(apiPort, apiPortExplicit, 'api-port', 'the local server');
+  const resolvedPort = await pick(port, portExplicit, 'port', 'Studio');
+  return { port: resolvedPort, apiPort: resolvedApiPort, notices };
 }
 
 /**
@@ -196,8 +300,14 @@ export function resolveStudioToken({ repoRoot = REPO_ROOT, env = process.env, ho
   });
 }
 
+/** True for the payload Studio's `/api/studio/health` returns; anything else is a foreign app. */
+export function isStudioHealthPayload(body) {
+  return Boolean(body) && body.ok === true && typeof body.version === 'string';
+}
+
 /**
  * Poll `/api/studio/health` until it answers 200 with the pairing token.
+ * A 404 or a JSON body that is not a Studio health payload means another app owns the port.
  * @param {{ url: string, token: string, timeoutMs?: number, intervalMs?: number, fetchImpl?: typeof fetch }} opts
  */
 export async function waitForHealth({
@@ -209,17 +319,36 @@ export async function waitForHealth({
 }) {
   const deadline = Date.now() + timeoutMs;
   let lastError = 'no response';
+  let foreign = false;
   while (Date.now() < deadline) {
     try {
       const res = await fetchImpl(url, { headers: { 'X-Studio-Token': token } });
-      if (res.ok) return await res.json().catch(() => ({ ok: true }));
-      lastError = `HTTP ${res.status}`;
+      if (res.ok) {
+        const body = await res.json().catch(() => null);
+        if (isStudioHealthPayload(body)) return body;
+        foreign = true;
+        lastError = 'an answer that is not Studio';
+      } else {
+        if (res.status === 404) foreign = true;
+        lastError = `HTTP ${res.status}`;
+      }
     } catch (err) {
       lastError = err.message;
     }
     await new Promise((r) => setTimeout(r, intervalMs));
   }
-  throw new Error(`Studio server did not become healthy at ${url} (${lastError})`);
+  const port = (() => {
+    try {
+      return new URL(url).port;
+    } catch {
+      return '';
+    }
+  })();
+  const hint =
+    foreign && port
+      ? ` Another app is answering on port ${port}; start Studio with --api-port <free port>.`
+      : '';
+  throw new Error(`Studio server did not become healthy at ${url} (${lastError}).${hint}`);
 }
 
 /**
@@ -259,7 +388,7 @@ export async function createStudioStaticServer({
   return {
     server,
     port: actualPort,
-    url: `http://localhost:${actualPort}`,
+    url: loopbackUrl(actualPort),
     close: () => new Promise((done) => server.close(() => done())),
   };
 }
@@ -340,7 +469,9 @@ function ensureBuild({ studioDir, spinner }) {
 /**
  * @param {{ args?: string[], cwd?: string, chalk?: object, style?: Function, repoRoot?: string,
  *           ora?: Function, spawnImpl?: typeof spawn, fetchImpl?: typeof fetch,
- *           openImpl?: typeof openBrowser, nodeVersion?: string }} [ctx]
+ *           openImpl?: typeof openBrowser, nodeVersion?: string,
+ *           isPortBusy?: (port: number) => Promise<boolean>,
+ *           findFreePort?: (from: number) => Promise<number> }} [ctx]
  */
 export async function run(ctx = {}) {
   const {
@@ -361,7 +492,9 @@ export async function run(ctx = {}) {
   requireStudioNode(ctx.nodeVersion);
 
   const ora = ctx.ora || (await import('ora')).default;
-  const { port, apiPort, open, rotateToken } = parseStudioArgs(args);
+  const parsed = parseStudioArgs(args);
+  const { open, rotateToken } = parsed;
+  let { port, apiPort } = parsed;
 
   const hasStartRequest = args.some((arg) => arg !== '--rotate-token');
   let rotatedToken = null;
@@ -392,6 +525,20 @@ export async function run(ctx = {}) {
 
   if (!existsSync(serverEntry)) {
     throw new Error(`Local server not found at ${serverEntry}. Is the package installed fully?`);
+  }
+
+  const ports = await resolveStudioPorts({
+    port,
+    apiPort,
+    portExplicit: parsed.portExplicit,
+    apiPortExplicit: parsed.apiPortExplicit,
+    isBusy: ctx.isPortBusy,
+    findFree: ctx.findFreePort,
+  });
+  port = ports.port;
+  apiPort = ports.apiPort;
+  for (const notice of ports.notices) {
+    console.log(style('warning', notice));
   }
 
   console.log('');
