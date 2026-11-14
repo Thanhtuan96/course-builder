@@ -151,7 +151,7 @@ export function createCourse({ cwd, slug, kind, orphanStrategy = 'auto' }) {
   } catch (err) {
     tryGit(root, ['worktree', 'remove', '--force', dir]);
     if (!branchExists) tryGit(root, ['branch', '-D', branch]);
-    rmSync(dir, { recursive: true, force: true });
+    try { rmSync(dir, { recursive: true, force: true }); } catch { /* a path through a file (ENOTDIR) has nothing to remove */ }
     tryGit(root, ['worktree', 'prune']);
     const detail = (err.stderr || err.message || '').toString().trim();
     throw new Error(`Could not create the course worktree — nothing was kept. ${detail}`);
