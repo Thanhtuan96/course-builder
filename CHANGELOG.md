@@ -4,7 +4,7 @@ All notable changes to **ronin-skillforce** are documented here. The format is b
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.0] — Unreleased
+## [0.1.0] — 2026-11-14
 
 First release under the new name. Earlier versions were published as `course-professor`
 (1.x, now deprecated on npm); their history is in
