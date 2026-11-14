@@ -6,6 +6,12 @@ All notable changes to **ronin-skillforce** are documented here. The format is b
 
 ## [Unreleased]
 
+### Changed
+
+- **License: Apache-2.0** from this release (was MIT). Adds a `NOTICE` file with attribution,
+  third-party licences and a trademark note. Version 0.1.0 and all `course-professor` releases stay MIT.
+
+
 ### Added
 
 - `skillforce studio --autostart on|off` starts Professor Studio at login on macOS through a

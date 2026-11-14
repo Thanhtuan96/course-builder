@@ -1,0 +1,19 @@
+Ronin SkillForce
+Copyright 2026 Tuấn Khuất (ronnie)
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+Versions 0.1.0 and earlier, and all versions published as `course-professor`,
+were released under the MIT License.
+
+"Ronin SkillForce" and "SkillForce" are names of the project owner. The
+Apache License does not grant permission to use these names, logos or other
+trademarks, except as required for describing the origin of the work.
+
+Third-party software
+--------------------
+The built Studio app (studio/dist) bundles third-party packages under their
+own licenses, including:
+  - elkjs (Eclipse Public License 2.0), used unmodified through Mermaid
+    https://github.com/kieler/elkjs
+All other runtime dependencies are under permissive licenses (MIT, ISC,
+BSD-2/3-Clause, Apache-2.0, 0BSD, CC0-1.0, Unlicense, Python-2.0).

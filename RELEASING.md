@@ -22,7 +22,7 @@ npm pack --dry-run           # inspect the file list (see below)
 
 `npm pack --dry-run` must list: `bin/`, `templates/`, `shared/`, `plugin.json`, the `web/server.js`
 and `web/studio-*.js` runtime files, `web/lecture-archive.js`, `web/client` build inputs + `dist`,
-`studio/dist/`, `studio/migrations/`, `studio/src/lib/`, `README.md`, `CHANGELOG.md`, `LICENSE`.
+`studio/dist/`, `studio/migrations/`, `studio/src/lib/`, `README.md`, `CHANGELOG.md`, `LICENSE`, `NOTICE`.
 It must **not** list tests, fixtures, `.planning/`, `.worktrees/`, `node_modules/`, `web/.studio-token`
 or any `*.map` sourcemaps.
 

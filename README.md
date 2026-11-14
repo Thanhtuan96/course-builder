@@ -251,4 +251,9 @@ runs where and how to report a vulnerability.
 
 ## License
 
-MIT
+[Apache License 2.0](LICENSE) from version 0.2.0. See [`NOTICE`](NOTICE) for attribution and
+third-party licenses. Version 0.1.0 and every release published as `course-professor` were MIT.
+
+"Ronin SkillForce" and "SkillForce" are the project owner's names; the licence does not grant
+permission to use them for other products. Contributions are accepted under the terms in
+[`CONTRIBUTING.md`](CONTRIBUTING.md).
