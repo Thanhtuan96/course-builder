@@ -46,5 +46,10 @@
   "checkWord": "checks",
   "unsupportedNotice": "This exercise uses “{info}”, which the Workspace can't run. Do it in your own terminal and ask the Tutor to review your output.",
   "unsupportedCopy": "Copy skeleton",
-  "unsupportedCopied": "Copied"
+  "unsupportedCopied": "Copied",
+  "projectBoundTitle": "This exercise runs in your own project",
+  "projectBoundCommand": "Run it there: {command}",
+  "projectBoundFallback": "Your lecture says how to run it.",
+  "notRunnableTitle": "This exercise is not run in Studio",
+  "notRunnableBody": "It is a written exercise: read it here and keep your answers in the file."
 }

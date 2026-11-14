@@ -71,6 +71,8 @@ describe('findCourses', () => {
       'flavour-list',
       'flavour-nokind',
       'flavour-table',
+      'ron-372-conceptual',
+      'ron-372-exercises',
     ]);
     expect(courses.every((c) => c.location === 'custom')).toBe(true);
   });

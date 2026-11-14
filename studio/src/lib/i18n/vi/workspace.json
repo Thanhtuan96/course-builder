@@ -46,5 +46,10 @@
   "checkWord": "bài kiểm tra",
   "unsupportedNotice": "Bài tập này dùng “{info}”, ngôn ngữ mà Không gian làm việc không chạy được. Hãy làm trong terminal của bạn rồi nhờ Gia sư xem lại kết quả.",
   "unsupportedCopy": "Sao chép bộ khung",
-  "unsupportedCopied": "Đã sao chép"
+  "unsupportedCopied": "Đã sao chép",
+  "projectBoundTitle": "Bài tập này chạy trong dự án của bạn",
+  "projectBoundCommand": "Chạy ở đó: {command}",
+  "projectBoundFallback": "Bài giảng của bạn hướng dẫn cách chạy.",
+  "notRunnableTitle": "Bài tập này không chạy trong Studio",
+  "notRunnableBody": "Đây là bài viết: hãy đọc tại đây và ghi câu trả lời vào tệp."
 }

@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createMemoryAdapter, APP_ID } from '../src/lib/repo/memory-adapter.js';
-import { createIdbAdapter } from '../src/lib/repo/idb-adapter.js';
+import { createIdbAdapter, DB_VERSION } from '../src/lib/repo/idb-adapter.js';
 import { SCHEMA_VERSION } from '../src/lib/repo/schema.js';
 
 /**
@@ -225,8 +225,8 @@ export function runAdapterContract(makeAdapter) {
       await adapter.put('beta_profile', profileRow({ participant_id: 'participant-export' }));
 
       const dump = await adapter.exportAll();
-      expect(dump.schemaVersion).toBe(6);
-      expect(SCHEMA_VERSION).toBe(6);
+      expect(dump.schemaVersion).toBe(SCHEMA_VERSION);
+      expect(SCHEMA_VERSION).toBe(7);
       for (const table of BETA_TABLES) expect(dump.tables).toHaveProperty(table);
       expect(count(dump, 'learning_events')).toBe(count(before, 'learning_events') + 2);
       expect(count(dump, 'revision_links')).toBe(count(before, 'revision_links') + 1);
@@ -283,6 +283,27 @@ export function runAdapterContract(makeAdapter) {
       for (const table of BETA_TABLES) expect(await adapter.list(table)).toEqual([]);
     });
 
+    it('round-trips the workspace import ledger without a store change', async () => {
+      const id = `wf-ledger-${++seq}`;
+      await adapter.put('workspace_files', {
+        ...stamp,
+        id,
+        course_id: 'c1',
+        lesson_id: 'l1',
+        path: '01-project-anatomy.java',
+        language: 'java',
+        content: 'class ProjectAnatomy {}',
+        imported_hash: 'a'.repeat(64),
+      });
+      const row = await adapter.get('workspace_files', id);
+      expect(row).toMatchObject({
+        path: '01-project-anatomy.java',
+        language: 'java',
+        imported_hash: 'a'.repeat(64),
+      });
+      expect(await adapter.list('workspace_files', { where: { lesson_id: 'l1' } })).toHaveLength(1);
+    });
+
     it('info reports a kind and persistent flag', async () => {
       const info = await adapter.info();
       expect(info.kind).toBe(makeAdapter.kind || (label === 'memory' ? 'memory' : 'indexeddb'));
@@ -305,3 +326,10 @@ idbFactory.label = 'indexeddb';
 
 runAdapterContract(memoryFactory);
 runAdapterContract(idbFactory);
+
+describe('RON-372 workspace import ledger', () => {
+  it('needs no IndexedDB version bump for the imported_hash column', () => {
+    expect(DB_VERSION).toBe(6);
+    expect(SCHEMA_VERSION).toBe(7);
+  });
+});

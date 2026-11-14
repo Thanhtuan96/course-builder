@@ -375,3 +375,128 @@ describe('RON-265 stale seed through the adapter', () => {
     expect(await repo.listWorkspaceFiles(lesson.id)).toEqual([]);
   });
 });
+
+describe('RON-372 imported exercise files are the workspace', () => {
+  const IMPORTED = {
+    id: 'f-imported',
+    path: '01-project-anatomy-and-auto-configuration.java',
+    language: 'java',
+    content: '// TODO: name the auto-configuration\n',
+    imported_hash: 'a'.repeat(64),
+  };
+
+  it('RON-372 opens the imported file instead of seeding an empty editor', () => {
+    const { files, persist, stalePaths, unsupportedSkeleton } = resolveWorkspaceSeed({
+      lesson: LESSON,
+      course: COURSE,
+      version: { content_md: LESSON_MD },
+      rows: [IMPORTED],
+      runCount: 0,
+    });
+
+    expect(files).toEqual([
+      {
+        path: IMPORTED.path,
+        content: IMPORTED.content,
+        language: 'java',
+      },
+    ]);
+    expect(persist).toBe(false);
+    expect(stalePaths).toEqual([]);
+    expect(unsupportedSkeleton).toBeNull();
+  });
+
+  it('RON-372 does not re-seed an imported file whose content is empty', () => {
+    const { files, persist } = resolveWorkspaceSeed({
+      lesson: LESSON,
+      course: COURSE,
+      version: { content_md: LESSON_MD },
+      rows: [{ ...IMPORTED, content: '' }],
+      runCount: 0,
+    });
+
+    expect(files.map((file) => file.path)).toEqual([IMPORTED.path]);
+    expect(files[0].content).toBe('');
+    expect(persist).toBe(false);
+  });
+
+  it('RON-372 does not treat an imported file as a stale reference seed', () => {
+    const { files, stalePaths } = resolveWorkspaceSeed({
+      lesson: LESSON,
+      course: COURSE,
+      version: { content_md: LESSON_MD },
+      rows: [{ ...IMPORTED, content: 'echo "hello"' }],
+      runCount: 0,
+    });
+
+    expect(files.map((file) => file.path)).toEqual([IMPORTED.path]);
+    expect(stalePaths).toEqual([]);
+  });
+
+  it('RON-372 opens the imported file ahead of a kept non-empty file', () => {
+    const { files } = resolveWorkspaceSeed({
+      lesson: LESSON,
+      course: COURSE,
+      version: { content_md: LESSON_MD },
+      rows: [
+        { id: 'f-kept', path: 'main.js', language: 'javascript', content: 'console.log("mine");' },
+        { ...IMPORTED, path: '02-warm-up.py', language: 'python', content: 'print("hi")\n' },
+      ],
+      runCount: 0,
+    });
+
+    expect(files.map((file) => file.path)).toEqual(['02-warm-up.py', 'main.js']);
+  });
+
+  it('RON-372 opens the lower-numbered imported file first', () => {
+    const { files } = resolveWorkspaceSeed({
+      lesson: LESSON,
+      course: COURSE,
+      version: { content_md: LESSON_MD },
+      rows: [
+        { ...IMPORTED, id: 'f-b', path: '02-b.java', content: 'class B {}\n' },
+        { ...IMPORTED, id: 'f-a', path: '01-a.java', content: 'class A {}\n' },
+      ],
+      runCount: 0,
+    });
+
+    expect(files.map((file) => file.path)).toEqual(['01-a.java', '02-b.java']);
+  });
+
+  it('RON-372 keeps today\'s behaviour for a Studio-generated lesson', async () => {
+    const course = { id: 'c-372', title: 'Bash scripting foundations', kind: 'programming' };
+    const lesson = { id: 'l-372', title: 'Your first Bash script', content_md: null };
+    const seeded = await repo.saveWorkspaceFile({
+      courseId: course.id,
+      lessonId: lesson.id,
+      path: 'main.js',
+      language: 'javascript',
+      content: 'echo "hello"',
+    });
+    expect(seeded.imported_hash ?? null).toBeNull();
+
+    const first = resolveWorkspaceSeed({
+      lesson,
+      course,
+      version: { content_md: LESSON_MD },
+      rows: await repo.listWorkspaceFiles(lesson.id),
+      runCount: 0,
+    });
+    expect(first.files.map((file) => file.path)).toEqual(['main.sh']);
+    expect(first.stalePaths).toEqual(['main.js']);
+  });
+
+  it('RON-372 reset restores the imported rows instead of the Markdown seed', () => {
+    const plan = planReset({
+      lesson: { ...LESSON, content_md: LESSON_MD },
+      course: COURSE,
+      storedPaths: [IMPORTED.path, 'main.js'],
+      rows: [IMPORTED, { id: 'f-kept', path: 'main.js', language: 'javascript', content: 'mine' }],
+    });
+
+    expect(plan.files.map((file) => file.path)).toEqual([IMPORTED.path, 'main.js']);
+    expect(plan.files[0].content).toBe(IMPORTED.content);
+    expect(plan.persist).toBe(false);
+    expect(plan.deletePaths).toEqual([]);
+  });
+});

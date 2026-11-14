@@ -67,7 +67,7 @@ export const TABLES = {
   },
   workspace_files: {
     id: 'id',
-    fields: ['id', 'owner_id', 'course_id', 'lesson_id', 'path', 'language', 'content', 'created_at', 'updated_at', 'deleted_at'],
+    fields: ['id', 'owner_id', 'course_id', 'lesson_id', 'path', 'language', 'content', 'imported_hash', 'created_at', 'updated_at', 'deleted_at'],
     indexes: ['lesson_id'],
   },
   run_results: {
@@ -115,7 +115,7 @@ export const TABLES = {
 export const TABLE_NAMES = Object.keys(TABLES);
 
 /** Highest migration file shipped in `studio/migrations/` (D-12 single constant source). */
-export const LATEST_MIGRATION_VERSION = 6;
+export const LATEST_MIGRATION_VERSION = 7;
 
 export const SCHEMA_VERSION = LATEST_MIGRATION_VERSION;
 

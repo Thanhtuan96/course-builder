@@ -73,8 +73,8 @@ afterAll(() => {
 
 describe('RON-266 sqlite: migration 0006', () => {
   it('reports schema version 6 and exposes both tables', () => {
-    expect(db.schemaVersion).toBe(6);
-    expect(SCHEMA_VERSION).toBe(6);
+    expect(db.schemaVersion).toBe(7);
+    expect(SCHEMA_VERSION).toBe(7);
     expect(db.migrationsRun).toContain('0006_interactive_exercises.sql');
     for (const table of EXERCISE_TABLES) {
       expect(db.tables).toContain(table);
@@ -104,6 +104,24 @@ describe('RON-266 sqlite: migration 0006', () => {
     } finally {
       ledger.close();
     }
+  });
+});
+
+describe('RON-372 sqlite: migration 0007 adds the import ledger', () => {
+  it('RON-372 adds a nullable imported_hash to workspace_files', () => {
+    const ledger = new DatabaseSync(dbPath);
+    try {
+      const columns = ledger
+        .prepare('PRAGMA table_info(workspace_files)')
+        .all()
+        .map((column) => ({ name: column.name, notnull: column.notnull }));
+      expect(columns.map((column) => column.name).sort()).toEqual([...TABLES.workspace_files.fields].sort());
+      expect(columns.find((column) => column.name === 'imported_hash')).toMatchObject({ notnull: 0 });
+    } finally {
+      ledger.close();
+    }
+    expect(db.migrationsRun).toContain('0007_workspace_files_imported_hash.sql');
+    expect(db.schemaVersion).toBe(7);
   });
 });
 

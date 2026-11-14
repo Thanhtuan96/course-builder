@@ -891,14 +891,18 @@ export async function listWorkspaceFiles(lessonId) {
 
 /**
  * Upsert a workspace file by (lesson_id, path). Versioning snapshots are Phase 29's job.
- * @param {{ courseId?: string|null, lessonId: string, path: string, language?: string|null, content?: string }} input
+ *
+ * `importedHash` is the SHA-256 of the content an import wrote. Omitting it leaves an existing row's
+ * ledger value alone, which is what makes a learner edit recognisable on the next import.
+ * @param {{ courseId?: string|null, lessonId: string, path: string, language?: string|null, content?: string, importedHash?: string|null }} input
  */
-export async function saveWorkspaceFile({ courseId = null, lessonId, path, language = null, content = '' }) {
+export async function saveWorkspaceFile({ courseId = null, lessonId, path, language = null, content = '', importedHash = null }) {
   const existing = await adapter.list('workspace_files', { where: { lesson_id: lessonId } });
   const match = existing.find((f) => f.path === path);
+  const ledger = importedHash ? { imported_hash: importedHash } : {};
   const row = match
-    ? stampUpdate(match, { course_id: courseId ?? match.course_id, language, content })
-    : stampCreate({ course_id: courseId, lesson_id: lessonId, path, language, content });
+    ? stampUpdate(match, { course_id: courseId ?? match.course_id, language, content, ...ledger })
+    : stampCreate({ course_id: courseId, lesson_id: lessonId, path, language, content, ...ledger });
   await adapter.put('workspace_files', row);
   emit('workspace_files', row.id, match ? 'update' : 'create');
   return row;

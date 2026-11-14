@@ -22,6 +22,7 @@ import { FileTabs } from './FileTabs.jsx';
 import { OutputPanel } from './OutputPanel.jsx';
 import { HistoryDrawer } from './HistoryDrawer.jsx';
 import { UnsupportedSkeletonNotice } from './UnsupportedSkeletonNotice.jsx';
+import { ProjectBoundNotice } from './ProjectBoundNotice.jsx';
 import { RunnerNotice } from '../revision/RunnerNotice.jsx';
 import { AttemptHistory } from '../revision/AttemptHistory.jsx';
 import { needsRunnerAck, acknowledgeRunner, shouldBlockLocalRun } from '../revision/runner-notice.jsx';
@@ -39,6 +40,7 @@ import {
 } from '../../lib/runner/skeleton.js';
 import { guessCourseLanguage, getLanguage, languageForPath, normalizeLanguage } from '../../lib/runner/languages.js';
 import { run as runCode, describeRunner, checkToolchains } from '../../lib/runner/index.js';
+import { detectProjectBound } from '../../lib/runner/project-bound.js';
 import { encodeRunPayload, decodeRunResult } from '../../lib/runner/history.js';
 import { setCurrentCode, clearCurrentCode } from '../../lib/runner/current-code.js';
 import { isSafeRelPath, slugify } from '../../lib/runner/path.js';
@@ -113,6 +115,7 @@ export function CodeWorkspace({ lesson, course }) {
   const dirtyRef = useRef(new Set());
   const saveTimerRef = useRef(null);
   const idByPathRef = useRef(new Map());
+  const rowsRef = useRef([]);
   const revisionRef = useRef(null);
   const markdownRef = useRef(lesson?.content_md || '');
 
@@ -120,6 +123,18 @@ export function CodeWorkspace({ lesson, course }) {
 
   const ackRef = useRef(acknowledged);
   ackRef.current = acknowledged;
+
+  const activeFile = files.find((f) => f.path === activePath) || files[0] || null;
+  // The file, then the lecture, says whether this exercise runs in the learner's own project.
+  const projectBound = useMemo(
+    () =>
+      detectProjectBound({
+        language: activeFile?.language,
+        file: activeFile?.content,
+        lecture: markdownRef.current,
+      }),
+    [activeFile?.language, activeFile?.content]
+  );
 
   const scheduleRender = useCallback(() => {
     if (typeof requestAnimationFrame === 'undefined') {
@@ -147,6 +162,7 @@ export function CodeWorkspace({ lesson, course }) {
     let alive = true;
     setLoaded(false);
     idByPathRef.current = new Map();
+    rowsRef.current = [];
     dirtyRef.current = new Set();
     (async () => {
       let seed = [];
@@ -160,6 +176,7 @@ export function CodeWorkspace({ lesson, course }) {
           listRunResults(lesson.id).catch(() => []),
           getLessonContent(lesson.id).catch(() => null),
         ]);
+        rowsRef.current = rows;
         for (const row of rows) idByPathRef.current.set(row.path, row.id);
         markdownRef.current = version?.content_md || lesson?.content_md || '';
         ({ files: seed, persist, stalePaths, unsupportedSkeleton: unsupported } = resolveWorkspaceSeed({
@@ -298,6 +315,8 @@ export function CodeWorkspace({ lesson, course }) {
   const start = useCallback(
     async (kind) => {
       if (running || !filesRef.current.length) return;
+      // An exercise that belongs to the learner's own project never reaches the runner.
+      if (projectBound.bound) return;
 
       const current = filesRef.current;
       const active = current.find((f) => f.path === activePath) || current[0];
@@ -377,7 +396,7 @@ export function CodeWorkspace({ lesson, course }) {
         abortRef.current = null;
       }
     },
-    [activePath, course, courseSlug, lesson?.id, pushChunk, refreshHistory, running, settings, t, toolchains]
+    [activePath, course, courseSlug, lesson?.id, projectBound.bound, pushChunk, refreshHistory, running, settings, t, toolchains]
   );
 
   const stop = useCallback(() => {
@@ -465,6 +484,7 @@ export function CodeWorkspace({ lesson, course }) {
       lesson: { ...lesson, content_md: markdownRef.current || lesson?.content_md || '' },
       course,
       storedPaths: [...idByPathRef.current.keys()],
+      rows: rowsRef.current,
     });
     for (const path of plan.deletePaths) {
       dirtyRef.current.delete(path);
@@ -514,7 +534,6 @@ export function CodeWorkspace({ lesson, course }) {
     [courseId, lesson?.id]
   );
 
-  const activeFile = files.find((f) => f.path === activePath) || files[0] || null;
   const runnerInfo = describeRunner(activeFile?.language, { toolchains });
 
   // LOOP-01: the CTA is offered only for a failing run that actually produced checks. A compile or
@@ -559,10 +578,10 @@ export function CodeWorkspace({ lesson, course }) {
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" onClick={() => start('run')} disabled={Boolean(running) || !files.length}>
+          <Button size="sm" onClick={() => start('run')} disabled={Boolean(running) || !files.length || projectBound.bound}>
             {running === 'run' ? t('workspace.running') : t('workspace.run')}
           </Button>
-          <Button size="sm" variant="secondary" onClick={() => start('check')} disabled={Boolean(running) || !files.length}>
+          <Button size="sm" variant="secondary" onClick={() => start('check')} disabled={Boolean(running) || !files.length || projectBound.bound}>
             {running === 'check' ? t('workspace.check') : t('workspace.checkButton')}
           </Button>
           {running && (
@@ -593,6 +612,10 @@ export function CodeWorkspace({ lesson, course }) {
           onDelete={deleteFile}
         />
       )}
+
+      {projectBound.bound ? (
+        <ProjectBoundNotice command={projectBound.command} reason={projectBound.reason} />
+      ) : null}
 
       {activeFile ? (
         <Suspense fallback={<div className="flex h-64 items-center justify-center text-sm text-neutral-500"><Spinner /> {t('workspace.loadingEditor')}</div>}>
