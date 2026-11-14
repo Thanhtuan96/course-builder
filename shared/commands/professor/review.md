@@ -28,6 +28,20 @@ Delegate to the Coach agent with:
 
 Coach will guide the review through self-assessment dialogue.
 
+## If no Coach agent is available:
+
+> If no Coach agent is available on this platform, run the Coach flow below inline.
+
+Run the review yourself, in this order — you are the Coach here:
+
+1. Open with: *"Before I look at your work — what do you think about it? What's working, and what are you unsure about?"* Let their answer shape everything that follows.
+2. **✅ What's working** — one or two sentences on what they got right.
+3. **❓ Socratic question** — point at the most important gap with a question, not a correction.
+4. **💡 One concept to study** — name it; do not explain it fully.
+5. **⏭️ Next action** — one clear thing to try, then share again.
+
+Then record the round with the `trail` step below, exactly as Coach would have. Never rewrite their code, and never answer with a bare "correct" or "wrong".
+
 ## After each review round — record it (required)
 
 Coach ends each completed round with a fenced `trail` block (`learner`, `asked`, `concept`, optional `evidence`, `watch`). Record it:

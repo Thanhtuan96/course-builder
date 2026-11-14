@@ -1,7 +1,12 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { substituteTokens } from './_shared.js';
+import {
+  substituteTokens,
+  createInstallRun,
+  writeManagedFile,
+  printInstallSummary,
+} from './_shared.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PLUGIN_DIR = join(__dirname, '..', '..');
@@ -15,29 +20,27 @@ export function detect() {
 export async function install(scope = 'local') {
   const base = scope === 'global' ? (process.env.HOME || '') : process.cwd();
   const rulesDir = join(base, '.cursor', 'rules');
+  const run = createInstallRun();
+
   if (!existsSync(rulesDir)) {
     mkdirSync(rulesDir, { recursive: true });
     console.log('✓ Created .cursor/rules/ directory');
   }
 
-  const mdcPath = join(rulesDir, 'professor.mdc');
-  if (existsSync(mdcPath)) {
-    console.log('  ↔ .cursor/rules/professor.mdc (already exists)');
-  } else {
-    const frontmatterPath = join(PLUGIN_DIR, 'templates', 'cursor', 'professor.mdc');
-    const frontmatter = existsSync(frontmatterPath)
-      ? readFileSync(frontmatterPath, 'utf-8')
-      : '---\ndescription: Socratic learning assistant - professor mode\nalwaysApply: true\n---\n';
-    const rawSkill = readFileSync(join(PLUGIN_DIR, 'shared', 'SKILL.md'), 'utf-8');
-    // Strip YAML frontmatter from SKILL.md so the .mdc file has only one frontmatter block
-    const skill = rawSkill.startsWith('---')
-      ? rawSkill.replace(/^---[\s\S]*?---\n*/, '')
-      : rawSkill;
-    const combined = frontmatter + '\n' + skill;
-    const adapted = substituteTokens(combined, 'cursor');
-    writeFileSync(mdcPath, adapted);
-    console.log('  + .cursor/rules/professor.mdc');
-  }
+  const frontmatterPath = join(PLUGIN_DIR, 'templates', 'cursor', 'professor.mdc');
+  const frontmatter = existsSync(frontmatterPath)
+    ? readFileSync(frontmatterPath, 'utf-8')
+    : '---\ndescription: Socratic learning assistant - professor mode\nalwaysApply: true\n---\n';
+  const rawSkill = readFileSync(join(PLUGIN_DIR, 'shared', 'SKILL.md'), 'utf-8');
+  // Strip YAML frontmatter from SKILL.md so the .mdc file has only one frontmatter block
+  const skill = rawSkill.startsWith('---')
+    ? rawSkill.replace(/^---[\s\S]*?---\n*/, '')
+    : rawSkill;
+  const adapted = substituteTokens(`${frontmatter}\n${skill}`, 'cursor');
+
+  writeManagedFile(join(rulesDir, 'professor.mdc'), adapted, run, '.cursor/rules/professor.mdc');
+
+  printInstallSummary('Cursor', run);
 
   console.log(`
 ✅ Setup complete for Cursor!

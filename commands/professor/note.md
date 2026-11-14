@@ -3,7 +3,7 @@ name: professor:note
 description: Save a timestamped note to your course
 ---
 
-Use `AskUserQuestion` to collect note details, then append to NOTES.md.
+Collect the note details in one turn (`AskUserQuestion`), then append to NOTES.md.
 
 ## Step 1: Detect Active Course
 
@@ -11,7 +11,7 @@ Use `AskUserQuestion` to collect note details, then append to NOTES.md.
 2. If active course found → use `NOTES.md` in that same course directory (`learning/{slug}/NOTES.md`)
 3. If no active course → use `learning/notes.md` (global fallback, create `learning/` if needed)
 
-## Step 2: AskUserQuestion Flow
+## Step 2: Collect the Note
 
 Ask two questions in sequence:
 

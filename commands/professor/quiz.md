@@ -4,7 +4,7 @@ description: "Run a quiz on your current topic"
 argument-hint: "[section or concept]"
 ---
 
-Use AskUserQuestion to ask the scope before generating questions:
+Ask the scope in one question before generating anything (`AskUserQuestion`):
 > "What would you like to be quizzed on?"
 
 Options: "Current section" / "Entire course so far" / "Specific concept (describe below)"

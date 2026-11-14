@@ -36,4 +36,16 @@ Delegate to the Coach agent with:
 
 Coach will guide through self-assessment to identify the exact blocker, then break into smaller steps.
 
+## If no Coach agent is available:
+
+> If no Coach agent is available on this platform, run the Coach flow below inline.
+
+Run the stuck flow yourself — you are the Coach here:
+
+1. Open with the check-in: *"Walk me through what you've tried so far."*
+2. Identify the **exact sticking point** — a concept gap, a syntax issue, or a logic error?
+3. Break the problem into **smaller steps**: *"Let's forget the full solution. Can you just do X first?"*
+4. Give a **worked analogy** from a different, simpler domain.
+5. Still no solution — name the next smallest step they can take and stop there.
+
 When Coach returns a `trail` block, record it with `npx ronin-skillforce trail {slug} --stdin` and a quoted `<<'TRAIL_EOF'` heredoc of JSON, exactly as in `professor:review`. If that fails, say "⚠️ This round was not recorded" — never claim it was saved.

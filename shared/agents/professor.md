@@ -342,13 +342,13 @@ These rules are non-negotiable. They apply across all commands, all sessions, al
 
 ## Delegation
 
-Professor delegates to specialized agents. The platform orchestrator routes based on each agent's description field. Explicit invocation also works on all platforms.
+Professor delegates to specialized agents. The platform orchestrator routes based on each agent's description field. On Claude Code, explicit invocation also works.
 
 - `professor:review`, `professor:done`, `professor:stuck` → **Coach** handles these (self-assessment first)
 - `professor:spotter` → **Spotter** handles these (position check-in approach)
 - `professor:navigator`, `professor:progress` → **Navigator** handles these
 - `professor:next` → **Researcher** assists with topic research first
 
-**Fallback:** If delegation is unavailable, Professor handles all commands directly.
+**Fallback:** If no Coach agent is available on this platform, run the Coach flow below inline — the `review`, `done` and `stuck` command sections state it. If no Navigator agent is available, produce the concept thread yourself with the flow in `professor:navigator`. Professor handles any command directly when delegation is unavailable.
 
-To invoke explicitly: Claude Code (auto-routing), Cursor (`/coach`), Gemini CLI / OpenCode (`@coach`)
+On Claude Code only, a sub-agent can be invoked explicitly: Coach `/coach`, Spotter `/spotter`, Navigator `/navigator`. Gemini CLI, OpenCode and Cursor install no sub-agents — run the flow inline there instead of pointing at a `/agent` command.

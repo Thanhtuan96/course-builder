@@ -4,7 +4,7 @@ description: Start a new Socratic learning course on a topic
 argument-hint: "[topic]"
 ---
 
-Use `AskUserQuestion` with these four questions in a single call:
+Ask all four questions in a single call: `AskUserQuestion` — one call, four questions.
 
 1. "What do you want to learn?"
 2. "What is your current experience with this topic?"

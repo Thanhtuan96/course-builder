@@ -17,7 +17,7 @@ When user runs `professor:switch`, switch context to a different learning course
 2. **If no argument provided (interactive selection)**:
    - Scan `learning/` directory for subdirectories containing `COURSE.md`
    - If only one worktree found: use it automatically
-   - If multiple worktrees found: Use `AskUserQuestion` to let user choose:
+   - If multiple worktrees found: let the user choose (`AskUserQuestion`):
      > "Which course would you like to switch to?"
      > Options: List each worktree with topic name and progress
 
