@@ -231,6 +231,49 @@ const summary = (out, platform) => {
   return { updated: Number(updated), unchanged: Number(unchanged), backedUp: Number(backedUp) };
 };
 
+describe('The Gemini preamble routes to the current commands', () => {
+  /** The `| \`professor:x\` | behaviour |` rows of templates/gemini/GEMINI.md. */
+  function routingRows() {
+    const doc = read('templates/gemini/GEMINI.md');
+    return [...doc.matchAll(/^\| `professor:([a-z-]+)` \| (.+) \|$/gm)]
+      .map(([, command, row]) => ({ command, row }));
+  }
+
+  it('RON-358 the routing table names the same CLI steps as each command file', () => {
+    const rows = routingRows();
+    expect(rows.length).toBeGreaterThanOrEqual(16);
+
+    const mismatches = [];
+    for (const { command, row } of rows) {
+      const file = `commands/professor/${command}.md`;
+      expect(existsSync(join(ROOT, file)), `${file} exists`).toBe(true);
+      const expected = cliCalls(read(file)).join(', ');
+      const actual = cliCalls(row).join(', ');
+      if (expected !== actual) mismatches.push(`${command}: table [${actual}] vs file [${expected}]`);
+    }
+    expect(mismatches).toEqual([]);
+  });
+
+  it('RON-358 the routing table states the Coach gate, the capstone guards and the inline fallback', () => {
+    const doc = read('templates/gemini/GEMINI.md');
+    expect(doc).toMatch(/Coach gate/);
+    expect(doc).toMatch(/Capstone guard/);
+    expect(doc).toMatch(/if no Coach agent is available/i);
+    expect(doc).not.toContain('Confirm understanding verbally');
+  });
+
+  it('RON-358 no template carries a stale routing table or the profesor: misspelling', () => {
+    const templates = walk('templates').filter((rel) => /\.(md|json|mdc)$/.test(rel));
+    expect(templates.length).toBeGreaterThan(3);
+
+    const stale = templates.filter((rel) => {
+      const doc = read(rel);
+      return doc.includes('profesor:') || doc.includes('Confirm understanding verbally');
+    });
+    expect(stale).toEqual([]);
+  });
+});
+
 describe('Managed writes refresh, back up and count', () => {
   it('RON-358 writeManagedFile creates, leaves an identical file alone and backs up a change once', () => {
     const dir = mkHome();
